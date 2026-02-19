@@ -123,12 +123,12 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2, ease: cubicEasingFn }}
             >
-              {/* To-dos header with progress bar */}
+              {/* Actions header with progress bar */}
               <div className="px-3 py-2 border-t border-bolt-elements-borderColor bg-bolt-elements-background-depth-2">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <div className="i-ph:list-checks text-bolt-elements-textTertiary text-xs" />
-                    <span className="text-xs text-bolt-elements-textSecondary">To-dos</span>
+                    <span className="text-xs text-bolt-elements-textSecondary">Actions</span>
                   </div>
                   <span className="text-xs text-bolt-elements-textTertiary">
                     {actions.filter((a) => a.status === 'complete').length} of {actions.length} Done

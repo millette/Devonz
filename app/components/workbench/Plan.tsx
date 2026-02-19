@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { planStore, planProgress, approvePlan, rejectPlan, modifyPlan, type PlanTask } from '~/lib/stores/plan';
@@ -99,7 +99,7 @@ TaskItem.displayName = 'TaskItem';
  * - Modify: opens PLAN.md in editor for the user to edit
  * - Cancel: clears the plan state
  */
-const PlanActions = memo(({ approvedByUser }: { approvedByUser: boolean }) => {
+const PlanActions = memo(({ approvedByUser, progress }: { approvedByUser: boolean; progress: number }) => {
   const handleApprove = useCallback(() => {
     approvePlan();
   }, []);
@@ -111,6 +111,15 @@ const PlanActions = memo(({ approvedByUser }: { approvedByUser: boolean }) => {
   const handleReject = useCallback(() => {
     rejectPlan();
   }, []);
+
+  if (approvedByUser && progress >= 100) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-green-500">
+        <div className="i-ph:check-circle-fill" />
+        <span>Plan Complete — All tasks done</span>
+      </div>
+    );
+  }
 
   if (approvedByUser) {
     return (
@@ -154,6 +163,16 @@ export const Plan = memo(({ className }: PlanProps) => {
   const progress = useStore(planProgress);
 
   const [isOpen, setIsOpen] = React.useState(true);
+
+  // Auto-collapse the plan panel after all tasks complete
+  useEffect(() => {
+    if (state.approvedByUser && progress >= 100) {
+      const timer = setTimeout(() => setIsOpen(false), 3000);
+      return () => clearTimeout(timer);
+    }
+
+    return undefined;
+  }, [state.approvedByUser, progress]);
 
   if (!state.isActive || state.tasks.length === 0) {
     return null;
@@ -222,7 +241,7 @@ export const Plan = memo(({ className }: PlanProps) => {
 
               {/* Approval actions */}
               <div className="pt-3 border-t border-bolt-elements-borderColor">
-                <PlanActions approvedByUser={state.approvedByUser} />
+                <PlanActions approvedByUser={state.approvedByUser} progress={progress} />
               </div>
             </motion.div>
           </AnimatePresence>
