@@ -351,8 +351,11 @@ export const InspectorPanel = memo(
           {activeTab === 'text' && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-bolt-elements-textSecondary block mb-1">Text Content</label>
+                <label htmlFor="inspector-text-content" className="text-xs text-bolt-elements-textSecondary block mb-1">
+                  Text Content
+                </label>
                 <textarea
+                  id="inspector-text-content"
                   value={editedText || selectedElement.textContent}
                   onChange={(e) => handleTextChange(e.target.value)}
                   className="w-full bg-bolt-elements-background-depth-3 border border-bolt-elements-borderColor rounded px-2 py-2 text-bolt-elements-textPrimary text-sm focus:outline-none focus:border-accent-400 resize-none"

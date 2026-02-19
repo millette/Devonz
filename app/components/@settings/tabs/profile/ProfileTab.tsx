@@ -154,12 +154,15 @@ export default function ProfileTab() {
 
           {/* Bio Input */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Bio</label>
+            <label htmlFor="profile-bio" className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
+              Bio
+            </label>
             <div className="relative group">
               <div className="absolute left-3.5 top-3">
                 <div className="i-ph:text-aa w-5 h-5 text-gray-400 dark:text-gray-500 transition-colors group-focus-within:text-purple-500" />
               </div>
               <textarea
+                id="profile-bio"
                 value={profile.bio}
                 onChange={(e) => handleProfileUpdate('bio', e.target.value)}
                 className={classNames(

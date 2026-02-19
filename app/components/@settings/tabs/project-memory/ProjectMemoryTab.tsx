@@ -172,6 +172,7 @@ export default function ProjectMemoryTab() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            aria-label="Project instructions"
             placeholder="Enter your project instructions here... The AI will follow these rules in every conversation."
             className={classNames(
               'w-full h-64 p-3 rounded-lg resize-y',
