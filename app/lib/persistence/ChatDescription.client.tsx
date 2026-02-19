@@ -37,6 +37,7 @@ export function ChatDescription() {
               <div className="flex justify-between items-center p-2 rounded-md bg-bolt-elements-item-backgroundAccent">
                 <button
                   type="submit"
+                  aria-label="Save title"
                   className="i-ph:check-bold scale-110 hover:text-bolt-elements-item-contentAccent"
                   onMouseDown={handleSubmit}
                 />
@@ -51,6 +52,7 @@ export function ChatDescription() {
             <WithTooltip tooltip="Rename chat">
               <button
                 type="button"
+                aria-label="Rename chat"
                 className="ml-2 i-ph:pencil-fill scale-110 hover:text-bolt-elements-item-contentAccent"
                 onClick={(event) => {
                   event.preventDefault();

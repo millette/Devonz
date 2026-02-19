@@ -23,6 +23,7 @@ export function HeaderAvatar() {
         <DropdownMenu.Trigger asChild>
           <motion.button
             className="w-8 h-8 rounded-full bg-transparent flex items-center justify-center focus:outline-none"
+            aria-label="Profile menu"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

@@ -115,7 +115,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <ToastContainer
         closeButton={({ closeToast }) => {
           return (
-            <button className="Toastify__close-button" onClick={closeToast}>
+            <button className="Toastify__close-button" aria-label="Close notification" onClick={closeToast}>
               <div className="i-ph:x text-lg" />
             </button>
           );

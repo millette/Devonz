@@ -243,6 +243,7 @@ export const Workbench = memo(
                 icon="i-ph:x-circle"
                 className="-mr-1"
                 size="xl"
+                aria-label="Close workbench"
                 onClick={() => {
                   workbenchStore.showWorkbench.set(false);
                 }}

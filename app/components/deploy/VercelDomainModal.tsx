@@ -181,7 +181,11 @@ export function VercelDomainModal({ isOpen, onClose, projectId: propProjectId, c
                     </div>
                   </div>
                   <RadixDialog.Close asChild>
-                    <IconButton icon="i-ph:x" className="text-bolt-elements-textSecondary hover:text-white" />
+                    <IconButton
+                      icon="i-ph:x"
+                      aria-label="Close modal"
+                      className="text-bolt-elements-textSecondary hover:text-white"
+                    />
                   </RadixDialog.Close>
                 </div>
 

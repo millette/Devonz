@@ -101,6 +101,7 @@ export function HistoryItem({
           />
           <button
             type="submit"
+            aria-label="Save name"
             className="i-ph:check h-4 w-4 text-gray-500 hover:text-blue-500 transition-colors"
             onMouseDown={handleSubmit}
           />
@@ -181,6 +182,7 @@ const ChatActionButton = forwardRef(
         <button
           ref={ref}
           type="button"
+          aria-label={toolTipContent}
           className={`text-bolt-elements-textTertiary hover:text-blue-500 transition-colors ${icon} ${className ? className : ''}`}
           onClick={onClick}
         />

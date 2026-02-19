@@ -198,6 +198,7 @@ export const AssistantMessage = memo(
                   <button
                     onClick={() => onRewind(messageId)}
                     key="i-ph:arrow-u-up-left"
+                    aria-label="Revert to this message"
                     className="i-ph:arrow-u-up-left text-lg text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-colors"
                   />
                 </WithTooltip>

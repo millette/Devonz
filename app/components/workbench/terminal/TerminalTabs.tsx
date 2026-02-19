@@ -190,7 +190,9 @@ export const TerminalTabs = memo(() => {
                 </React.Fragment>
               );
             })}
-            {terminalCount < MAX_TERMINALS && <IconButton icon="i-ph:plus" size="md" onClick={addTerminal} />}
+            {terminalCount < MAX_TERMINALS && (
+              <IconButton icon="i-ph:plus" size="md" aria-label="Add terminal" onClick={addTerminal} />
+            )}
             <IconButton
               icon="i-ph:arrow-clockwise"
               title="Reset Terminal"
