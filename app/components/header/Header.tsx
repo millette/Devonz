@@ -19,8 +19,10 @@ export function Header() {
     >
       <div className="flex items-center gap-3 z-logo text-bolt-elements-textPrimary cursor-pointer">
         {!sidebarOpen && (
-          <div
-            className="i-ph:sidebar-simple text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors"
+          <button
+            type="button"
+            aria-label="Open sidebar"
+            className="i-ph:sidebar-simple text-xl text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary transition-colors bg-transparent border-none p-0"
             onClick={() => sidebarStore.toggle()}
           />
         )}
