@@ -1,11 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogTitle, DialogDescription, DialogRoot } from './Dialog';
-import { Button } from './Button';
 import { IconButton } from './IconButton';
 import type { DesignScheme } from '~/types/design-scheme';
 import { defaultDesignScheme, designFeatures, designFonts, paletteRoles } from '~/types/design-scheme';
-import { SplineAssetPicker } from './SplineAssetPicker';
-import type { SplineAsset } from '~/lib/assets';
 
 export interface ColorSchemeDialogProps {
   designScheme?: DesignScheme;
@@ -24,8 +21,7 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
   const [features, setFeatures] = useState<string[]>(designScheme?.features || defaultDesignScheme.features);
   const [font, setFont] = useState<string[]>(designScheme?.font || defaultDesignScheme.font);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<'colors' | 'typography' | 'features' | '3d-assets'>('colors');
-  const [selectedSplineAsset, setSelectedSplineAsset] = useState<SplineAsset | null>(null);
+  const [activeSection, setActiveSection] = useState<'colors' | 'typography' | 'features'>('colors');
 
   useEffect(() => {
     if (designScheme) {
@@ -51,16 +47,6 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
     setFont((prev) => (prev.includes(key) ? prev.filter((f) => f !== key) : [...prev, key]));
   };
 
-  const handleSplineAssetSelect = useCallback((asset: SplineAsset) => {
-    setSelectedSplineAsset(asset);
-  }, []);
-
-  const handleCopySplineUrl = useCallback(() => {
-    if (selectedSplineAsset) {
-      navigator.clipboard.writeText(selectedSplineAsset.sceneUrl);
-    }
-  }, [selectedSplineAsset]);
-
   const handleSave = () => {
     setDesignScheme?.({ palette, features, font });
     setIsDialogOpen(false);
@@ -73,30 +59,30 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
   };
 
   const renderColorSection = () => (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-bolt-elements-textPrimary flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-bolt-elements-item-contentAccent"></div>
+        <h3 className="text-sm font-medium text-[#e6edf3] flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#8badd4]"></div>
           Color Palette
         </h3>
         <button
           onClick={handleReset}
-          className="text-sm bg-transparent hover:bg-bolt-elements-bg-depth-2 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary rounded-lg flex items-center gap-2 transition-all duration-200"
+          className="text-xs bg-transparent hover:bg-[#1a2332] text-[#8b949e] hover:text-[#e6edf3] px-2 py-1 rounded-md flex items-center gap-1.5 transition-all border border-transparent hover:border-white/8"
         >
-          <span className="i-ph:arrow-clockwise text-sm" />
+          <span className="i-ph:arrow-clockwise text-xs" />
           Reset
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
         {paletteRoles.map((role) => (
           <div
             key={role.key}
-            className="group flex items-center gap-4 p-4 rounded-xl bg-bolt-elements-bg-depth-3 hover:bg-bolt-elements-bg-depth-2 border border-transparent hover:border-bolt-elements-borderColor transition-all duration-200"
+            className="group flex items-center gap-3 p-3 rounded-lg bg-[#1a2332]/50 hover:bg-[#1a2332] border border-white/[0.04] hover:border-white/8 transition-all"
           >
             <div className="relative flex-shrink-0">
               <div
-                className="w-12 h-12 rounded-xl shadow-md cursor-pointer transition-all duration-200 hover:scale-110 ring-2 ring-transparent hover:ring-bolt-elements-borderColorActive"
+                className="w-9 h-9 rounded-lg shadow-sm cursor-pointer transition-all hover:scale-110 ring-1 ring-white/10 hover:ring-[#4d6a8f]"
                 style={{ backgroundColor: palette[role.key] }}
                 onClick={() => document.getElementById(`color-input-${role.key}`)?.click()}
                 role="button"
@@ -111,18 +97,11 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 tabIndex={-1}
               />
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-bolt-elements-bg-depth-1 rounded-full flex items-center justify-center shadow-sm">
-                <span className="i-ph:pencil-simple text-xs text-bolt-elements-textSecondary" />
-              </div>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-semibold text-bolt-elements-textPrimary transition-colors">{role.label}</div>
-              <div className="text-sm text-bolt-elements-textSecondary line-clamp-2 leading-relaxed">
-                {role.description}
-              </div>
-              <div className="text-xs text-bolt-elements-textTertiary font-mono mt-1 px-2 py-1 bg-bolt-elements-bg-depth-1 rounded-md inline-block">
-                {palette[role.key]}
-              </div>
+              <div className="text-xs font-medium text-[#e6edf3]">{role.label}</div>
+              <div className="text-[10px] text-[#8b949e] line-clamp-1">{role.description}</div>
+              <div className="text-[10px] text-[#8b949e]/60 font-mono mt-0.5">{palette[role.key]}</div>
             </div>
           </div>
         ))}
@@ -131,43 +110,37 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
   );
 
   const renderTypographySection = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-bolt-elements-textPrimary flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-bolt-elements-item-contentAccent"></div>
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-[#e6edf3] flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#8badd4]"></div>
         Typography
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-3 gap-2 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
         {designFonts.map((f) => (
           <button
             key={f.key}
             type="button"
             onClick={() => handleFontToggle(f.key)}
-            className={`group p-4 rounded-xl border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-bolt-elements-borderColorActive ${
+            className={`group p-3 rounded-lg border transition-all focus:outline-none ${
               font.includes(f.key)
-                ? 'bg-bolt-elements-item-backgroundAccent border-bolt-elements-borderColorActive shadow-lg'
-                : 'bg-bolt-elements-background-depth-3 border-bolt-elements-borderColor hover:border-bolt-elements-borderColorActive hover:bg-bolt-elements-bg-depth-2'
+                ? 'bg-[#1e3a5f]/40 border-[#4d6a8f] text-[#8badd4]'
+                : 'bg-[#1a2332]/50 border-white/[0.04] hover:border-white/8 hover:bg-[#1a2332] text-[#8b949e]'
             }`}
           >
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-1.5">
               <div
-                className={`text-2xl font-medium transition-colors ${
-                  font.includes(f.key) ? 'text-bolt-elements-item-contentAccent' : 'text-bolt-elements-textPrimary'
+                className={`text-lg font-medium transition-colors ${
+                  font.includes(f.key) ? 'text-[#8badd4]' : 'text-[#e6edf3]'
                 }`}
                 style={{ fontFamily: f.key }}
               >
                 {f.preview}
               </div>
-              <div
-                className={`text-sm font-medium transition-colors ${
-                  font.includes(f.key) ? 'text-bolt-elements-item-contentAccent' : 'text-bolt-elements-textSecondary'
-                }`}
-              >
-                {f.label}
-              </div>
+              <div className="text-[10px] font-medium">{f.label}</div>
               {font.includes(f.key) && (
-                <div className="w-6 h-6 mx-auto bg-bolt-elements-item-contentAccent rounded-full flex items-center justify-center">
-                  <span className="i-ph:check text-white text-sm" />
+                <div className="w-4 h-4 mx-auto bg-[#4d6a8f] rounded-full flex items-center justify-center">
+                  <span className="i-ph:check text-white text-[10px]" />
                 </div>
               )}
             </div>
@@ -178,155 +151,75 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
   );
 
   const renderFeaturesSection = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-bolt-elements-textPrimary flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-bolt-elements-item-contentAccent"></div>
+    <div className="space-y-3">
+      <h3 className="text-sm font-medium text-[#e6edf3] flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full bg-[#8badd4]"></div>
         Design Features
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+      <div className="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-1 custom-scrollbar">
         {designFeatures.map((f) => {
           const isSelected = features.includes(f.key);
 
           return (
-            <div key={f.key} className="feature-card-container p-2">
-              <button
-                type="button"
-                onClick={() => handleFeatureToggle(f.key)}
-                className={`group relative w-full p-6 text-sm font-medium transition-all duration-200 bg-bolt-elements-background-depth-3 text-bolt-elements-item-textSecondary ${
-                  f.key === 'rounded'
-                    ? isSelected
-                      ? 'rounded-3xl'
-                      : 'rounded-xl'
-                    : f.key === 'border'
-                      ? 'rounded-lg'
-                      : 'rounded-xl'
-                } ${
-                  f.key === 'border'
-                    ? isSelected
-                      ? 'border-3 border-bolt-elements-borderColorActive bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent'
-                      : 'border-2 border-bolt-elements-borderColor hover:border-bolt-elements-borderColorActive text-bolt-elements-textSecondary'
-                    : f.key === 'gradient'
-                      ? ''
-                      : isSelected
-                        ? 'bg-bolt-elements-item-backgroundAccent text-bolt-elements-item-contentAccent shadow-lg'
-                        : 'bg-bolt-elements-bg-depth-3 hover:bg-bolt-elements-bg-depth-2 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary'
-                } ${f.key === 'shadow' ? (isSelected ? 'shadow-xl' : 'shadow-lg') : 'shadow-md'}`}
-                style={{
-                  ...(f.key === 'gradient' && {
-                    background: isSelected
-                      ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                      : 'var(--bolt-elements-bg-depth-3)',
-                    color: isSelected ? 'white' : 'var(--bolt-elements-textSecondary)',
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => handleFeatureToggle(f.key)}
+              className={`group relative w-full p-4 text-sm font-medium transition-all rounded-lg border ${
+                isSelected
+                  ? 'bg-[#1e3a5f]/40 border-[#4d6a8f] text-[#8badd4]'
+                  : 'bg-[#1a2332]/50 border-white/[0.04] hover:border-white/8 hover:bg-[#1a2332] text-[#8b949e]'
+              }`}
+              style={{
+                ...(f.key === 'gradient' &&
+                  isSelected && {
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    borderColor: '#667eea',
+                    color: 'white',
                   }),
-                }}
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-bolt-elements-bg-depth-1 bg-opacity-20">
-                    {f.key === 'rounded' && (
+              }}
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/5">
+                  {f.key === 'rounded' && (
+                    <div
+                      className={`w-5 h-5 bg-current transition-all ${isSelected ? 'rounded-full' : 'rounded'} opacity-80`}
+                    />
+                  )}
+                  {f.key === 'border' && (
+                    <div
+                      className={`w-5 h-5 rounded transition-all ${
+                        isSelected ? 'border-2 border-current opacity-90' : 'border border-current opacity-60'
+                      }`}
+                    />
+                  )}
+                  {f.key === 'gradient' && (
+                    <div className="w-5 h-5 rounded bg-gradient-to-br from-purple-400 via-pink-400 to-indigo-400 opacity-90" />
+                  )}
+                  {f.key === 'shadow' && (
+                    <div className="relative">
+                      <div className={`w-5 h-5 bg-current rounded opacity-${isSelected ? '90' : '60'}`} />
                       <div
-                        className={`w-6 h-6 bg-current transition-all duration-200 ${
-                          isSelected ? 'rounded-full' : 'rounded'
-                        } opacity-80`}
+                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-current rounded opacity-${isSelected ? '40' : '25'}`}
                       />
-                    )}
-                    {f.key === 'border' && (
-                      <div
-                        className={`w-6 h-6 rounded-lg transition-all duration-200 ${
-                          isSelected ? 'border-3 border-current opacity-90' : 'border-2 border-current opacity-70'
-                        }`}
-                      />
-                    )}
-                    {f.key === 'gradient' && (
-                      <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-400 via-pink-400 to-indigo-400 opacity-90" />
-                    )}
-                    {f.key === 'shadow' && (
-                      <div className="relative">
-                        <div
-                          className={`w-6 h-6 bg-current rounded-lg transition-all duration-200 ${
-                            isSelected ? 'opacity-90' : 'opacity-70'
-                          }`}
-                        />
-                        <div
-                          className={`absolute top-1 left-1 w-6 h-6 bg-current rounded-lg transition-all duration-200 ${
-                            isSelected ? 'opacity-40' : 'opacity-30'
-                          }`}
-                        />
-                      </div>
-                    )}
-                    {f.key === 'frosted-glass' && (
-                      <div className="relative">
-                        <div
-                          className={`w-6 h-6 rounded-lg transition-all duration-200 backdrop-blur-sm bg-white/20 border border-white/30 ${
-                            isSelected ? 'opacity-90' : 'opacity-70'
-                          }`}
-                        />
-                        <div
-                          className={`absolute inset-0 w-6 h-6 rounded-lg transition-all duration-200 backdrop-blur-md bg-gradient-to-br from-white/10 to-transparent ${
-                            isSelected ? 'opacity-60' : 'opacity-40'
-                          }`}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-center">
-                    <div className="font-semibold">{f.label}</div>
-                    {isSelected && <div className="mt-2 w-8 h-1 bg-current rounded-full mx-auto opacity-60" />}
-                  </div>
+                    </div>
+                  )}
+                  {f.key === 'frosted-glass' && (
+                    <div className="relative">
+                      <div className="w-5 h-5 rounded backdrop-blur-sm bg-white/20 border border-white/30 opacity-80" />
+                    </div>
+                  )}
                 </div>
-              </button>
-            </div>
+                <div className="text-center">
+                  <div className="text-xs font-medium">{f.label}</div>
+                  {isSelected && <div className="mt-1 w-6 h-0.5 bg-current rounded-full mx-auto opacity-60" />}
+                </div>
+              </div>
+            </button>
           );
         })}
       </div>
-    </div>
-  );
-
-  const render3DAssetsSection = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-bolt-elements-textPrimary flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-bolt-elements-item-contentAccent"></div>
-        3D Assets
-      </h3>
-
-      <p className="text-sm text-bolt-elements-textSecondary">
-        Browse and select pre-verified Spline 3D scenes to add to your project. These assets are tested and ready to
-        use.
-      </p>
-
-      <SplineAssetPicker onSelect={handleSplineAssetSelect} selectedAssetId={selectedSplineAsset?.id} compact />
-
-      {selectedSplineAsset && (
-        <div className="p-4 rounded-xl bg-bolt-elements-bg-depth-3 border border-bolt-elements-borderColor">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-bolt-elements-textPrimary">{selectedSplineAsset.name}</h4>
-              <p className="text-sm text-bolt-elements-textSecondary mt-1">{selectedSplineAsset.description}</p>
-              <div className="flex items-center gap-2 mt-2 text-xs text-bolt-elements-textTertiary">
-                {selectedSplineAsset.interactive && (
-                  <span className="flex items-center gap-1 bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
-                    <span className="i-ph:cursor-click w-3 h-3" /> Interactive
-                  </span>
-                )}
-                <span className="capitalize bg-bolt-elements-bg-depth-1 px-2 py-0.5 rounded-full">
-                  {selectedSplineAsset.category}
-                </span>
-              </div>
-            </div>
-            <Button variant="secondary" onClick={handleCopySplineUrl} className="flex-shrink-0">
-              <span className="i-ph:copy mr-1" />
-              Copy URL
-            </Button>
-          </div>
-          <div className="mt-3 p-2 bg-bolt-elements-bg-depth-1 rounded-lg">
-            <code className="text-xs text-bolt-elements-textSecondary break-all">{selectedSplineAsset.sceneUrl}</code>
-          </div>
-          <p className="text-xs text-bolt-elements-textTertiary mt-2">
-            💡 Tip: Ask Devonz to "add a 3D element using {selectedSplineAsset.name}" and it will use this asset!
-          </p>
-        </div>
-      )}
     </div>
   );
 
@@ -337,68 +230,68 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
       </IconButton>
 
       <DialogRoot open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <Dialog>
-          <div className="py-4 px-4 min-w-[480px] max-w-[90vw] max-h-[85vh] flex flex-col gap-6 overflow-hidden">
-            <div className="">
-              <DialogTitle className="text-2xl font-bold text-bolt-elements-textPrimary">
-                Design Palette & Features
+        <Dialog className="!bg-[#0b0d13] !border-white/8 !shadow-xl !shadow-black/50 !rounded-xl !w-[560px]">
+          <div className="flex flex-col overflow-hidden max-h-[85vh]">
+            {/* Header */}
+            <div className="px-5 pt-5 pb-3">
+              <DialogTitle className="!text-lg font-semibold text-[#e6edf3]">
+                <span className="i-ph:palette-duotone text-[#8badd4] mr-2" />
+                Design Palette
               </DialogTitle>
-              <DialogDescription className="text-bolt-elements-textSecondary leading-relaxed">
-                Customize your color palette, typography, and design features. These preferences will guide the AI in
-                creating designs that match your style.
+              <DialogDescription className="text-[#8b949e] text-xs mt-1">
+                Customize colors, typography, and design features for AI-generated designs.
               </DialogDescription>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className="flex gap-1 p-1 bg-bolt-elements-bg-depth-3 rounded-xl">
+            {/* Tabs */}
+            <div className="flex border-b border-white/8 bg-[#0b0d13]">
               {(
                 [
                   { key: 'colors', label: 'Colors', icon: 'i-ph:palette' },
                   { key: 'typography', label: 'Typography', icon: 'i-ph:text-aa' },
                   { key: 'features', label: 'Features', icon: 'i-ph:magic-wand' },
-                  { key: '3d-assets', label: '3D Assets', icon: 'i-ph:cube' },
                 ] as const
               ).map((tab) => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveSection(tab.key)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                  className={`flex-1 px-4 py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                     activeSection === tab.key
-                      ? 'bg-bolt-elements-background-depth-3 text-bolt-elements-textPrimary shadow-md'
-                      : 'bg-bolt-elements-background-depth-2 text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary hover:bg-bolt-elements-bg-depth-2'
+                      ? 'bg-[#1e3a5f]/40 text-[#8badd4] border-b-2 border-[#4d6a8f]'
+                      : 'bg-[#0b0d13] text-[#8b949e] hover:bg-[#1a2332] hover:text-[#e6edf3]'
                   }`}
                 >
-                  <span className={`${tab.icon} text-lg`} />
+                  <span className={`${tab.icon}`} />
                   <span>{tab.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Content Area */}
-            <div className=" min-h-92 overflow-y-auto">
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto min-h-[320px] max-h-[440px] p-4 custom-scrollbar">
               {activeSection === 'colors' && renderColorSection()}
               {activeSection === 'typography' && renderTypographySection()}
               {activeSection === 'features' && renderFeaturesSection()}
-              {activeSection === '3d-assets' && render3DAssetsSection()}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-bolt-elements-textSecondary">
+            {/* Footer */}
+            <div className="px-4 py-2.5 border-t border-white/[0.04] bg-[#0b0d13] flex justify-between items-center">
+              <div className="text-xs text-[#8b949e]">
                 {Object.keys(palette).length} colors • {font.length} fonts • {features.length} features
-                {selectedSplineAsset && ` • 1 3D asset`}
               </div>
-              <div className="flex gap-3">
-                <Button variant="secondary" onClick={() => setIsDialogOpen(false)}>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsDialogOpen(false)}
+                  className="px-3 py-1.5 text-xs font-medium text-[#8b949e] hover:text-[#e6edf3] bg-[#1a2332] border border-white/8 rounded-lg transition-all hover:bg-[#1e3a5f]/30"
+                >
                   Cancel
-                </Button>
-                <Button
-                  variant="ghost"
+                </button>
+                <button
                   onClick={handleSave}
-                  className="bg-bolt-elements-button-primary-background hover:bg-bolt-elements-button-primary-backgroundHover text-bolt-elements-button-primary-text"
+                  className="px-3 py-1.5 text-xs font-medium text-[#8badd4] bg-[#1e3a5f]/40 border border-[#4d6a8f]/50 rounded-lg transition-all hover:bg-[#1e3a5f]/60"
                 >
                   Save Changes
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -408,34 +301,26 @@ export const ColorSchemeDialog: React.FC<ColorSchemeDialogProps> = ({ setDesignS
       <style>{`
         .custom-scrollbar {
           scrollbar-width: thin;
-          scrollbar-color: var(--bolt-elements-textTertiary) transparent;
+          scrollbar-color: rgba(139, 173, 212, 0.2) transparent;
         }
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: var(--bolt-elements-textTertiary);
-          border-radius: 3px;
+          background-color: rgba(139, 173, 212, 0.2);
+          border-radius: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: var(--bolt-elements-textSecondary);
+          background-color: rgba(139, 173, 212, 0.35);
         }
-        .line-clamp-2 {
+        .line-clamp-1 {
           display: -webkit-box;
-          -webkit-line-clamp: 2;
+          -webkit-line-clamp: 1;
           -webkit-box-orient: vertical;
           overflow: hidden;
-        }
-        .feature-card-container {
-          min-height: 140px;
-          display: flex;
-          align-items: stretch;
-        }
-        .feature-card-container button {
-          flex: 1;
         }
       `}</style>
     </div>
