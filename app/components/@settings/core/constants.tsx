@@ -1,4 +1,4 @@
-import type { TabType } from './types';
+import type { TabType, SidebarCategoryConfig } from './types';
 import { classNames } from '~/utils/classNames';
 
 // Icon wrapper component factory for UnoCSS Phosphor icons
@@ -114,4 +114,31 @@ export const DEFAULT_TAB_CONFIG = [
   { id: 'project-memory', visible: true, window: 'user' as const, order: 12 },
 
   // User Window Tabs (In dropdown, initially hidden)
+];
+
+export const SIDEBAR_CATEGORIES: SidebarCategoryConfig[] = [
+  {
+    id: 'general',
+    label: 'General',
+    icon: 'i-ph:sliders',
+    tabs: ['features', 'notifications'],
+  },
+  {
+    id: 'ai',
+    label: 'AI',
+    icon: 'i-ph:brain',
+    tabs: ['cloud-providers', 'local-providers', 'mcp', 'project-memory'],
+  },
+  {
+    id: 'services',
+    label: 'Services',
+    icon: 'i-ph:plugs-connected',
+    tabs: ['github', 'gitlab', 'netlify', 'vercel', 'supabase'],
+  },
+  {
+    id: 'system',
+    label: 'System',
+    icon: 'i-ph:gear',
+    tabs: ['data', 'event-logs'],
+  },
 ];
