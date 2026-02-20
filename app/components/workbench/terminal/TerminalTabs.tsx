@@ -9,6 +9,7 @@ import { classNames } from '~/utils/classNames';
 import { Terminal, type TerminalRef } from './Terminal';
 import { TerminalManager } from './TerminalManager';
 import { createScopedLogger } from '~/utils/logger';
+import { toast } from 'react-toastify';
 
 const logger = createScopedLogger('Terminal');
 
@@ -25,6 +26,59 @@ export const TerminalTabs = memo(() => {
 
   const [activeTerminal, setActiveTerminal] = useState(0);
   const [terminalCount, setTerminalCount] = useState(0);
+  const [isRestarting, setIsRestarting] = useState(false);
+
+  const handleReinstallAndRestart = useCallback(async () => {
+    if (isRestarting) {
+      return;
+    }
+
+    setIsRestarting(true);
+    setActiveTerminal(0);
+
+    try {
+      const shell = workbenchStore.devonzTerminal;
+      await shell.ready();
+
+      let devCommand = 'npm run dev';
+
+      try {
+        const files = workbenchStore.files.get();
+        const pkgEntry = Object.entries(files).find(([k]) => k.endsWith('/package.json'));
+
+        if (pkgEntry && pkgEntry[1]?.type === 'file') {
+          const pkg = JSON.parse(pkgEntry[1].content || '{}');
+
+          if (pkg.scripts?.dev) {
+            devCommand = 'npm run dev';
+          } else if (pkg.scripts?.start) {
+            devCommand = 'npm start';
+          } else if (pkg.scripts?.preview) {
+            devCommand = 'npm run preview';
+          }
+        }
+      } catch {
+        // use default
+      }
+
+      toast.info('Reinstalling dependencies...');
+
+      const installResult = await shell.executeCommand('reinstall', 'npm install --legacy-peer-deps');
+
+      if (installResult && installResult.exitCode !== 0) {
+        toast.error('npm install failed — check the terminal for details');
+        return;
+      }
+
+      toast.info('Starting dev server...');
+      shell.executeCommand('restart-dev', devCommand);
+    } catch (err) {
+      logger.error('Reinstall & restart failed:', err);
+      toast.error('Failed to reinstall & restart');
+    } finally {
+      setIsRestarting(false);
+    }
+  }, [isRestarting]);
 
   const addTerminal = () => {
     if (terminalCount < MAX_TERMINALS) {
@@ -213,6 +267,21 @@ export const TerminalTabs = memo(() => {
                 }
               }}
             />
+            <button
+              title="Reinstall dependencies and restart dev server"
+              disabled={isRestarting}
+              onClick={handleReinstallAndRestart}
+              className={classNames(
+                'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all',
+                isRestarting
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-devonz-elements-terminals-buttonBackground cursor-pointer',
+              )}
+              style={{ color: '#22D3EE' }}
+            >
+              <div className={classNames('i-ph:rocket-launch text-sm', isRestarting && 'animate-pulse')} />
+              {isRestarting ? 'Restarting...' : 'Reinstall & Run'}
+            </button>
             <IconButton
               className="ml-auto"
               icon="i-ph:caret-down"

@@ -117,23 +117,68 @@ export const Workbench = memo(
           );
 
           if (!hasStartAction && previews.length === 0) {
-            // Check if index.html exists in project files
             const currentFiles = workbenchStore.files.get();
-            const hasIndexHtml = Object.keys(currentFiles).some(
-              (filePath) => filePath.endsWith('/index.html') && currentFiles[filePath]?.type === 'file',
+
+            const hasPackageJson = Object.keys(currentFiles).some(
+              (filePath) => filePath.endsWith('/package.json') && currentFiles[filePath]?.type === 'file',
             );
 
-            if (hasIndexHtml) {
-              workbenchLogger.info('No start action found — launching static file server for index.html');
+            const hasShellAction = Object.values(artifacts).some((artifact) =>
+              Object.values(artifact.runner.actions.get()).some((action) => action.type === 'shell'),
+            );
 
-              webcontainer.then((wc) => {
-                wc.spawn('npx', ['--yes', 'serve', '.'], {
-                  cwd: WORK_DIR,
-                  env: { NODE_ENV: 'development' },
-                }).catch((err) => {
-                  workbenchLogger.error('Failed to start static file server:', err);
-                });
+            if (hasPackageJson && !hasShellAction) {
+              workbenchLogger.info('No shell/start action found with package.json — auto-installing and starting dev server');
+
+              let devCommand = 'npm run dev';
+
+              try {
+                const pkgEntry = Object.entries(currentFiles).find(
+                  ([k]) => k.endsWith('/package.json'),
+                );
+
+                if (pkgEntry && pkgEntry[1]?.type === 'file') {
+                  const pkg = JSON.parse(pkgEntry[1].content || '{}');
+
+                  if (pkg.scripts?.dev) {
+                    devCommand = 'npm run dev';
+                  } else if (pkg.scripts?.start) {
+                    devCommand = 'npm start';
+                  } else if (pkg.scripts?.preview) {
+                    devCommand = 'npm run preview';
+                  }
+                }
+              } catch {
+                // use default
+              }
+
+              const shell = workbenchStore.devonzTerminal;
+
+              shell.ready().then(async () => {
+                try {
+                  await shell.executeCommand('auto-start-install', 'npm install --legacy-peer-deps');
+                  shell.executeCommand('auto-start-dev', devCommand);
+                } catch (err) {
+                  workbenchLogger.error('Auto-start failed:', err);
+                }
               });
+            } else if (!hasPackageJson) {
+              const hasIndexHtml = Object.keys(currentFiles).some(
+                (filePath) => filePath.endsWith('/index.html') && currentFiles[filePath]?.type === 'file',
+              );
+
+              if (hasIndexHtml) {
+                workbenchLogger.info('No start action found — launching static file server for index.html');
+
+                webcontainer.then((wc) => {
+                  wc.spawn('npx', ['--yes', 'serve', '.'], {
+                    cwd: WORK_DIR,
+                    env: { NODE_ENV: 'development' },
+                  }).catch((err) => {
+                    workbenchLogger.error('Failed to start static file server:', err);
+                  });
+                });
+              }
             }
           }
         }, 2000);

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "botanica-plant-shop",
+    "name": "Botanica Plant Shop",
+    "description": "Premium indoor plant shop with elegant product showcases",
+    "category": "online-store",
+    "vercelUrl": "https://botanica-example.vercel.app",
+    "githubRepo": "zebbern/botanica-template",
+    "tags": ["e-commerce", "plants", "modern"],
+    "icon": "i-ph:shopping-bag-duotone"
+  },
+  {
+    "id": "studio-noir",
+    "name": "Studio Noir",
+    "description": "Dark and cinematic creative studio portfolio",
+    "category": "portfolio",
+    "vercelUrl": "https://studio-noir-example.vercel.app",
+    "githubRepo": "zebbern/studio-noir-template",
+    "tags": ["creative", "dark", "cinematic"],
+    "icon": "i-ph:camera-duotone"
+  },
+  {
+    "id": "nexus-analytics",
+    "name": "Nexus Analytics",
+    "description": "Executive analytics dashboard with sparkline cards and insights",
+    "category": "dashboard",
+    "vercelUrl": "https://nexus-analytics-example.vercel.app",
+    "githubRepo": "zebbern/nexus-analytics-template",
+    "tags": ["analytics", "charts", "dashboard"],
+    "icon": "i-ph:chart-bar-duotone"
+  },
+  {
+    "id": "social-scheduler",
+    "name": "Social Scheduler",
+    "description": "Schedule and manage social media posts across platforms",
+    "category": "saas",
+    "vercelUrl": "https://social-scheduler-example.vercel.app",
+    "githubRepo": "zebbern/social-scheduler-template",
+    "tags": ["social-media", "scheduling", "saas"],
+    "icon": "i-ph:calendar-duotone"
+  },
+  {
+    "id": "ai-content-studio",
+    "name": "AI Content Studio",
+    "description": "AI-powered content generation and management platform",
+    "category": "ai-app",
+    "vercelUrl": "https://ai-content-example.vercel.app",
+    "githubRepo": "zebbern/ai-content-template",
+    "tags": ["ai", "content", "generation"],
+    "icon": "i-ph:sparkle-duotone"
+  },
+  {
+    "id": "modern-landing",
+    "name": "Modern Landing",
+    "description": "Clean, conversion-focused landing page with hero section",
+    "category": "landing-page",
+    "vercelUrl": "https://modern-landing-example.vercel.app",
+    "githubRepo": "zebbern/modern-landing-template",
+    "tags": ["landing", "hero", "conversion"],
+    "icon": "i-ph:rocket-launch-duotone"
+  },
+  {
+    "id": "craft-portfolio",
+    "name": "Craft Portfolio",
+    "description": "Minimal portfolio with bento grid layout for creative work",
+    "category": "portfolio",
+    "vercelUrl": "https://craft-portfolio-example.vercel.app",
+    "githubRepo": "zebbern/craft-portfolio-template",
+    "tags": ["portfolio", "minimal", "bento"],
+    "icon": "i-ph:layout-duotone"
+  },
+  {
+    "id": "team-flow",
+    "name": "TeamFlow",
+    "description": "Team collaboration and workflow management dashboard",
+    "category": "saas",
+    "vercelUrl": "https://teamflow-example.vercel.app",
+    "githubRepo": "zebbern/teamflow-template",
+    "tags": ["collaboration", "workflow", "teams"],
+    "icon": "i-ph:users-three-duotone"
+  }
+]

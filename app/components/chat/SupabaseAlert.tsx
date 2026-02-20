@@ -171,7 +171,7 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
               </button>
             ) : (
               <button
-                onClick={() => executeSupabaseAction(content)}
+                onClick={() => executeSupabaseAction(content ?? '')}
                 disabled={isExecuting}
                 className={classNames(
                   `px-3 py-2 rounded-md text-sm font-medium`,

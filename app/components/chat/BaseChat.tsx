@@ -12,7 +12,7 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import styles from './BaseChat.module.scss';
 import { LeftActionPanel } from '~/components/chat/LeftActionPanel';
 import { ExamplePrompts } from '~/components/chat/ExamplePrompts';
-import RightIconPanel from './RightIconPanel';
+import { TemplateSection } from '~/components/chat/TemplateSection';
 import { RecentChats } from '~/components/chat/RecentChats';
 import type { ProviderInfo } from '~/types/model';
 import type { ActionAlert, SupabaseAlert, DeployAlert, LlmErrorAlertType } from '~/types/actions';
@@ -530,14 +530,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     </div>
                   </div>
 
-                  {/* Framework Icons Row - Below ChatBox */}
-                  {!chatStarted && (
-                    <div className="flex justify-center mt-4 max-w-chat mx-auto w-full">
-                      <RightIconPanel />
-                    </div>
-                  )}
-
-                  {/* Example Prompts - Below Framework Icons */}
+                  {/* Example Prompts - Below ChatBox */}
                   {!chatStarted && (
                     <div className="flex flex-col items-center gap-4 mt-4 max-w-chat mx-auto w-full">
                       <ExamplePrompts
@@ -554,7 +547,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                   )}
                 </div>
               </StickToBottom>
-              {/* Recent Chats - Below Example Prompts */}
+              {/* Template Gallery - Below Example Prompts */}
+              {!chatStarted && <TemplateSection />}
+              {/* Recent Chats - Below Templates */}
               {!chatStarted && <ClientOnly>{() => <RecentChats maxItems={10} />}</ClientOnly>}
             </div>
           )}

@@ -229,6 +229,11 @@ export interface AgentToolDefinition<TParams = Record<string, unknown>, TResult 
         description: string;
         default?: unknown;
         enum?: string[];
+        items?: {
+          type: string;
+          properties?: Record<string, { type: string; description: string }>;
+          required?: string[];
+        };
       }
     >;
     required: string[];

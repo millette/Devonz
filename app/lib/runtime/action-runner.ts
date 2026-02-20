@@ -1796,7 +1796,7 @@ export class ActionRunner {
 
       logger.info(`[TaskUpdate] Updated task ${taskId} to status: ${taskStatus}`);
     } catch (error) {
-      logger.error(`[TaskUpdate] Failed to update task ${taskId} to ${taskStatus}:`, error);
+      logger.error(`[TaskUpdate] Failed to update task ${action.taskId} to ${action.taskStatus}:`, error);
       throw error; // Propagate so the action is marked as failed
     }
   }
