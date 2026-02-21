@@ -60,48 +60,6 @@ const BLOCKED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   { pattern: /\binit\s+[06]\b/i, reason: 'System halt/reboot via init' },
 ];
 
-/**
- * Commands that are always safe (bypass pattern checks).
- * These are common dev commands that might accidentally match a broad pattern.
- */
-const SAFE_PREFIXES = [
-  'npm ',
-  'npx ',
-  'pnpm ',
-  'yarn ',
-  'node ',
-  'bun ',
-  'deno ',
-  'tsc ',
-  'vite ',
-  'next ',
-  'remix ',
-  'astro ',
-  'python ',
-  'python3 ',
-  'pip ',
-  'pip3 ',
-  'git ',
-  'echo ',
-  'cat ',
-  'ls ',
-  'dir ',
-  'cd ',
-  'pwd ',
-  'mkdir ',
-  'touch ',
-  'cp ',
-  'mv ',
-  'head ',
-  'tail ',
-  'grep ',
-  'find ',
-  'which ',
-  'where ',
-  'env ',
-  'printenv ',
-];
-
 export interface CommandValidationResult {
   allowed: boolean;
   reason?: string;
@@ -118,16 +76,10 @@ export function validateCommand(command: string): CommandValidationResult {
     return { allowed: true };
   }
 
-  // Safe prefixes bypass pattern checks
-  const lowerCmd = trimmed.toLowerCase();
-
-  for (const prefix of SAFE_PREFIXES) {
-    if (lowerCmd.startsWith(prefix)) {
-      return { allowed: true };
-    }
-  }
-
-  // Check against blocked patterns
+  /*
+   * Always check against blocked patterns first — even safe-prefix commands
+   * can be chained with destructive operations (e.g., `npm install && rm -rf /`)
+   */
   for (const { pattern, reason } of BLOCKED_PATTERNS) {
     if (pattern.test(trimmed)) {
       logger.warn(`BLOCKED command: "${trimmed}" — reason: ${reason}`);
