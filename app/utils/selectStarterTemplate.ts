@@ -1054,6 +1054,8 @@ RULES:
 4. Keep the template's styling approach intact — do not switch CSS frameworks.
 5. Build a COMPLETE working application — no placeholders, stubs, or "coming soon" pages.
 6. Only run npm install if adding NEW packages not already installed.
+
+Implement the user's request below by MODIFYING existing files and adding new ones as needed.
 `;
 
   return {
