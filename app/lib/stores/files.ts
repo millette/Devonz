@@ -720,7 +720,7 @@ export class FilesStore {
         case 'unlinkDir': {
           this.files.setKey(sanitizedPath, undefined);
 
-          for (const [direntPath] of Object.entries(this.files)) {
+          for (const [direntPath] of Object.entries(this.files.get())) {
             if (direntPath.startsWith(sanitizedPath)) {
               this.files.setKey(direntPath, undefined);
             }
