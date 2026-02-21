@@ -895,12 +895,19 @@ If you need to make changes to functionality, create new files instead of modify
       const isTailwindV3 =
         tailwindVersion.startsWith('^3') || tailwindVersion.startsWith('~3') || tailwindVersion.startsWith('3');
 
+      // Detect React version to prevent API mismatch
+      const reactVersion = pkgJson.dependencies?.react || '';
+      const isReact18 =
+        reactVersion.startsWith('^18') || reactVersion.startsWith('~18') || reactVersion.startsWith('18');
+      const isReact19 =
+        reactVersion.startsWith('^19') || reactVersion.startsWith('~19') || reactVersion.startsWith('19');
+
       userMessage += `
 ⚠️ DEPENDENCY RULES:
 - ${depCount} pre-configured dependencies exist. NEVER rewrite package.json from scratch.
 - Only ADD new dependencies — keep ALL existing ones.
 - If you import a new npm package in code, add it to package.json dependencies FIRST.
-${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: Radix UI primitives and peer deps are MANDATORY.\n` : ''}${isTailwindV3 ? `- Tailwind CSS v3 syntax: \`@tailwind base; @tailwind components; @tailwind utilities;\` — NOT \`@import "tailwindcss";\`.\n` : ''}`;
+${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: Radix UI primitives and peer deps are MANDATORY.\n` : ''}${isTailwindV3 ? `- Tailwind CSS v3 syntax: \`@tailwind base; @tailwind components; @tailwind utilities;\` — NOT \`@import "tailwindcss";\`.\n` : ''}${isReact18 ? `- React 18 project: Use forwardRef, manual useMemo/useCallback. Do NOT use React 19 APIs (useActionState, use(), ref-as-prop).\n` : ''}${isReact19 ? `- React 19 project: Use ref as prop (no forwardRef), useActionState, use() hook. React Compiler handles memoization.\n` : ''}`;
     } catch {
       // Failed to parse package.json, skip dep preservation instructions
     }
