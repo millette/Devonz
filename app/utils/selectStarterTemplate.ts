@@ -98,93 +98,36 @@ interface PromptTemplate {
 const starterTemplateSelectionPrompt = (
   starterTemplates: PromptTemplate[],
   showcaseTemplates: PromptTemplate[] = [],
-) => `
-You are an experienced developer who helps people choose the best starter template for their projects.
-IMPORTANT: Vite is preferred
-IMPORTANT: Prefer shadcn templates for React projects that need UI components.
-IMPORTANT: When the user asks for something specific like a portfolio, landing page, dashboard, or SaaS template, prefer a showcase template that matches.
+) => `You pick the best starter template for a user's project. Respond ONLY with the XML selection — no explanation.
 
-Available starter templates (basic scaffolding):
-<template>
-  <name>blank</name>
-  <description>Empty starter for simple scripts and trivial tasks that don't require a full template setup</description>
-  <tags>basic, script</tags>
-</template>
-${starterTemplates
-  .map(
-    (template) => `
-<template>
-  <name>${template.name}</name>
-  <description>${template.description}</description>
-  ${template.tags ? `<tags>${template.tags.join(', ')}</tags>` : ''}
-</template>
-`,
-  )
-  .join('\n')}
+Decision rules (in priority order):
+1. Trivial tasks (scripts, algorithms, simple logic) → blank
+2. Specific site type (portfolio, landing page, dashboard, SaaS, e-commerce) → matching showcase template
+3. React project needing UI components → Vite Shadcn (preferred) or NextJS Shadcn (if SSR/fullstack needed)
+4. Vue project → Vue
+5. Svelte project → Sveltekit
+6. Angular project → Angular
+7. Presentation/slides → Slidev
+8. Mobile app → Expo App
+9. Static site/blog → Basic Astro
+10. Any other web project → Vite Shadcn as default
+
+Starter templates:
+<template><name>blank</name><description>Empty starter for simple scripts</description><tags>basic, script</tags></template>
+${starterTemplates.map((t) => `<template><name>${t.name}</name><description>${t.description}</description>${t.tags ? `<tags>${t.tags.join(', ')}</tags>` : ''}</template>`).join('\n')}
 ${
   showcaseTemplates.length > 0
     ? `
-Available showcase templates (full pre-built projects — use when the user wants a specific type of site):
-${showcaseTemplates
-  .map(
-    (template) => `
-<template>
-  <name>${template.name}</name>
-  <description>${template.description}</description>
-  ${template.tags ? `<tags>${template.tags.join(', ')}</tags>` : ''}
-</template>
-`,
-  )
-  .join('\n')}
-`
+Showcase templates (full pre-built projects):
+${showcaseTemplates.map((t) => `<template><name>${t.name}</name><description>${t.description}</description>${t.tags ? `<tags>${t.tags.join(', ')}</tags>` : ''}</template>`).join('\n')}`
     : ''
 }
 
-Response Format:
+Format:
 <selection>
-  <templateName>{selected template name}</templateName>
-  <title>{a proper title for the project}</title>
+  <templateName>{name}</templateName>
+  <title>{short project title}</title>
 </selection>
-
-Examples:
-
-<example>
-User: I need to build a todo app
-Response:
-<selection>
-  <templateName>Vite Shadcn</templateName>
-  <title>Simple React todo application</title>
-</selection>
-</example>
-
-<example>
-User: Write a script to generate numbers from 1 to 100
-Response:
-<selection>
-  <templateName>blank</templateName>
-  <title>script to generate numbers from 1 to 100</title>
-</selection>
-</example>
-
-<example>
-User: Build me a portfolio website
-Response:
-<selection>
-  <templateName>Luxury Portfolio</templateName>
-  <title>Personal portfolio website</title>
-</selection>
-</example>
-
-Instructions:
-1. For trivial tasks and simple scripts, always recommend the blank template
-2. For more complex projects, recommend templates from the provided list
-3. Follow the exact XML format
-4. Consider both technical requirements and tags
-5. If the user asks for something specific (portfolio, landing page, dashboard, SaaS), prefer a matching showcase template
-6. If no perfect match exists, recommend the closest starter template
-
-Important: Provide only the selection tags in your response, no additional text.
-MOST IMPORTANT: YOU DONT HAVE TIME TO THINK JUST START RESPONDING BASED ON HUNCH 
 `;
 
 const templates: Template[] = STARTER_TEMPLATES;
@@ -651,39 +594,25 @@ If you need to make changes to functionality, create new files instead of modify
         tailwindVersion.startsWith('^3') || tailwindVersion.startsWith('~3') || tailwindVersion.startsWith('3');
 
       userMessage += `
----
-⚠️ PACKAGE.JSON RULES:
-- The template has ${depCount} pre-configured dependencies. NEVER rewrite package.json from scratch.
-- To change dependencies, ADD new ones — keep ALL existing.
-- Start from existing file content when modifying package.json.
-${
-  resolvedName.toLowerCase().includes('shadcn')
-    ? `- This is a shadcn/ui template — Radix UI primitives and peer deps are MANDATORY.`
-    : ''
-}
-${
-  isTailwindV3
-    ? `- Tailwind CSS v3: use \`@tailwind base; @tailwind components; @tailwind utilities;\` — NOT the v4 \`@import "tailwindcss";\` syntax.`
-    : ''
-}
----
-`;
+⚠️ DEPENDENCY RULES:
+- ${depCount} pre-configured dependencies exist. NEVER rewrite package.json from scratch.
+- Only ADD new dependencies — keep ALL existing ones.
+- If you import a new npm package in code, add it to package.json dependencies FIRST.
+${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: Radix UI primitives and peer deps are MANDATORY.\n` : ''}${isTailwindV3 ? `- Tailwind CSS v3 syntax: \`@tailwind base; @tailwind components; @tailwind utilities;\` — NOT \`@import "tailwindcss";\`.\n` : ''}`;
     } catch {
       // Failed to parse package.json, skip dep preservation instructions
     }
   }
 
   userMessage += `
----
-Template "${displayName}" is now imported. Ready to build.
+Template "${displayName}" imported. Dependencies install automatically.
 
 RULES:
-1. Modify only the files you need to change. Do NOT rewrite files unnecessarily.
+1. Edit only the files you need — do NOT rewrite files unnecessarily or create duplicate structures.
 2. Preserve existing imports, exports, and functionality when editing files.
-3. Dependencies are installing automatically — do NOT run \`npm install\` or \`npm run dev\`.
-4. Focus on creating/modifying source files to fulfill the user's request.
-5. When adding new components, use the template's existing patterns and conventions.
----
+3. Do NOT run \`npm install\` or \`npm run dev\` — both happen automatically.
+4. Follow the template's existing directory structure and patterns.
+5. Use TypeScript (.tsx/.ts) for new files unless the template uses plain JS.
 `;
 
   return {
