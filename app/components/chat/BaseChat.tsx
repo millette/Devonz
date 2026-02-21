@@ -238,10 +238,16 @@ export const BaseChat = React.memo(
 
           setIsModelLoading('all');
           fetch('/api/models')
-            .then((response) => response.json())
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error(`Model fetch failed: ${response.status}`);
+              }
+
+              return response.json();
+            })
             .then((data) => {
-              const typedData = data as { modelList: ModelInfo[] };
-              setModelList(typedData.modelList);
+              const typedData = data as { modelList?: ModelInfo[] };
+              setModelList(Array.isArray(typedData.modelList) ? typedData.modelList : []);
             })
             .catch((error) => {
               logger.error('Error fetching model list:', error);
@@ -268,8 +274,14 @@ export const BaseChat = React.memo(
 
           try {
             const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`);
+
+            if (!response.ok) {
+              throw new Error(`Provider model fetch failed: ${response.status}`);
+            }
+
             const data = await response.json();
-            providerModels = (data as { modelList: ModelInfo[] }).modelList;
+            const parsed = (data as { modelList?: ModelInfo[] }).modelList;
+            providerModels = Array.isArray(parsed) ? parsed : [];
           } catch (error) {
             logger.error('Error loading dynamic models for:', providerName, error);
           }

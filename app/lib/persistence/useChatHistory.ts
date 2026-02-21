@@ -49,7 +49,9 @@ export const db = persistenceEnabled ? await openDatabase() : undefined;
 
 // Start auto-backup once the database is available
 if (db) {
-  import('./autoBackup').then(({ startAutoBackup }) => startAutoBackup(db!));
+  import('./autoBackup')
+    .then(({ startAutoBackup }) => startAutoBackup(db!))
+    .catch((err) => console.error('Failed to start auto-backup:', err));
 }
 
 export const chatId = atom<string | undefined>(undefined);
