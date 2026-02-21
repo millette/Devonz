@@ -301,6 +301,31 @@ export class LocalRuntime implements RuntimeProvider {
     };
   }
 
+  /**
+   * Kill all terminal sessions and reset port detection.
+   * Used on client reconnect to clean up orphaned processes from previous page loads.
+   */
+  async cleanSessions(): Promise<void> {
+    if (this.#sessions.size === 0) {
+      return;
+    }
+
+    logger.info(`Cleaning ${this.#sessions.size} orphaned session(s) for "${this.#projectId}"`);
+
+    for (const [id, session] of this.#sessions) {
+      try {
+        session.process.kill('SIGTERM');
+      } catch {
+        // Process may have already exited
+      }
+
+      logger.debug(`Killed orphaned session ${id}`);
+    }
+
+    this.#sessions.clear();
+    this.#detectedPorts.clear();
+  }
+
   async teardown(): Promise<void> {
     logger.info(`Tearing down runtime for project "${this.#projectId}"`);
 
@@ -424,9 +449,20 @@ export class LocalRuntime implements RuntimeProvider {
  *
  * API routes use `RuntimeManager.get(projectId)` to obtain a runtime,
  * creating one on demand if it doesn't exist.
+ *
+ * Features:
+ * - Deduplicates concurrent boot requests for the same project
+ * - Tracks last-activity per project for idle cleanup
+ * - Auto-tears down runtimes idle for > IDLE_TIMEOUT_MS (10 minutes)
  */
 export class RuntimeManager {
   static #instance: RuntimeManager | null = null;
+
+  /** 10 minutes of inactivity before auto-teardown */
+  static readonly IDLE_TIMEOUT_MS = 10 * 60 * 1000;
+
+  /** How often to check for idle runtimes (every 60 seconds) */
+  static readonly IDLE_CHECK_INTERVAL_MS = 60 * 1000;
 
   #runtimes = new Map<string, LocalRuntime>();
 
@@ -442,12 +478,19 @@ export class RuntimeManager {
    */
   #bootingProjects = new Map<string, Promise<LocalRuntime>>();
 
+  /** Tracks last activity timestamp per project for idle timeout */
+  #lastActivity = new Map<string, number>();
+
+  /** Interval timer for idle cleanup */
+  #idleTimer: ReturnType<typeof setInterval> | null = null;
+
   #projectsDir: string;
   #shell: string;
 
   private constructor(options?: { projectsDir?: string; shell?: string }) {
     this.#projectsDir = options?.projectsDir ?? process.env.DEVONZ_PROJECTS_DIR ?? DEFAULT_PROJECTS_DIR;
     this.#shell = options?.shell ?? detectShell();
+    this.#startIdleTimer();
   }
 
   /** Get the singleton instance. */
@@ -459,6 +502,11 @@ export class RuntimeManager {
     return RuntimeManager.#instance;
   }
 
+  /** Record activity for a project (prevents idle teardown). */
+  touchActivity(projectId: string): void {
+    this.#lastActivity.set(projectId, Date.now());
+  }
+
   /**
    * Get or create a runtime for the given project ID.
    * Automatically boots the runtime if it's new.
@@ -467,6 +515,8 @@ export class RuntimeManager {
    * for the same project ID, both will receive the same runtime instance.
    */
   async getRuntime(projectId: string): Promise<LocalRuntime> {
+    this.touchActivity(projectId);
+
     // Fast path: runtime already exists
     const existing = this.#runtimes.get(projectId);
 
@@ -513,15 +563,22 @@ export class RuntimeManager {
     if (runtime) {
       await runtime.teardown();
       this.#runtimes.delete(projectId);
+      this.#lastActivity.delete(projectId);
     }
   }
 
   /** Tear down all runtimes. Called on server shutdown. */
   async teardownAll(): Promise<void> {
+    if (this.#idleTimer) {
+      clearInterval(this.#idleTimer);
+      this.#idleTimer = null;
+    }
+
     const teardownPromises = Array.from(this.#runtimes.values()).map((rt) => rt.teardown());
     await Promise.allSettled(teardownPromises);
     this.#runtimes.clear();
     this.#bootingProjects.clear();
+    this.#lastActivity.clear();
     logger.info('All runtimes torn down');
   }
 
@@ -533,5 +590,36 @@ export class RuntimeManager {
   /** List all active project IDs. */
   listProjects(): string[] {
     return Array.from(this.#runtimes.keys());
+  }
+
+  /** Start the periodic idle cleanup timer. */
+  #startIdleTimer(): void {
+    this.#idleTimer = setInterval(() => {
+      this.#cleanIdleRuntimes();
+    }, RuntimeManager.IDLE_CHECK_INTERVAL_MS);
+
+    // Don't prevent Node.js from exiting
+    if (this.#idleTimer && typeof this.#idleTimer === 'object' && 'unref' in this.#idleTimer) {
+      this.#idleTimer.unref();
+    }
+  }
+
+  /** Tear down runtimes that haven't had activity within IDLE_TIMEOUT_MS. */
+  #cleanIdleRuntimes(): void {
+    const now = Date.now();
+
+    for (const [projectId] of this.#runtimes) {
+      const lastActive = this.#lastActivity.get(projectId) ?? 0;
+
+      if (now - lastActive > RuntimeManager.IDLE_TIMEOUT_MS) {
+        logger.info(
+          `Idle timeout: tearing down runtime for "${projectId}" (inactive for ${Math.round((now - lastActive) / 1000)}s)`,
+        );
+
+        this.removeRuntime(projectId).catch((err) => {
+          logger.error(`Failed to teardown idle runtime "${projectId}":`, err);
+        });
+      }
+    }
   }
 }

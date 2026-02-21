@@ -123,6 +123,12 @@ async function execAction({ request }: ActionFunctionArgs) {
       try {
         const runtime = await manager.getRuntime(projectId);
 
+        /*
+         * Kill orphaned sessions from previous page loads / client reconnects.
+         * This prevents dev-server processes from stacking up on different ports.
+         */
+        await runtime.cleanSessions();
+
         return json({
           success: true,
           workdir: runtime.workdir,
