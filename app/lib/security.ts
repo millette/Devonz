@@ -62,11 +62,10 @@ export function checkRateLimit(request: Request, endpoint: string): { allowed: b
 
   const [, config] = rule;
   const now = Date.now();
-  const windowStart = now - config.windowMs;
 
-  // Clean up old entries
+  // Clean up expired entries — resetTime is the absolute expiry timestamp
   for (const [storedKey, data] of rateLimitStore.entries()) {
-    if (data.resetTime < windowStart) {
+    if (data.resetTime < now) {
       rateLimitStore.delete(storedKey);
     }
   }
