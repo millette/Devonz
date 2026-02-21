@@ -500,6 +500,12 @@ export const getFineTunedPrompt = (
     - App.tsx MUST be updated in the SAME response as feature components. If using react-router-dom, define ALL routes.
     - SELF-CHECK: After writing App.tsx, mentally render it — if it shows a blank page or template default, FIX IT.
 
+  TEMPLATE COMPONENT REUSE (CRITICAL):
+    - If the template includes pre-built UI components (listed in the user message), you MUST import and use them.
+    - NEVER recreate a component file that already exists in the template (e.g., button.tsx, card.tsx, dialog.tsx).
+    - The user message lists exact import paths — copy those import statements directly into your code.
+    - For shadcn/ui templates: components export multiple named exports (e.g., Card, CardContent, CardHeader, CardTitle from card.tsx). Import ALL sub-exports you need.
+
   COMPONENT IMPORT COMPLETENESS (CRITICAL):
     - Every \`<ComponentName>\` in JSX MUST have a matching import. Common miss: \`<Card>\`, \`<Button>\`, \`<Badge>\` without shadcn/ui imports.
     - Self-check: Scan every JSX tag — is EACH one imported or defined locally?
@@ -508,21 +514,13 @@ export const getFineTunedPrompt = (
     - After writing ALL source files, BEFORE npm install: scan every .tsx/.ts file for \`import ... from 'package-name'\`.
     - Verify EACH package exists in package.json deps/devDeps. Common missed: react-router-dom, lucide-react, recharts, zustand, framer-motion, @tanstack/react-query, date-fns, clsx, tailwind-merge.
     - Missing packages = Vite "Failed to resolve import" errors that break the entire app.
-
-  Dependencies:
-    - Update package.json with ALL dependencies upfront
-    - Run single install command
-    - Avoid individual package installations
+    - NEVER rewrite package.json from scratch in follow-up responses — only ADD new packages.
+    - Template package.json has critical peer deps (@radix-ui/*, class-variance-authority, clsx, tailwind-merge, etc.). Omitting any causes cascading build failures.
 
   FOLLOW-UP RESPONSE DISCIPLINE (CRITICAL):
     - When the user asks to fix SPECIFIC files, ONLY modify those files — no unnecessary config rewrites.
     - Do NOT re-create package.json, tsconfig, vite.config, tailwind.config, utility files, or seed data unless asked.
     - NEVER waste tokens rewriting files that don't need changes.
-
-  PACKAGE.JSON PROTECTION (CRITICAL):
-    - NEVER rewrite package.json from scratch in follow-up responses — only ADD new packages.
-    - Template package.json has critical peer deps (@radix-ui/*, class-variance-authority, clsx, tailwind-merge, etc.).
-    - Omitting any existing dependency causes cascading build failures.
 </artifact_instructions>
 
 <design_instructions>
@@ -916,6 +914,7 @@ The todo app is running with local storage persistence.</assistant_response>
   [ ] package.json FIRST → App.tsx / main source files → other source → config files → \`npm install\` → \`npm run dev\` LAST.
   [ ] Each shell command in its OWN devonzAction. New deps via package.json file edit, NOT \`npm install <pkg>\`.
   [ ] Follow-up responses: ONLY modify files the user asked about — no unnecessary config rewrites.
+  [ ] Template components: if user message lists pre-built components, IMPORT them — do NOT create new files for Button, Card, Input, etc.
 
   Framework Compatibility:
   [ ] React 18 → R3F v8; React 19 → R3F v9 (never mix).

@@ -163,6 +163,62 @@ const ANGULAR_COMBINED_PACKAGES: Record<string, string> = {
   ...ANGULAR_EXTRA_PACKAGES,
 };
 
+/**
+ * Maps shadcn/ui component filenames to their primary exports.
+ * Used to generate explicit import guidance for the LLM so it
+ * imports pre-built components instead of recreating them.
+ */
+const SHADCN_COMPONENT_EXPORTS: Record<string, string[]> = {
+  button: ['Button', 'buttonVariants'],
+  card: ['Card', 'CardContent', 'CardDescription', 'CardFooter', 'CardHeader', 'CardTitle'],
+  input: ['Input'],
+  label: ['Label'],
+  badge: ['Badge', 'badgeVariants'],
+  separator: ['Separator'],
+  textarea: ['Textarea'],
+  tabs: ['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'],
+  dialog: [
+    'Dialog',
+    'DialogContent',
+    'DialogDescription',
+    'DialogFooter',
+    'DialogHeader',
+    'DialogTitle',
+    'DialogTrigger',
+  ],
+  select: ['Select', 'SelectContent', 'SelectGroup', 'SelectItem', 'SelectLabel', 'SelectTrigger', 'SelectValue'],
+
+  // Additional components that may be added via GitHub templates
+  accordion: ['Accordion', 'AccordionContent', 'AccordionItem', 'AccordionTrigger'],
+  checkbox: ['Checkbox'],
+  switch: ['Switch'],
+  tooltip: ['Tooltip', 'TooltipContent', 'TooltipProvider', 'TooltipTrigger'],
+  popover: ['Popover', 'PopoverContent', 'PopoverTrigger'],
+  'dropdown-menu': [
+    'DropdownMenu',
+    'DropdownMenuContent',
+    'DropdownMenuItem',
+    'DropdownMenuTrigger',
+    'DropdownMenuSeparator',
+  ],
+  'scroll-area': ['ScrollArea', 'ScrollBar'],
+  avatar: ['Avatar', 'AvatarFallback', 'AvatarImage'],
+  progress: ['Progress'],
+  slider: ['Slider'],
+  toggle: ['Toggle'],
+  'alert-dialog': [
+    'AlertDialog',
+    'AlertDialogAction',
+    'AlertDialogCancel',
+    'AlertDialogContent',
+    'AlertDialogDescription',
+    'AlertDialogFooter',
+    'AlertDialogHeader',
+    'AlertDialogTitle',
+    'AlertDialogTrigger',
+  ],
+};
+
 interface PromptTemplate {
   name: string;
   description: string;
@@ -510,6 +566,48 @@ function buildDirectoryHint(files: Array<{ path: string }>): string {
 }
 
 /**
+ * Build explicit import examples for pre-built shadcn/ui components.
+ * Generates actual import statements the LLM can copy, e.g.:
+ *   import { Button } from "@/components/ui/button"
+ *   import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+ *
+ * This dramatically improves LLM compliance — showing exact syntax
+ * is far more effective than listing filenames.
+ */
+function buildShadcnImportGuide(componentNames: string[], shadcnDir: string, usesAtAlias: boolean): string {
+  if (componentNames.length === 0) {
+    return '';
+  }
+
+  const lines: string[] = [];
+
+  for (const name of componentNames) {
+    const exports = SHADCN_COMPONENT_EXPORTS[name];
+
+    if (!exports) {
+      // Unknown component — still list it with PascalCase name
+      const pascalName = name.charAt(0).toUpperCase() + name.slice(1);
+      const importPath = usesAtAlias ? `@/${shadcnDir}${name}` : `./${shadcnDir}${name}`;
+      lines.push(`import { ${pascalName} } from "${importPath}"`);
+      continue;
+    }
+
+    const importPath = usesAtAlias ? `@/${shadcnDir}${name}` : `./${shadcnDir}${name}`;
+
+    // For components with many exports, show the most commonly used ones
+    if (exports.length <= 4) {
+      lines.push(`import { ${exports.join(', ')} } from "${importPath}"`);
+    } else {
+      // Show first 4 exports + indication of more
+      const shown = exports.slice(0, 4);
+      lines.push(`import { ${shown.join(', ')}, ... } from "${importPath}"`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
  * Frameworks whose templates should get full COMMON_EXTRA_PACKAGES
  * (React-specific + universal) injected into package.json.
  */
@@ -843,6 +941,10 @@ ${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: All Rad
   const cnUtilityPaths = ['src/lib/utils.ts', 'lib/utils.ts', 'src/utils.ts', 'utils/cn.ts'];
   const cnUtilityFile = cnUtilityPaths.find((p) => filePaths.includes(p));
 
+  // Determine if the template uses @/ import alias (true for Vite+shadcn and Next.js templates)
+  const usesAtAlias =
+    filePaths.some((fp) => fp.includes('vite.config')) || filePaths.some((fp) => fp.includes('next.config'));
+
   // Detect pre-built shadcn/ui components so the LLM uses them instead of recreating
   const shadcnComponentDirs = ['src/components/ui/', 'components/ui/'];
   const shadcnDir = shadcnComponentDirs.find((d) => filePaths.some((fp) => fp.startsWith(d)));
@@ -852,10 +954,20 @@ ${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: All Rad
         .map((fp) => fp.slice(shadcnDir.length, -4))
     : [];
 
+  // Build explicit import guide for shadcn components
+  const shadcnImportGuide =
+    shadcnComponents.length > 0 ? buildShadcnImportGuide(shadcnComponents, shadcnDir!, usesAtAlias) : '';
+
   userMessage += `
 Template "${displayName}" imported and running. All files are already created and installed — DO NOT recreate them.
 ${archSummary ? `Architecture: ${archSummary}\n` : ''}${dirHint ? `Directories: ${dirHint}\n` : ''}Pre-installed packages (ready to import): ${availablePackageHint}.
-${mainEntryFile ? `Primary file to modify: ${mainEntryFile}\n` : ''}${cnUtilityFile ? `Class utility: import { cn } from '${cnUtilityFile.startsWith('src/') ? `@/${cnUtilityFile.slice(4, -3)}` : `./${cnUtilityFile.slice(0, -3)}`}' — use cn() for conditional class merging.\n` : ''}${shadcnComponents.length > 0 ? `Pre-built shadcn/ui components (import from ${shadcnDir}): ${shadcnComponents.join(', ')}. Use these directly — do NOT recreate them.\n` : ''}`;
+${mainEntryFile ? `Primary file to modify: ${mainEntryFile}\n` : ''}${cnUtilityFile ? `Class utility: import { cn } from '${cnUtilityFile.startsWith('src/') ? `@/${cnUtilityFile.slice(4, -3)}` : `./${cnUtilityFile.slice(0, -3)}`}' — use cn() for conditional class merging.\n` : ''}${
+    shadcnImportGuide
+      ? `PRE-BUILT COMPONENTS — use these imports directly, do NOT recreate these files:
+${shadcnImportGuide}
+`
+      : ''
+  }`;
 
   /*
    * Add framework-specific coding hints for non-React frameworks
