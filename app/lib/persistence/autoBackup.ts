@@ -268,6 +268,7 @@ export function loadBackup(backupKey: string): BackupData | null {
 }
 
 let backupInterval: ReturnType<typeof setInterval> | null = null;
+let initialBackupTimeout: ReturnType<typeof setTimeout> | null = null;
 
 /**
  * Start periodic auto-backup. Safe to call multiple times (idempotent).
@@ -276,7 +277,10 @@ export function startAutoBackup(db: IDBDatabase, intervalMs = DEFAULT_INTERVAL_M
   stopAutoBackup();
 
   // Initial backup after a short delay to avoid blocking startup
-  setTimeout(() => createBackup(db), 10_000);
+  initialBackupTimeout = setTimeout(() => {
+    initialBackupTimeout = null;
+    createBackup(db);
+  }, 10_000);
 
   backupInterval = setInterval(() => createBackup(db), intervalMs);
   logger.info(`Auto-backup started (every ${Math.round(intervalMs / 60_000)}min)`);
@@ -286,6 +290,11 @@ export function startAutoBackup(db: IDBDatabase, intervalMs = DEFAULT_INTERVAL_M
  * Stop periodic auto-backup.
  */
 export function stopAutoBackup() {
+  if (initialBackupTimeout) {
+    clearTimeout(initialBackupTimeout);
+    initialBackupTimeout = null;
+  }
+
   if (backupInterval) {
     clearInterval(backupInterval);
     backupInterval = null;
