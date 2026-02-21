@@ -15,6 +15,21 @@ const versionedMessages = new Set<string>();
 let versionDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingVersionData: { messageId: string; title: string } | null = null;
 
+/**
+ * Reset version tracking state. Call when starting a new chat session
+ * to prevent stale message IDs from accumulating indefinitely.
+ */
+export function resetVersionTracking() {
+  versionedMessages.clear();
+
+  if (versionDebounceTimer) {
+    clearTimeout(versionDebounceTimer);
+    versionDebounceTimer = null;
+  }
+
+  pendingVersionData = null;
+}
+
 const messageParser = new EnhancedStreamingMessageParser({
   callbacks: {
     onArtifactOpen: (data) => {
@@ -177,6 +192,7 @@ export function useMessageParser() {
     if (import.meta.env.DEV && !isLoading) {
       reset = true;
       messageParser.reset();
+      resetVersionTracking();
     }
 
     for (const [index, message] of messages.entries()) {
