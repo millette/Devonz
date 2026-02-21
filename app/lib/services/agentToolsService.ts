@@ -278,35 +278,42 @@ async function runCommand(params: RunCommandParams): Promise<ToolExecutionResult
     // Execute with a session ID unique to this agent call
     const sessionId = `agent-${Date.now()}`;
 
-    // Create a timeout promise
+    // Create a timeout promise with cleanup to prevent unhandled rejections
+    let timeoutId: ReturnType<typeof setTimeout>;
     const timeoutPromise = new Promise<null>((_, reject) => {
-      setTimeout(() => reject(new Error(`Command timed out after ${timeout}ms`)), timeout);
+      timeoutId = setTimeout(() => reject(new Error(`Command timed out after ${timeout}ms`)), timeout);
     });
 
-    // Race between command execution and timeout
-    const result = await Promise.race([shell.executeCommand(sessionId, fullCommand), timeoutPromise]);
+    try {
+      // Race between command execution and timeout
+      const result = await Promise.race([shell.executeCommand(sessionId, fullCommand), timeoutPromise]);
 
-    if (!result) {
+      clearTimeout(timeoutId!);
+
+      if (!result) {
+        return {
+          success: false,
+          error: 'Command execution returned no result',
+        };
+      }
+
+      const isSuccess = result.exitCode === 0;
+
+      logger.debug(`Command completed with exit code ${result.exitCode}`, {
+        outputLength: result.output?.length,
+      });
+
       return {
-        success: false,
-        error: 'Command execution returned no result',
+        success: true,
+        data: {
+          exitCode: result.exitCode,
+          stdout: isSuccess ? result.output : '',
+          stderr: isSuccess ? '' : result.output,
+        },
       };
+    } finally {
+      clearTimeout(timeoutId!);
     }
-
-    const isSuccess = result.exitCode === 0;
-
-    logger.debug(`Command completed with exit code ${result.exitCode}`, {
-      outputLength: result.output?.length,
-    });
-
-    return {
-      success: true,
-      data: {
-        exitCode: result.exitCode,
-        stdout: isSuccess ? result.output : '',
-        stderr: isSuccess ? '' : result.output,
-      },
-    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`Failed to execute command: ${command}`, error);
