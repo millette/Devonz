@@ -150,6 +150,7 @@ export const ChatImpl = memo(
     const skipNextPlanModeSave = useRef(false);
     const prevChatIdRef = useRef<string | undefined>(undefined);
     const planModeRef = useRef(planMode);
+    const sendingRef = useRef(false);
     planModeRef.current = planMode;
 
     const [selectedElement, setSelectedElement] = useState<ElementInfo | null>(null);
@@ -567,6 +568,13 @@ export const ChatImpl = memo(
         return;
       }
 
+      // Prevent duplicate sends during async template selection
+      if (sendingRef.current) {
+        return;
+      }
+
+      sendingRef.current = true;
+
       let finalMessageContent = messageContent;
 
       if (selectedElement) {
@@ -640,6 +648,7 @@ export const ChatImpl = memo(
 
               textareaRef.current?.blur();
               setFakeLoading(false);
+              sendingRef.current = false;
 
               return;
             }
@@ -670,6 +679,7 @@ export const ChatImpl = memo(
         resetEnhancer();
 
         textareaRef.current?.blur();
+        sendingRef.current = false;
 
         return;
       }
@@ -724,6 +734,7 @@ export const ChatImpl = memo(
       resetEnhancer();
 
       textareaRef.current?.blur();
+      sendingRef.current = false;
     };
 
     /**
