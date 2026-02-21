@@ -264,6 +264,16 @@ export function useChatHistory() {
         adjustedKey = adjustedKey.replace(container.workdir, '');
       }
 
+      /*
+       * Strip leading slashes from legacy snapshots that stored absolute paths
+       * (e.g. "/src/App.tsx" → "src/App.tsx") to prevent isSafePath rejection.
+       */
+      adjustedKey = adjustedKey.replace(/^\/+/, '');
+
+      if (!adjustedKey) {
+        return;
+      }
+
       if (value?.type === 'folder') {
         dirPromises.push(container.fs.mkdir(adjustedKey, { recursive: true }));
       } else if (value?.type === 'file') {

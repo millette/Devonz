@@ -160,35 +160,57 @@ export const Versions = memo(() => {
   const [changedFiles, setChangedFiles] = useState<{ sha: string; files: string[] } | null>(null);
   const [restoring, setRestoring] = useState(false);
 
-  const projectId = runtimeContext.projectId;
-
   const loadCommits = useCallback(async () => {
-    if (!projectId) {
+    // Read projectId at call time (not render time) since runtimeContext is non-reactive
+    const currentProjectId = runtimeContext.projectId;
+
+    if (!currentProjectId) {
       setLoading(false);
       return;
     }
 
     setLoading(true);
 
-    const log = await getLog(projectId);
+    const log = await getLog(currentProjectId);
     setCommits(log);
     setLoading(false);
-  }, [projectId]);
+  }, []);
 
   useEffect(() => {
-    loadCommits();
+    /*
+     * runtimeContext is a plain object (not reactive), so projectId may still be
+     * null when the component mounts.  Poll briefly until bootRuntime completes.
+     */
+    if (runtimeContext.projectId) {
+      loadCommits();
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      if (runtimeContext.projectId) {
+        clearInterval(interval);
+        loadCommits();
+      }
+    }, 250);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [loadCommits]);
 
   const handleRestore = useCallback(
     async (sha: string) => {
-      if (!projectId || restoring) {
+      // Read projectId at call time since runtimeContext is non-reactive
+      const currentProjectId = runtimeContext.projectId;
+
+      if (!currentProjectId || restoring) {
         return;
       }
 
       setRestoring(true);
 
       try {
-        const success = await checkout(projectId, sha);
+        const success = await checkout(currentProjectId, sha);
 
         if (success) {
           setCheckedOutSha(sha);
@@ -209,18 +231,21 @@ export const Versions = memo(() => {
         setRestoring(false);
       }
     },
-    [projectId, restoring, loadCommits],
+    [restoring, loadCommits],
   );
 
   const handleReturnToLatest = useCallback(async () => {
-    if (!projectId || restoring) {
+    // Read projectId at call time since runtimeContext is non-reactive
+    const currentProjectId = runtimeContext.projectId;
+
+    if (!currentProjectId || restoring) {
       return;
     }
 
     setRestoring(true);
 
     try {
-      const success = await checkoutMain(projectId);
+      const success = await checkoutMain(currentProjectId);
 
       if (success) {
         setCheckedOutSha(null);
@@ -235,11 +260,14 @@ export const Versions = memo(() => {
     } finally {
       setRestoring(false);
     }
-  }, [projectId, restoring, loadCommits]);
+  }, [restoring, loadCommits]);
 
   const handleViewFiles = useCallback(
     async (sha: string) => {
-      if (!projectId) {
+      // Read projectId at call time since runtimeContext is non-reactive
+      const currentProjectId = runtimeContext.projectId;
+
+      if (!currentProjectId) {
         return;
       }
 
@@ -248,10 +276,10 @@ export const Versions = memo(() => {
         return;
       }
 
-      const files = await getCommitFiles(projectId, sha);
+      const files = await getCommitFiles(currentProjectId, sha);
       setChangedFiles({ sha, files });
     },
-    [projectId, changedFiles],
+    [changedFiles],
   );
 
   const filteredCommits = commits.filter(
