@@ -202,9 +202,8 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
 
       logger.info(`Generating response Provider: ${provider.name}, Model: ${modelDetails.name}`);
 
-      // DEBUG: Log reasoning model detection
       const isReasoning = isReasoningModel(modelDetails.name);
-      logger.info(`DEBUG: Model "${modelDetails.name}" detected as reasoning model: ${isReasoning}`);
+      logger.debug(`Model "${modelDetails.name}" reasoning model: ${isReasoning}`);
 
       // Use maxCompletionTokens for reasoning models (o1, GPT-5), maxTokens for traditional models
       const tokenParams = isReasoning ? { maxCompletionTokens: dynamicMaxTokens } : { maxTokens: dynamicMaxTokens };
@@ -241,25 +240,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         logger.info(`Extended thinking enabled for ${provider.name}/${modelDetails.name} in llmcall`);
       }
 
-      // DEBUG: Log final parameters
-      logger.info(
-        `DEBUG: Final params for model "${modelDetails.name}":`,
-        JSON.stringify(
-          {
-            isReasoning,
-            hasTemperature: 'temperature' in finalParams,
-            hasMaxTokens: 'maxTokens' in finalParams,
-            hasMaxCompletionTokens: 'maxCompletionTokens' in finalParams,
-            paramKeys: Object.keys(finalParams).filter((key) => !['model', 'messages', 'system'].includes(key)),
-            tokenParams,
-            finalParams: Object.fromEntries(
-              Object.entries(finalParams).filter(([key]) => !['model', 'messages', 'system'].includes(key)),
-            ),
-          },
-          null,
-          2,
-        ),
-      );
+      logger.debug(`LLM params for "${modelDetails.name}": ${JSON.stringify(tokenParams)}`);
 
       const result = await generateText(finalParams);
       logger.info(`Generated response`);

@@ -436,6 +436,18 @@ async function searchCode(params: SearchCodeParams): Promise<ToolExecutionResult
       }
     }
 
+    /*
+     * Compile the search regex ONCE before entering the file loop.
+     * If the query is an invalid regex, fall back to literal string matching.
+     */
+    let searchRegex: RegExp | null = null;
+
+    try {
+      searchRegex = new RegExp(query, caseSensitive ? '' : 'i');
+    } catch {
+      // Invalid regex — searchRegex stays null, literal match used below
+    }
+
     // File extensions to search
     const codeExtensions = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.html', '.md', '.yaml', '.yml'];
 
@@ -512,13 +524,12 @@ async function searchCode(params: SearchCodeParams): Promise<ToolExecutionResult
                 break;
               }
 
-              // Try regex first, fall back to literal match
+              // Use pre-compiled regex, fall back to literal match
               let isMatch = false;
 
-              try {
-                isMatch = new RegExp(query, caseSensitive ? '' : 'i').test(lines[i]);
-              } catch {
-                // Invalid regex, fall back to literal match
+              if (searchRegex) {
+                isMatch = searchRegex.test(lines[i]);
+              } else {
                 isMatch = caseSensitive
                   ? lines[i].includes(query)
                   : lines[i].toLowerCase().includes(query.toLowerCase());
@@ -529,15 +540,17 @@ async function searchCode(params: SearchCodeParams): Promise<ToolExecutionResult
                 let matchStart = 0;
                 let matchEnd = 0;
 
-                try {
-                  const regexMatch = lines[i].match(new RegExp(query, caseSensitive ? '' : 'i'));
+                if (searchRegex) {
+                  const regexMatch = lines[i].match(searchRegex);
 
                   if (regexMatch && regexMatch.index !== undefined) {
                     matchStart = regexMatch.index;
                     matchEnd = regexMatch.index + regexMatch[0].length;
                   }
-                } catch {
-                  matchStart = lines[i].indexOf(query);
+                } else {
+                  matchStart = caseSensitive
+                    ? lines[i].indexOf(query)
+                    : lines[i].toLowerCase().indexOf(query.toLowerCase());
                   matchEnd = matchStart + query.length;
                 }
 
