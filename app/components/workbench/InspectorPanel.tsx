@@ -9,67 +9,16 @@
  * @module workbench/InspectorPanel
  */
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import type { UseInspectorReturn } from '~/lib/hooks/useInspector';
 import type { InspectorTab } from '~/lib/inspector/types';
 import { setPendingChatMessage } from '~/lib/stores/chat';
 import { sanitizeForPrompt, sanitizeSelectorPart } from '~/utils/sanitize';
-import { BoxModelEditor } from './BoxModelEditor';
-import { AiQuickActions } from './AIQuickActions';
-import { ElementTreeNavigator } from './ElementTreeNavigator';
-import { PageColorPalette } from './PageColorPalette';
 import { BulkStyleSelector } from './BulkStyleSelector';
-import { StyleGroup } from './StyleGroup';
-import { DesignControl } from './DesignControl';
-import { ImageEditor } from './ImageEditor';
 import { ThemeEditor } from './ThemeEditor';
-
-/* ─── Style property groups ────────────────────────────────────────── */
-
-interface PropGroup {
-  label: string;
-  icon: string;
-  props: string[];
-  defaultOpen?: boolean;
-}
-
-const STYLE_GROUPS: PropGroup[] = [
-  {
-    label: 'Layout',
-    icon: 'i-ph:layout',
-    props: ['display', 'position', 'flex-direction', 'justify-content', 'align-items', 'gap'],
-  },
-  {
-    label: 'Size',
-    icon: 'i-ph:resize',
-    props: ['width', 'height', 'overflow'],
-  },
-  {
-    label: 'Spacing',
-    icon: 'i-ph:arrows-out',
-    props: ['margin', 'padding'],
-  },
-  {
-    label: 'Typography',
-    icon: 'i-ph:text-aa',
-    props: ['color', 'font-size', 'font-weight', 'font-family', 'text-align'],
-  },
-  {
-    label: 'Background',
-    icon: 'i-ph:paint-bucket',
-    props: ['background', 'background-color'],
-  },
-  {
-    label: 'Border',
-    icon: 'i-ph:bounding-box',
-    props: ['border', 'border-radius'],
-  },
-  {
-    label: 'Effects',
-    icon: 'i-ph:sparkle',
-    props: ['box-shadow', 'opacity'],
-  },
-];
+import { StylesTabContent } from './inspector/StylesTabContent';
+import { BoxTabContent } from './inspector/BoxTabContent';
+import { AiTabContent } from './inspector/AITabContent';
 
 /* ─── Tab config ───────────────────────────────────────────────────── */
 
@@ -100,10 +49,19 @@ interface InspectorPanelProps {
 
 export const InspectorPanel = memo(({ inspector }: InspectorPanelProps) => {
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
+  const copyFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear copy-feedback timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackTimeoutRef.current) {
+        clearTimeout(copyFeedbackTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const {
     selectedElement,
-    isPanelVisible,
     activeTab,
     pendingEdits,
     pendingTextEdit,
@@ -164,13 +122,23 @@ export const InspectorPanel = memo(({ inspector }: InspectorPanelProps) => {
   const handleCopyCSS = useCallback(async () => {
     const ok = await inspector.copyCSS();
     setCopyFeedback(ok ? 'Copied!' : 'No changes to copy');
-    setTimeout(() => setCopyFeedback(null), 2000);
+
+    if (copyFeedbackTimeoutRef.current) {
+      clearTimeout(copyFeedbackTimeoutRef.current);
+    }
+
+    copyFeedbackTimeoutRef.current = setTimeout(() => setCopyFeedback(null), 2000);
   }, [inspector]);
 
   const handleCopyAllStyles = useCallback(async () => {
     const ok = await inspector.copyAllStyles();
     setCopyFeedback(ok ? 'All styles copied!' : 'No styles to copy');
-    setTimeout(() => setCopyFeedback(null), 2000);
+
+    if (copyFeedbackTimeoutRef.current) {
+      clearTimeout(copyFeedbackTimeoutRef.current);
+    }
+
+    copyFeedbackTimeoutRef.current = setTimeout(() => setCopyFeedback(null), 2000);
   }, [inspector]);
 
   /* ── Revert routing ────────────────────────────────────────────── */
@@ -264,8 +232,16 @@ export const InspectorPanel = memo(({ inspector }: InspectorPanelProps) => {
 
   /* ── Early return ──────────────────────────────────────────────── */
 
-  if (!isPanelVisible || !selectedElement) {
-    return null;
+  if (!selectedElement) {
+    return (
+      <div className="flex flex-col h-full w-full bg-devonz-elements-background-depth-2 items-center justify-center p-6 text-center">
+        <div className="i-ph:cursor-click text-4xl text-devonz-elements-textSecondary mb-3" />
+        <h3 className="text-sm font-medium text-devonz-elements-textPrimary mb-1">No Element Selected</h3>
+        <p className="text-xs text-devonz-elements-textSecondary max-w-[200px]">
+          Click on any element in the preview to inspect and edit its styles
+        </p>
+      </div>
+    );
   }
 
   /* ── Render ────────────────────────────────────────────────────── */
@@ -402,117 +378,26 @@ export const InspectorPanel = memo(({ inspector }: InspectorPanelProps) => {
         aria-labelledby={`inspector-tab-${activeTab}`}
       >
         {activeTab === 'styles' && (
-          <div>
-            {/* Image Editor */}
-            {selectedElement.isImage && selectedElement.imageSrc && (
-              <div className="p-3 border-b border-devonz-elements-borderColor">
-                <ImageEditor
-                  src={selectedElement.imageSrc}
-                  alt={selectedElement.imageAlt}
-                  naturalWidth={selectedElement.imageNaturalWidth}
-                  naturalHeight={selectedElement.imageNaturalHeight}
-                  backgroundImage={selectedElement.backgroundImage}
-                  onSrcChange={handleImageSrcChange}
-                  onAltChange={handleImageAltChange}
-                  onBackgroundImageChange={handleBackgroundImageChange}
-                />
-              </div>
-            )}
-
-            {/* Background-image only (non-img elements) */}
-            {!selectedElement.isImage && selectedElement.backgroundImage && (
-              <div className="p-3 border-b border-devonz-elements-borderColor">
-                <ImageEditor
-                  src=""
-                  backgroundImage={selectedElement.backgroundImage}
-                  onSrcChange={() => {}}
-                  onAltChange={() => {}}
-                  onBackgroundImageChange={handleBackgroundImageChange}
-                />
-              </div>
-            )}
-
-            {/* Text Content section */}
-            {selectedElement.textContent && (
-              <div className="p-3 border-b border-devonz-elements-borderColor">
-                <label
-                  htmlFor="inspector-text-content"
-                  className="text-xs font-medium text-devonz-elements-textSecondary block mb-1.5"
-                >
-                  Text Content
-                </label>
-                <textarea
-                  id="inspector-text-content"
-                  value={pendingTextEdit || selectedElement.textContent}
-                  onChange={(e) => handleTextChange(e.target.value)}
-                  className="w-full bg-devonz-elements-background-depth-3 border border-devonz-elements-borderColor rounded px-2 py-2 text-devonz-elements-textPrimary text-sm focus:outline-none focus:border-accent-400 resize-none"
-                  rows={2}
-                  placeholder="Enter text content..."
-                />
-              </div>
-            )}
-
-            {/* Copy all styles */}
-            <div className="p-3 border-b border-devonz-elements-borderColor">
-              <button
-                onClick={handleCopyAllStyles}
-                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded border border-devonz-elements-borderColor bg-devonz-elements-background-depth-3 text-devonz-elements-textSecondary hover:bg-devonz-elements-background-depth-4 hover:text-devonz-elements-textPrimary transition-colors"
-              >
-                <span className="i-ph:clipboard w-3.5 h-3.5" aria-hidden="true" />
-                <span aria-live="polite">{copyFeedback || 'Copy All Styles'}</span>
-              </button>
-            </div>
-
-            {/* Grouped style properties */}
-            {STYLE_GROUPS.map((group) => {
-              const visibleProps = group.props.filter((prop) => selectedElement.styles[prop]);
-
-              if (visibleProps.length === 0) {
-                return null;
-              }
-
-              return (
-                <StyleGroup key={group.label} label={group.label} icon={group.icon} defaultOpen={group.defaultOpen}>
-                  {visibleProps.map((prop) => (
-                    <DesignControl
-                      key={prop}
-                      property={prop}
-                      value={pendingEdits[prop] ?? selectedElement.styles[prop]}
-                      onChange={handleStyleChange}
-                      isModified={prop in pendingEdits}
-                    />
-                  ))}
-                </StyleGroup>
-              );
-            })}
-
-            {/* Page Color Palette */}
-            {selectedElement.colors && selectedElement.colors.length > 0 && (
-              <div className="p-3 border-t border-devonz-elements-borderColor">
-                <PageColorPalette
-                  colors={selectedElement.colors}
-                  onColorSelect={(color) => handleStyleChange('background-color', color)}
-                />
-              </div>
-            )}
-          </div>
+          <StylesTabContent
+            selectedElement={selectedElement}
+            pendingEdits={pendingEdits}
+            pendingTextEdit={pendingTextEdit}
+            onStyleChange={handleStyleChange}
+            onTextContentChange={handleTextChange}
+            onImageSrcChange={handleImageSrcChange}
+            onImageAltChange={handleImageAltChange}
+            onBackgroundImageChange={handleBackgroundImageChange}
+            copyFeedback={copyFeedback}
+            onCopyAllStyles={handleCopyAllStyles}
+          />
         )}
 
         {activeTab === 'box' && (
-          <div className="p-3 space-y-3">
-            {/* Element Tree / Hierarchy */}
-            {selectedElement.hierarchy && (
-              <div className="pb-3 border-b border-devonz-elements-borderColor">
-                <ElementTreeNavigator
-                  hierarchy={selectedElement.hierarchy}
-                  onSelectElement={inspector.selectFromTree}
-                />
-              </div>
-            )}
-
-            {/* Box Model Editor */}
-            <BoxModelEditor boxModel={selectedElement.boxModel ?? null} onValueChange={handleStyleChange} />
-          </div>
+          <BoxTabContent
+            selectedElement={selectedElement}
+            onNavigate={inspector.selectFromTree}
+            onBoxModelChange={handleStyleChange}
+          />
         )}
 
         {activeTab === 'theme' && (
@@ -524,11 +409,7 @@ export const InspectorPanel = memo(({ inspector }: InspectorPanelProps) => {
           />
         )}
 
-        {activeTab === 'ai' && (
-          <div className="p-3">
-            <AiQuickActions selectedElement={selectedElement} onAIAction={handleAIAction} />
-          </div>
-        )}
+        {activeTab === 'ai' && <AiTabContent selectedElement={selectedElement} onQuickAction={handleAIAction} />}
       </div>
 
       {/* Footer with action buttons */}

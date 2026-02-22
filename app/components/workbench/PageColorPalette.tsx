@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, type KeyboardEvent } from 'react';
+import { memo, useState, useCallback, useMemo, useRef, useEffect, type KeyboardEvent } from 'react';
 import { createScopedLogger } from '~/utils/logger';
 import { toHex, isLightColor } from '~/utils/color';
 
@@ -11,6 +11,16 @@ interface PageColorPaletteProps {
 
 export const PageColorPalette = memo(({ colors, onColorSelect }: PageColorPaletteProps) => {
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
+  const [appliedColor, setAppliedColor] = useState<string | null>(null);
+  const appliedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (appliedTimerRef.current) {
+        clearTimeout(appliedTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleCopyColor = useCallback(async (color: string) => {
     const hex = toHex(color);
@@ -26,7 +36,15 @@ export const PageColorPalette = memo(({ colors, onColorSelect }: PageColorPalett
 
   const handleSelectColor = useCallback(
     (color: string) => {
-      onColorSelect?.(toHex(color));
+      const hex = toHex(color);
+      onColorSelect?.(hex);
+      setAppliedColor(hex);
+
+      if (appliedTimerRef.current) {
+        clearTimeout(appliedTimerRef.current);
+      }
+
+      appliedTimerRef.current = setTimeout(() => setAppliedColor(null), 2000);
     },
     [onColorSelect],
   );
@@ -41,7 +59,7 @@ export const PageColorPalette = memo(({ colors, onColorSelect }: PageColorPalett
   }
 
   // Deduplicate and limit colors
-  const uniqueColors = [...new Set(colors.map((c) => toHex(c)))].slice(0, 16);
+  const uniqueColors = useMemo(() => [...new Set(colors.map((c) => toHex(c)))].slice(0, 16), [colors]);
 
   return (
     <div className="space-y-3">
@@ -72,7 +90,7 @@ export const PageColorPalette = memo(({ colors, onColorSelect }: PageColorPalett
                     handleCopyColor(color);
                   }
                 }}
-                className="w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 hover:shadow-lg relative group"
+                className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 hover:shadow-lg relative group ${appliedColor === hex ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-transparent' : ''}`}
                 style={{
                   backgroundColor: color,
                   borderColor: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)',

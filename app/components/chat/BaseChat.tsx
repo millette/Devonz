@@ -1,5 +1,5 @@
 import type { JSONValue, Message } from 'ai';
-import React, { type RefCallback, lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { type RefCallback, lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { classNames } from '~/utils/classNames';
@@ -18,7 +18,7 @@ import ProgressCompilation from './ProgressCompilation';
 import type { ProgressAnnotation } from '~/types/context';
 import { expoUrlAtom } from '~/lib/stores/qrCode';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { inspectorApiAtom, inspectorPanelVisibleAtom } from '~/lib/stores/inspector';
+import { inspectorApiAtom, inspectorModeAtom } from '~/lib/stores/inspector';
 import { useStore } from '@nanostores/react';
 import { StickToBottom, useStickToBottomContext } from '~/lib/hooks';
 import { ChatBox } from './ChatBox';
@@ -92,6 +92,26 @@ interface BaseChatProps {
   onWebSearchResult?: (result: string) => void;
 }
 
+/* ─── Isolated inspector slot (avoids re-rendering the entire chat) ── */
+
+const InspectorPanelSlot = memo(() => {
+  const inspectorApi = useStore(inspectorApiAtom);
+  const inspectorMode = useStore(inspectorModeAtom);
+
+  /*
+   * Show panel when inspector is enabled (mode !== 'off') and API is available.
+   * The panel handles the empty state internally when no element is selected.
+   */
+  if (inspectorMode === 'off' || !inspectorApi) {
+    return null;
+  }
+
+  return <InspectorPanel inspector={inspectorApi} />;
+});
+InspectorPanelSlot.displayName = 'InspectorPanelSlot';
+
+/* ─── Main component ──────────────────────────────────────────────── */
+
 export const BaseChat = React.memo(
   React.forwardRef<HTMLDivElement, BaseChatProps>(
     (
@@ -158,8 +178,7 @@ export const BaseChat = React.memo(
       const expoUrl = useStore(expoUrlAtom);
       const showWorkbench = useStore(workbenchStore.showWorkbench);
       const workbenchWidth = useStore(workbenchStore.workbenchWidth);
-      const inspectorApi = useStore(inspectorApiAtom);
-      const inspectorVisible = useStore(inspectorPanelVisibleAtom);
+      const inspectorActive = useStore(inspectorModeAtom) !== 'off';
       const [qrModalOpen, setQrModalOpen] = useState(false);
       const [isResizing, setIsResizing] = useState(false);
 
@@ -409,13 +428,13 @@ export const BaseChat = React.memo(
               <div
                 className={classNames(styles.Chat, 'flex flex-col flex-grow min-w-[300px] h-full', {
                   'select-none': isResizing,
-                  'overflow-hidden': chatStarted || (inspectorVisible && inspectorApi),
-                  'overflow-y-auto': !chatStarted && !(inspectorVisible && inspectorApi),
+                  'overflow-hidden': chatStarted || inspectorActive,
+                  'overflow-y-auto': !chatStarted && !inspectorActive,
                 })}
               >
                 {/* Inspector Panel replaces chat content when active */}
-                {inspectorVisible && inspectorApi ? (
-                  <InspectorPanel inspector={inspectorApi} />
+                {inspectorActive ? (
+                  <InspectorPanelSlot />
                 ) : (
                   <>
                     {!chatStarted && (

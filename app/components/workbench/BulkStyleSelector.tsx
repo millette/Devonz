@@ -342,3 +342,5 @@ export const BulkStyleSelector = memo(
     );
   },
 );
+
+BulkStyleSelector.displayName = 'BulkStyleSelector';

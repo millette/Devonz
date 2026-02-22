@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import type { ElementInfo } from './inspector-types';
 
 interface AiQuickActionsProps {
@@ -134,16 +134,35 @@ function buildSelector(element: ElementInfo): string {
 }
 
 export const AiQuickActions = ({ selectedElement, onAIAction }: AiQuickActionsProps) => {
+  const [clickedActionId, setClickedActionId] = useState<string | null>(null);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleAction = useCallback(
     (action: QuickAction) => {
-      if (!selectedElement) {
+      if (!selectedElement || clickedActionId === action.id) {
         return;
       }
+
+      setClickedActionId(action.id);
+
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+      }
+
+      clickTimerRef.current = setTimeout(() => setClickedActionId(null), 200);
 
       const prompt = action.generatePrompt(selectedElement);
       onAIAction(prompt);
     },
-    [selectedElement, onAIAction],
+    [selectedElement, onAIAction, clickedActionId],
   );
 
   if (!selectedElement) {
@@ -162,7 +181,8 @@ export const AiQuickActions = ({ selectedElement, onAIAction }: AiQuickActionsPr
           <button
             key={action.id}
             onClick={() => handleAction(action)}
-            className="flex flex-col items-center gap-1 p-2 rounded-lg bg-devonz-elements-bg-depth-3 border border-devonz-elements-borderColor hover:border-accent-500/50 hover:bg-devonz-elements-background-depth-4 transition-all group"
+            disabled={clickedActionId === action.id}
+            className={`flex flex-col items-center gap-1 p-2 rounded-lg bg-devonz-elements-bg-depth-3 border border-devonz-elements-borderColor hover:border-accent-500/50 hover:bg-devonz-elements-background-depth-4 transition-all group ${clickedActionId === action.id ? 'animate-pulse opacity-70 pointer-events-none' : ''}`}
             title={action.description}
           >
             <div

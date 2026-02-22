@@ -220,3 +220,5 @@ export const BoxModelEditor = memo(({ boxModel, onValueChange }: BoxModelEditorP
     </div>
   );
 });
+
+BoxModelEditor.displayName = 'BoxModelEditor';
