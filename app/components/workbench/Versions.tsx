@@ -271,6 +271,13 @@ const CommitCard = memo(
                   <span>{formatTokenCount(totalTokens)} tokens</span>
                 </>
               )}
+              {(commit.additions > 0 || commit.deletions > 0) && (
+                <>
+                  <span>•</span>
+                  {commit.additions > 0 && <span style={{ color: '#4ade80' }}>+{commit.additions}</span>}
+                  {commit.deletions > 0 && <span style={{ color: '#f87171' }}>-{commit.deletions}</span>}
+                </>
+              )}
               {/* Expand chevron */}
               <motion.div
                 className="i-ph:caret-down text-xs ml-auto"

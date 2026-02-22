@@ -13,6 +13,8 @@ export interface GitCommitInfo {
   message: string;
   timestamp: number;
   isoDate: string;
+  additions: number;
+  deletions: number;
 }
 
 async function gitApi<T>(op: string, projectId: string, extra: Record<string, unknown> = {}): Promise<T> {

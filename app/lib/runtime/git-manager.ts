@@ -35,6 +35,8 @@ export interface GitCommitInfo {
   message: string;
   timestamp: number;
   isoDate: string;
+  additions: number;
+  deletions: number;
 }
 
 function gitExec(cmd: string, cwd: string): string {
@@ -146,6 +148,7 @@ export function autoCommit(projectDir: string, message: string): string | null {
 
 /**
  * Get the git log as an array of commit info objects.
+ * Includes per-commit insertion/deletion counts via --shortstat.
  */
 export function getGitLog(projectDir: string, maxCount = 50): GitCommitInfo[] {
   if (!checkGitAvailable()) {
@@ -156,23 +159,48 @@ export function getGitLog(projectDir: string, maxCount = 50): GitCommitInfo[] {
   const safeMax = Math.max(1, Math.min(Math.trunc(Number(maxCount)) || 50, 1000));
 
   try {
-    const format = '%H%n%h%n%s%n%at%n%aI';
-    const raw = gitExec(`git log --format="${format}" -n ${safeMax}`, projectDir);
+    // Use a unique record separator to reliably split commits
+    const sep = '---COMMIT_SEP---';
+    const format = `${sep}%n%H%n%h%n%s%n%at%n%aI`;
+    const raw = gitExec(`git log --format="${format}" --shortstat -n ${safeMax}`, projectDir);
 
     if (!raw) {
       return [];
     }
 
-    const lines = raw.split('\n');
+    const blocks = raw.split(sep).filter((b) => b.trim());
     const commits: GitCommitInfo[] = [];
 
-    for (let i = 0; i + 4 < lines.length; i += 5) {
+    for (const block of blocks) {
+      const lines = block.split('\n').filter((l) => l !== '');
+
+      if (lines.length < 5) {
+        continue;
+      }
+
+      // Parse shortstat line if present (e.g. " 3 files changed, 18 insertions(+), 13 deletions(-)")
+      let additions = 0;
+      let deletions = 0;
+      const statLine = lines[5] ?? '';
+      const insMatch = statLine.match(/(\d+)\s+insertion/);
+      const delMatch = statLine.match(/(\d+)\s+deletion/);
+
+      if (insMatch) {
+        additions = parseInt(insMatch[1], 10);
+      }
+
+      if (delMatch) {
+        deletions = parseInt(delMatch[1], 10);
+      }
+
       commits.push({
-        sha: lines[i],
-        shortSha: lines[i + 1],
-        message: lines[i + 2],
-        timestamp: parseInt(lines[i + 3], 10) * 1000,
-        isoDate: lines[i + 4],
+        sha: lines[0],
+        shortSha: lines[1],
+        message: lines[2],
+        timestamp: parseInt(lines[3], 10) * 1000,
+        isoDate: lines[4],
+        additions,
+        deletions,
       });
     }
 
