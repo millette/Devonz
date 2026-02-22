@@ -256,7 +256,9 @@ export const BaseChat = React.memo(
               setIsModelLoading(undefined);
             });
         }
-      }, [providerList, provider]);
+
+        // Fetch models once on mount — provider/key changes are handled by onApiKeysChange
+      }, []);
 
       const onApiKeysChange = useCallback(
         async (providerName: string, apiKey: string) => {

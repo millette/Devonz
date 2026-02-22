@@ -10,6 +10,7 @@ export class LLMManager {
   private _providers: Map<string, BaseProvider> = new Map();
   private _modelList: ModelInfo[] = [];
   private _env: Record<string, string | undefined> = {};
+  private _pendingUpdate: Promise<ModelInfo[]> | null = null;
 
   private constructor(_env: Record<string, string | undefined>) {
     this._registerProvidersFromDirectory();
@@ -94,6 +95,24 @@ export class LLMManager {
   }
 
   async updateModelList(options: {
+    apiKeys?: Record<string, string>;
+    providerSettings?: Record<string, IProviderSetting>;
+    serverEnv?: Record<string, string | undefined>;
+  }): Promise<ModelInfo[]> {
+    // Deduplicate concurrent calls — if an update is already in-flight, reuse it
+    if (this._pendingUpdate) {
+      logger.debug('updateModelList already in-flight — reusing pending request');
+      return this._pendingUpdate;
+    }
+
+    this._pendingUpdate = this._doUpdateModelList(options).finally(() => {
+      this._pendingUpdate = null;
+    });
+
+    return this._pendingUpdate;
+  }
+
+  private async _doUpdateModelList(options: {
     apiKeys?: Record<string, string>;
     providerSettings?: Record<string, IProviderSetting>;
     serverEnv?: Record<string, string | undefined>;

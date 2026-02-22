@@ -15,6 +15,10 @@ interface ModelsResponse {
 let cachedProviders: ProviderInfo[] | null = null;
 let cachedDefaultProvider: ProviderInfo | null = null;
 
+/** Server-side model list cache with short TTL to avoid repeated fetches during startup */
+let cachedModelResponse: { models: ModelInfo[]; timestamp: number } | null = null;
+const MODEL_CACHE_TTL_MS = 30_000; // 30 seconds
+
 function getProviderInfo(llmManager: LLMManager) {
   if (!cachedProviders) {
     cachedProviders = llmManager.getAllProviders().map((provider) => ({
@@ -64,13 +68,17 @@ async function modelsLoader({ request, params, context }: LoaderFunctionArgs): P
         serverEnv,
       });
     }
+  } else if (cachedModelResponse && Date.now() - cachedModelResponse.timestamp < MODEL_CACHE_TTL_MS) {
+    // Return server-side cached model list to avoid repeated fetches during startup
+    modelList = cachedModelResponse.models;
   } else {
-    // Update all models
+    // Update all models and cache the result
     modelList = await llmManager.updateModelList({
       apiKeys,
       providerSettings,
       serverEnv,
     });
+    cachedModelResponse = { models: modelList, timestamp: Date.now() };
   }
 
   return json<ModelsResponse>({
