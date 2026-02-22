@@ -688,7 +688,7 @@ export const Versions = memo(() => {
                       exit={{ opacity: 0, height: 0 }}
                       className="mb-2 rounded-lg text-xs overflow-hidden"
                       style={{
-                        background: 'var(--devonz-elements-button-secondary-background)',
+                        background: 'var(--devonz-elements-bg-depth-3)',
                         border: '1px solid var(--devonz-elements-borderColor)',
                       }}
                     >
@@ -732,7 +732,13 @@ export const Versions = memo(() => {
                         const isOpen = fileDiffs.has(diffKey);
 
                         return (
-                          <div key={file} style={{ borderBottom: '1px solid var(--devonz-elements-borderColor)' }}>
+                          <div
+                            key={file}
+                            style={{
+                              borderBottom: '1px solid var(--devonz-elements-borderColor)',
+                              background: 'var(--devonz-elements-button-secondary-background)',
+                            }}
+                          >
                             <button
                               onClick={() => handleFileDiff(commit.sha, file)}
                               className="flex items-center gap-1.5 w-full px-3 py-1.5 text-left transition-colors hover:bg-devonz-elements-bg-depth-4"
