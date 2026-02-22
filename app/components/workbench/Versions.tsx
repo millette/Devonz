@@ -736,7 +736,7 @@ export const Versions = memo(() => {
                             key={file}
                             style={{
                               borderBottom: '1px solid var(--devonz-elements-borderColor)',
-                              background: 'var(--devonz-elements-button-secondary-background)',
+                              background: '#17191f',
                             }}
                           >
                             <button
