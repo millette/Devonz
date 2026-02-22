@@ -4,7 +4,7 @@
 
 **AI-powered full-stack development agent :-: describe what you want, watch it build.**
 
-[![Docker Build](https://img.shields.io/github/actions/workflow/status/zebbern/Devonz/docker-publish.yml?branch=main&label=Docker%20Build&logo=docker)](https://github.com/zebbern/Devonz/actions/workflows/docker-publish.yml)
+[![Docker Build](https://img.shields.io/github/actions/workflow/status/zebbern/Devonz/ci.yml?branch=main&label=Docker%20Build&logo=docker)](https://github.com/zebbern/Devonz/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/Node-18.18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
