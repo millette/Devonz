@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
  * Cross-platform update script for Devonz (devonz.diy).
- * Pulls latest from main, installs deps, and rebuilds.
+ * Pulls latest from main, installs deps, and optionally rebuilds.
  *
  * Usage:
- *   pnpm run update          # update from git + rebuild
- *   pnpm run update -- --skip-build   # update without rebuilding
+ *   pnpm run update          # update from git (no build)
+ *   pnpm run update -- --build   # update + rebuild for production
  */
 const { execSync } = require('child_process');
 const { existsSync } = require('fs');
@@ -15,7 +15,7 @@ const ROOT = resolve(__dirname, '..');
 const run = (cmd) => execSync(cmd, { cwd: ROOT, stdio: 'inherit' });
 
 const args = process.argv.slice(2);
-const skipBuild = args.includes('--skip-build');
+const doBuild = args.includes('--build');
 
 console.log('\n🔄 Updating Devonz to latest version...\n');
 
@@ -57,13 +57,13 @@ console.log('📦 Installing dependencies...');
 run('pnpm install --frozen-lockfile');
 console.log('✅ Dependencies installed\n');
 
-// 5. Build (unless skipped)
-if (!skipBuild) {
+// 5. Build (only if --build flag is passed)
+if (doBuild) {
   console.log('🔨 Building application...');
   run('pnpm build');
   console.log('✅ Build complete\n');
 } else {
-  console.log('⏭️  Skipping build (--skip-build flag)\n');
+  console.log('⏭️  Skipping build (pass --build to rebuild for production)\n');
 }
 
 // 6. Show current version
