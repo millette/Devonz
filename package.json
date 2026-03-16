@@ -142,7 +142,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@blitz/eslint-plugin": "0.1.0",
+    "@blitz/eslint-plugin": "0.1.4",
     "@iconify-json/ph": "^1.2.1",
     "@iconify-json/vscode-icons": "^1.2.43",
     "@iconify/types": "^2.0.0",
