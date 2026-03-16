@@ -71,7 +71,7 @@
     "@iconify-json/svg-spinners": "^1.2.1",
     "@lezer/highlight": "^1.2.3",
     "@libsql/client": "^0.17.0",
-    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@nanostores/react": "^0.7.3",
     "@octokit/rest": "^21.0.2",
     "@openrouter/ai-sdk-provider": "^0.0.5",
