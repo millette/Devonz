@@ -347,6 +347,16 @@ async function persistCheckpointFromEvent(event: AgentCheckpointEvent): Promise<
 }
 
 /**
+ * Reset stream event state atoms when a stream completes.
+ * Called from Chat.client.tsx onFinish to clear stale phase badges.
+ */
+export function resetStreamEventState(): void {
+  latestPlanPhaseChange.set(null);
+  latestReviewCycle.set(null);
+  structuredStreamingActive.set(false);
+}
+
+/**
  * Dispatch a validated StreamingEvent to the appropriate store handler.
  *
  * This is the single entry point for all structured streaming events

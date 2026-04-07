@@ -49,6 +49,7 @@ import { createAutoFixHandler, handleFixSuccess, isAutoFixActive } from '~/lib/s
 import { hasExceededMaxRetries, recordFixAttempt, resetAutoFix } from '~/lib/stores/autofix';
 import { planActionAtom, clearPlanAction } from '~/lib/stores/plan';
 import { modelRoutingConfigStore, blueprintModeStore } from '~/lib/stores/settings';
+import { resetStreamEventState } from '~/lib/stores/stream-event-router';
 import type { PlanPhase } from '~/lib/agent/types';
 
 const logger = createScopedLogger('Chat');
@@ -339,6 +340,10 @@ export const ChatImpl = memo(
         const usage = response.usage;
         setData(undefined);
         workbenchStore.resetDataStreamProcessing();
+
+        // Reset agent phase tracking and streaming state when stream completes
+        resetStreamEventState();
+        agentModeStore.setKey('planPhase', 'idle');
 
         if (usage) {
           logger.debug('Token usage:', usage);

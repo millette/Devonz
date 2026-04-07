@@ -719,6 +719,14 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             const shouldRebuildForContext = needsContextSummarization;
 
             if (!shouldContinueForLength && !shouldRebuildForContext) {
+              // ── Transition agent phase back to idle when stream completes ──
+              if (useAgentMode && agentPlanPhase !== 'idle') {
+                const prevPhase = agentPlanPhase;
+                agentPlanPhase = 'idle';
+                emitPlanPhaseEvent(dataStream, prevPhase, 'idle');
+                orchestratorRef?.notifyPhaseTransition('idle');
+              }
+
               dataStream.writeMessageAnnotation({
                 type: 'usage',
                 value: {

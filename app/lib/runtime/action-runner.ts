@@ -30,8 +30,26 @@ import {
   queueCommand,
   type ChangeType,
 } from '~/lib/stores/staging';
+import { workbenchStore } from '~/lib/stores/workbench';
 
 const logger = createScopedLogger('ActionRunner');
+
+/**
+ * Debounced preview refresh — agent mode writes many files in rapid succession,
+ * so we wait 1 second after the last write before refreshing the preview iframe.
+ */
+let _previewRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function schedulePreviewRefresh(): void {
+  if (_previewRefreshTimer !== null) {
+    clearTimeout(_previewRefreshTimer);
+  }
+
+  _previewRefreshTimer = setTimeout(() => {
+    _previewRefreshTimer = null;
+    workbenchStore.previewsStore?.refreshAllPreviews();
+  }, 1000);
+}
 
 export type ActionStatus = 'pending' | 'running' | 'complete' | 'aborted' | 'failed';
 
@@ -780,6 +798,9 @@ export class ActionRunner {
 
       await runtime.fs.writeFile(relativePath, contentToWrite);
       logger.debug(`File written ${relativePath}`);
+
+      // Schedule a debounced preview refresh so the iframe picks up file changes
+      schedulePreviewRefresh();
 
       /*
        * Auto-install: If package.json was written and dependencies changed,
