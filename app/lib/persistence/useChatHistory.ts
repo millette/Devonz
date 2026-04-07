@@ -470,29 +470,28 @@ export function useChatHistory() {
 
         takeSnapshot(messages[messages.length - 1].id, workbenchStore.files.get(), resolvedUrlId, chatSummary);
 
-        if (!description.get()) {
-          const artifactTitle =
-            firstArtifact?.title && firstArtifact.title !== 'Code Changes' ? firstArtifact.title : '';
+        const artifactTitle =
+          firstArtifact?.title && firstArtifact.title !== 'Code Changes' ? firstArtifact.title : '';
 
-          if (artifactTitle) {
-            description.set(artifactTitle);
-          } else {
-            const firstUserMsg = messages.find((m) => m.role === 'user');
+        if (artifactTitle) {
+          // Always prefer artifact title — overwrites user-message fallback once available
+          description.set(artifactTitle);
+        } else if (!description.get()) {
+          const firstUserMsg = messages.find((m) => m.role === 'user');
 
-            if (firstUserMsg) {
-              let text =
-                typeof firstUserMsg.content === 'string'
-                  ? firstUserMsg.content
-                  : (firstUserMsg.parts?.find((p: Record<string, unknown>) => p.type === 'text') as { text?: string })
-                      ?.text ?? '';
+          if (firstUserMsg) {
+            let text =
+              typeof firstUserMsg.content === 'string'
+                ? firstUserMsg.content
+                : (firstUserMsg.parts?.find((p: Record<string, unknown>) => p.type === 'text') as { text?: string })
+                    ?.text ?? '';
 
-              // Strip [Model: ...] and [Provider: ...] metadata prefixes
-              text = text.replace(MODEL_REGEX, '').replace(PROVIDER_REGEX, '').trim();
+            // Strip [Model: ...] and [Provider: ...] metadata prefixes
+            text = text.replace(MODEL_REGEX, '').replace(PROVIDER_REGEX, '').trim();
 
-              if (text) {
-                const truncated = text.slice(0, 60).trim();
-                description.set(truncated.length < text.length ? `${truncated}…` : truncated);
-              }
+            if (text) {
+              const truncated = text.slice(0, 60).trim();
+              description.set(truncated.length < text.length ? `${truncated}…` : truncated);
             }
           }
         }
