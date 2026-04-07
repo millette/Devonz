@@ -119,7 +119,7 @@ export interface AutoFixState {
 
 // Default settings
 const DEFAULT_SETTINGS: AutoFixSettings = {
-  isEnabled: true,
+  isEnabled: false,
   maxRetries: 3,
   delayBetweenAttempts: 1000,
   showNotifications: true,

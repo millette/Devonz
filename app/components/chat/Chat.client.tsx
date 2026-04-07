@@ -35,15 +35,7 @@ import { mcpStore } from '~/lib/stores/mcp';
 import { agentModeStore } from '~/lib/stores/agentMode';
 import { shouldAutoApproveAgentTool } from '~/utils/agentToolApproval';
 import type { LlmErrorAlertType } from '~/types/actions';
-import {
-  registerAutoFixCallback,
-  unregisterAutoFixCallback,
-  resetTerminalErrorDetector,
-} from '~/utils/terminalErrorDetector';
-import {
-  resetPreviewErrorHandler,
-} from '~/utils/previewErrorHandler';
-import { createAutoFixHandler, handleFixSuccess, isAutoFixActive } from '~/lib/services/autoFixService';
+import { handleFixSuccess, isAutoFixActive } from '~/lib/services/autoFixService';
 import { hasExceededMaxRetries, recordFixAttempt, resetAutoFix } from '~/lib/stores/autofix';
 import { planActionAtom, clearPlanAction } from '~/lib/stores/plan';
 import { modelRoutingConfigStore, blueprintModeStore } from '~/lib/stores/settings';
@@ -439,7 +431,7 @@ export const ChatImpl = memo(
         runAnimation();
         append({
           role: 'user',
-          content: `[Model: ${modelRef.current}]\n\n[Provider: ${providerRef.current.name}]\n\n${prompt}`,
+          content: `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n${prompt}`,
         });
       }
     }, [searchParams.get('prompt')]);
@@ -898,61 +890,6 @@ export const ChatImpl = memo(
       return () => debouncedCachePrompt.cancel();
     }, [debouncedCachePrompt]);
 
-    /**
-     * Register auto-fix callback on mount
-     * This allows the terminal error detector to automatically send errors to chat
-     * Use refs to avoid re-running effect when model/provider/append change
-     */
-    const modelRef = useRef(model);
-    const providerRef = useRef(provider);
-    const appendRef = useRef(append);
-
-    // Keep refs up to date
-    useEffect(() => {
-      modelRef.current = model;
-    }, [model]);
-
-    useEffect(() => {
-      providerRef.current = provider;
-    }, [provider]);
-
-    useEffect(() => {
-      appendRef.current = append;
-    }, [append]);
-
-    useEffect(() => {
-      // Create a function that sends messages for auto-fix
-      const autoFixSendMessage = (message: string) => {
-        // Reset error handlers before sending (same as "Ask Devonz")
-        resetTerminalErrorDetector();
-        resetPreviewErrorHandler();
-
-        // Build the message in same format as ChatAlert's handleAskDevonz
-        const messageText = `[Model: ${modelRef.current}]\n\n[Provider: ${providerRef.current.name}]\n\n${message}`;
-
-        // Use append to send the message
-        runAnimation();
-
-        appendRef.current({
-          role: 'user',
-          content: messageText,
-        });
-      };
-
-      // Register the callback for terminal errors only (preview errors show alert to user)
-      const handler = createAutoFixHandler(autoFixSendMessage);
-      registerAutoFixCallback(handler);
-
-      // Cleanup on unmount
-      return () => {
-        unregisterAutoFixCallback();
-
-        // Reset auto-fix state so it doesn't stay stuck if component unmounts mid-fix
-        if (isAutoFixActive()) {
-          resetAutoFix();
-        }
-      };
-    }, []); // Empty deps - only run on mount/unmount
 
     /**
      * Watch the plan action atom for approval/rejection/modify events.
@@ -970,7 +907,7 @@ export const ChatImpl = memo(
 
         if (action === 'approve') {
           const executeMessage =
-            `[Model: ${modelRef.current}]\n\n[Provider: ${providerRef.current.name}]\n\n` +
+            `[Model: ${model}]\n\n[Provider: ${provider.name}]\n\n` +
             `The plan has been approved. Execute all steps in PLAN.md now. ` +
             `Implement each task in order, creating files, writing code, and running commands as needed. ` +
             `After completing each step, update PLAN.md to mark it done with \`- [x]\`.`;
@@ -980,7 +917,7 @@ export const ChatImpl = memo(
 
           runAnimation();
 
-          appendRef.current({
+          append({
             role: 'user',
             content: executeMessage,
           });

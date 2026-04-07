@@ -7,47 +7,10 @@
 
 import { workbenchStore } from '~/lib/stores/workbench';
 import { createScopedLogger } from '~/utils/logger';
-import {
-  autoFixStore,
-  startAutoFix,
-  shouldContinueFix,
-  hasExceededMaxRetries,
-  type ErrorSource,
-} from '~/lib/stores/autofix';
 
 const logger = createScopedLogger('TerminalErrorDetector');
 
-/**
- * Callback type for auto-fix integration
- * Called when an error is detected and auto-fix should handle it
- */
-export type AutoFixCallback = (error: {
-  source: ErrorSource;
-  type: string;
-  message: string;
-  content: string;
-}) => Promise<void>;
 
-// Global auto-fix callback - set by Chat component
-let globalAutoFixCallback: AutoFixCallback | null = null;
-
-/**
- * Register a callback to handle auto-fix requests
- * This should be called by the Chat component on mount
- */
-export function registerAutoFixCallback(callback: AutoFixCallback): void {
-  globalAutoFixCallback = callback;
-  logger.debug('Auto-fix callback registered');
-}
-
-/**
- * Unregister the auto-fix callback
- * This should be called by the Chat component on unmount
- */
-export function unregisterAutoFixCallback(): void {
-  globalAutoFixCallback = null;
-  logger.debug('Auto-fix callback unregistered');
-}
 
 /**
  * Error pattern definition
@@ -699,49 +662,7 @@ export class TerminalErrorDetector {
     // Format content for display
     const content = this.#formatErrorContent();
 
-    // Check if we should trigger auto-fix instead of showing alert
-    const autoFixState = autoFixStore.get();
-    const canAutoFix =
-      primaryError.autoFixable &&
-      primaryError.severity === 'error' && // Only auto-fix real errors, not warnings
-      shouldContinueFix() &&
-      globalAutoFixCallback;
-
-    if (canAutoFix) {
-      // Trigger auto-fix instead of showing alert
-      const started = startAutoFix({
-        source: 'terminal',
-        type: primaryError.type,
-        message: primaryError.message,
-        content,
-      });
-
-      if (started && globalAutoFixCallback) {
-        logger.info(`Auto-fix triggered for: ${primaryError.title}`);
-
-        // Add delay before triggering fix (configurable)
-        setTimeout(() => {
-          globalAutoFixCallback?.({
-            source: 'terminal',
-            type: primaryError.type,
-            message: primaryError.message,
-            content,
-          });
-        }, autoFixState.settings.delayBetweenAttempts);
-
-        // Clear processed errors
-        this.#detectedErrors = [];
-
-        return;
-      }
-    }
-
-    // If auto-fix didn't trigger, show max retries warning if applicable
-    if (primaryError.autoFixable && hasExceededMaxRetries()) {
-      logger.warn('Max auto-fix retries exceeded, showing alert to user');
-    }
-
-    // Fallback to workbench alert (existing behavior)
+    // Always show the alert dialog — user decides whether to send to Devonz
     workbenchStore.actionAlert.set({
       type: 'error',
       title: primaryError.title,
