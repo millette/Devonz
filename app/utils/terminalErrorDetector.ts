@@ -7,6 +7,8 @@
 
 import { workbenchStore } from '~/lib/stores/workbench';
 import { createScopedLogger } from '~/utils/logger';
+import { classifyError, shouldShowFullAlert } from '~/lib/errors/error-classifier';
+import { showErrorToast } from '~/lib/errors/error-toast';
 
 const logger = createScopedLogger('TerminalErrorDetector');
 
@@ -667,19 +669,31 @@ export class TerminalErrorDetector {
     // Get the most recent/important error
     const primaryError = this.#detectedErrors[this.#detectedErrors.length - 1];
 
-    // Format content for display
-    const content = this.#formatErrorContent();
+    // Classify the error to decide alert vs toast
+    const classified = classifyError(primaryError.message);
 
-    // Always show the alert dialog — user decides whether to send to Devonz
-    workbenchStore.actionAlert.set({
-      type: 'error',
-      title: primaryError.title,
-      description: primaryError.message,
-      content,
-      source: 'terminal',
-    });
+    if (shouldShowFullAlert(classified)) {
+      // Fatal / error severity → full ChatAlert dialog so user can ask Devonz for help
+      const content = this.#formatErrorContent();
 
-    logger.info(`Terminal error detected: ${primaryError.title}`);
+      workbenchStore.actionAlert.set({
+        type: 'error',
+        title: primaryError.title,
+        description: primaryError.message,
+        content,
+        source: 'terminal',
+      });
+
+      logger.info(`Terminal error [${classified.severity}/${classified.category}]: ${primaryError.title}`);
+    } else {
+      // Warning / info severity → lightweight toast notification
+      showErrorToast({
+        ...classified,
+        message: `${primaryError.title}: ${primaryError.message}`,
+      });
+
+      logger.info(`Terminal warning toast [${classified.category}]: ${primaryError.title}`);
+    }
 
     // Clear processed errors
     this.#detectedErrors = [];

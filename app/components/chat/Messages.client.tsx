@@ -1,7 +1,8 @@
 import type { Message } from 'ai';
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { atom } from 'nanostores';
 import { useStore } from '@nanostores/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '~/utils/cn';
 import { AssistantMessage } from './AssistantMessage';
 import { UserMessage } from './UserMessage';
@@ -211,6 +212,9 @@ export function Messages(props: MessagesProps) {
   const { id, isStreaming = false, messages = [], ref } = props;
   const location = useLocation();
 
+  // Track the initial message count so we only animate messages that arrive after mount
+  const initialMessageCountRef = useRef(messages.length);
+
   // Subscribe to branch state atoms
   const branchParent = useStore(currentBranchParentAtom);
   const branchCounts = useStore(messageBranchCountsAtom);
@@ -298,60 +302,80 @@ export function Messages(props: MessagesProps) {
   return (
     <div id={id} className={props.className} ref={ref}>
       {branchParent && <BranchIndicator parentChatId={branchParent.parentChatId} />}
-      {messages.length > 0
-        ? messages.map((message, index) => {
-            const { role, content, id: messageId, annotations, parts } = message;
-            const isUserMessage = role === 'user';
-            const isFirst = index === 0;
-            const isHidden = annotations?.includes('hidden');
+      <AnimatePresence initial={false}>
+        {messages.length > 0
+          ? messages.map((message, index) => {
+              const { role, content, id: messageId, annotations, parts } = message;
+              const isUserMessage = role === 'user';
+              const isFirst = index === 0;
+              const isHidden = annotations?.includes('hidden');
 
-            if (isHidden) {
-              return <Fragment key={message.id} />;
-            }
+              if (isHidden) {
+                return <Fragment key={message.id} />;
+              }
 
-            const branchCount = messageId ? (branchCounts[messageId] ?? 0) : 0;
+              const branchCount = messageId ? (branchCounts[messageId] ?? 0) : 0;
+              const isNewMessage = index >= initialMessageCountRef.current;
 
-            return (
-              <div
-                key={message.id}
-                className={cn('flex gap-4 py-3 w-full rounded-lg', {
-                  'mt-4': !isFirst,
-                })}
-              >
-                <div className="grid grid-col-1 w-full">
-                  {isUserMessage ? (
-                    <UserMessage content={content} parts={parts} />
-                  ) : (
-                    <AssistantMessage
-                      content={content}
-                      annotations={message.annotations}
-                      messageId={messageId}
-                      onRewind={handleRewind}
-                      onFork={handleFork}
-                      append={props.append}
-                      chatMode={props.chatMode}
-                      setChatMode={props.setChatMode}
-                      model={props.model}
-                      provider={props.provider}
-                      parts={parts}
-                      addToolResult={props.addToolResult}
-                    />
-                  )}
-                  {!isUserMessage && messageId && branchCount > 0 && (
-                    <BranchSelector messageId={messageId} count={branchCount} />
-                  )}
-                </div>
-              </div>
-            );
-          })
-        : null}
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={isNewMessage ? { opacity: 0, x: isUserMessage ? 20 : -20 } : false}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: isUserMessage ? 0.2 : 0.25, ease: 'easeOut' }}
+                  className={cn('flex gap-4 py-3 w-full rounded-lg', {
+                    'mt-4': !isFirst,
+                  })}
+                >
+                  <div className="grid grid-col-1 w-full">
+                    {isUserMessage ? (
+                      <UserMessage content={content} parts={parts} />
+                    ) : (
+                      <AssistantMessage
+                        content={content}
+                        annotations={message.annotations}
+                        messageId={messageId}
+                        onRewind={handleRewind}
+                        onFork={handleFork}
+                        append={props.append}
+                        chatMode={props.chatMode}
+                        setChatMode={props.setChatMode}
+                        model={props.model}
+                        provider={props.provider}
+                        parts={parts}
+                        addToolResult={props.addToolResult}
+                      />
+                    )}
+                    {!isUserMessage && messageId && branchCount > 0 && (
+                      <BranchSelector messageId={messageId} count={branchCount} />
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
+          : null}
+      </AnimatePresence>
       {isStreaming && agentState.planPhase !== 'idle' && <AgentPhaseIndicator phase={agentState.planPhase} />}
-      {isStreaming && (
-        <div className="flex items-center justify-center gap-2 w-full mt-4">
-          <div className="i-svg-spinners:3-dots-fade text-xl text-devonz-elements-item-contentAccent" />
-          <span className="text-sm text-devonz-elements-textSecondary animate-pulse">Generating...</span>
-        </div>
-      )}
+      <AnimatePresence>
+        {isStreaming && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="flex items-center justify-center gap-2 w-full mt-4"
+          >
+            <div className="i-svg-spinners:3-dots-fade text-xl text-devonz-elements-item-contentAccent" />
+            <motion.span
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+              className="text-sm text-devonz-elements-textSecondary"
+            >
+              Generating...
+            </motion.span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

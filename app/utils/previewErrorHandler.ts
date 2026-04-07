@@ -13,7 +13,7 @@
  * - Auto-fix integration for code errors
  */
 
-/* NOTE: workbenchStore is imported lazily inside showAlert() to avoid circular dependency */
+/* NOTE: workbenchStore is imported lazily inside handlePreviewMessage() to avoid circular dependency */
 import { cleanStackTrace } from '~/utils/stacktrace';
 import { createScopedLogger } from '~/utils/logger';
 import {
@@ -22,6 +22,8 @@ import {
   classifyErrorSeverity,
   SEVERITY_CONFIG,
 } from '~/utils/errors/errorConfig';
+import { classifyError, shouldShowFullAlert } from '~/lib/errors/error-classifier';
+import { showErrorToast } from '~/lib/errors/error-toast';
 
 const logger = createScopedLogger('PreviewErrorHandler');
 
@@ -154,7 +156,23 @@ class PreviewErrorHandler {
     const description = friendlyMessage?.description || errorMessage;
     const suggestion = friendlyMessage?.suggestion || '';
 
-    // Create content with helpful context
+    // Classify via the new error classifier to decide alert vs toast
+    const classified = classifyError(errorMessage);
+
+    if (!shouldShowFullAlert(classified)) {
+      // Warning / info severity → lightweight toast instead of full dialog
+      showErrorToast({
+        ...classified,
+        message: `${title}: ${description}`,
+        suggestion: suggestion || classified.suggestion,
+      });
+
+      logger.info(`Preview warning toast [${classified.category}]: ${title} - ${errorMessage.slice(0, 100)}`);
+
+      return;
+    }
+
+    // Fatal / error severity → full ChatAlert dialog
     const contentParts: string[] = [];
     contentParts.push(`Error occurred at ${message.pathname || '/'}${message.search || ''}${message.hash || ''}`);
     contentParts.push(`Port: ${message.port || 'unknown'}`);
@@ -185,7 +203,7 @@ class PreviewErrorHandler {
       source: 'preview',
     });
 
-    logger.info(`Preview error detected [${severity}]: ${title} - ${errorMessage.slice(0, 100)}`);
+    logger.info(`Preview error detected [${severity}/${classified.category}]: ${title} - ${errorMessage.slice(0, 100)}`);
   }
 
   /**
