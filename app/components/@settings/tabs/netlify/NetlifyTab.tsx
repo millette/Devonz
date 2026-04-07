@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
 import { useStore } from '@nanostores/react';
 import { netlifyConnection, updateNetlifyConnection, initializeNetlifyConnection } from '~/lib/stores/netlify';
 import type {
@@ -648,7 +648,7 @@ export default function NetlifyTab() {
                 </span>
               </div>
               <div
-                className={classNames(
+                className={cn(
                   'i-ph:caret-down w-4 h-4 transform transition-transform duration-200 text-devonz-elements-textSecondary',
                   isStatsOpen ? 'rotate-180' : '',
                 )}
@@ -886,7 +886,7 @@ export default function NetlifyTab() {
                         className="flex items-center gap-2 text-devonz-elements-textPrimary dark:text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive/10"
                       >
                         <div
-                          className={classNames(
+                          className={cn(
                             'i-ph:arrows-clockwise w-4 h-4 text-devonz-elements-item-contentAccent dark:text-devonz-elements-item-contentAccent',
                             { 'animate-spin': fetchingStats },
                           )}
@@ -898,7 +898,7 @@ export default function NetlifyTab() {
                       {(isSitesExpanded ? sites : sites.slice(0, 8)).map((site, index) => (
                         <div
                           key={site.id}
-                          className={classNames(
+                          className={cn(
                             'bg-devonz-elements-background dark:bg-devonz-elements-background-depth-1 border rounded-lg p-4 transition-all cursor-pointer',
                             activeSiteIndex === index
                               ? 'border-devonz-elements-item-contentAccent bg-devonz-elements-item-backgroundActive/10'
@@ -1267,7 +1267,7 @@ export default function NetlifyTab() {
       {/* Connection Test Results */}
       {connectionTest && (
         <motion.div
-          className={classNames('p-4 rounded-lg border', {
+          className={cn('p-4 rounded-lg border', {
             'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700':
               connectionTest.status === 'success',
             'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700': connectionTest.status === 'error',
@@ -1287,7 +1287,7 @@ export default function NetlifyTab() {
               <div className="i-ph:spinner-gap w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
             )}
             <span
-              className={classNames('text-sm font-medium', {
+              className={cn('text-sm font-medium', {
                 'text-green-800 dark:text-green-200': connectionTest.status === 'success',
                 'text-red-800 dark:text-red-200': connectionTest.status === 'error',
                 'text-blue-800 dark:text-blue-200': connectionTest.status === 'testing',
@@ -1334,7 +1334,7 @@ export default function NetlifyTab() {
                   value={tokenInput}
                   onChange={(e) => setTokenInput(e.target.value)}
                   placeholder="Enter your Netlify API token"
-                  className={classNames(
+                  className={cn(
                     'w-full px-3 py-2 rounded-lg text-sm',
                     'bg-devonz-elements-background-depth-1',
                     'border border-devonz-elements-borderColor',
@@ -1360,7 +1360,7 @@ export default function NetlifyTab() {
                 <button
                   onClick={handleConnect}
                   disabled={isConnecting || !tokenInput}
-                  className={classNames(
+                  className={cn(
                     'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                     'bg-devonz-elements-bg-depth-3 text-devonz-elements-textPrimary',
                     'hover:bg-[#5E41D0] hover:text-white',
@@ -1387,7 +1387,7 @@ export default function NetlifyTab() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDisconnect}
-                  className={classNames(
+                  className={cn(
                     'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                     'bg-red-500 text-white',
                     'hover:bg-red-600',

@@ -9,7 +9,7 @@ import { profileStore } from '~/lib/stores/profile';
 import type { TabType, Profile } from './types';
 import { TAB_LABELS, TAB_ICONS, SIDEBAR_CATEGORIES } from './constants';
 import { DialogTitle } from '~/components/ui/Dialog';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
 import { PanelErrorBoundary } from '~/components/ui/PanelErrorBoundary';
 
@@ -248,10 +248,10 @@ export const ControlPanel = ({ open, onClose, initialTab }: ControlPanelProps) =
                 aria-orientation="vertical"
               >
                 {categorizedTabs.map((category, catIndex) => (
-                  <div key={category.id} className={classNames(catIndex > 0 ? 'mt-3' : '')}>
+                  <div key={category.id} className={cn(catIndex > 0 ? 'mt-3' : '')}>
                     {/* Category Header */}
                     <div className="flex items-center gap-2 px-4 py-1.5 mb-0.5">
-                      <div className={classNames(category.icon, 'w-3.5 h-3.5 text-devonz-elements-textTertiary')} />
+                      <div className={cn(category.icon, 'w-3.5 h-3.5 text-devonz-elements-textTertiary')} />
                       <span className="text-[11px] font-medium uppercase tracking-wider text-devonz-elements-textTertiary">
                         {category.label}
                       </span>
@@ -274,8 +274,9 @@ export const ControlPanel = ({ open, onClose, initialTab }: ControlPanelProps) =
                           tabIndex={isActive ? 0 : -1}
                           onClick={() => handleTabClick(tabId)}
                           onKeyDown={(e) => handleTabKeyDown(e, tabId)}
-                          className={classNames(
+                          className={cn(
                             'w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition-colors duration-150',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-focus focus-visible:ring-inset',
                             isActive
                               ? 'text-devonz-elements-textPrimary border-l-2 border-devonz-elements-item-contentAccent'
                               : 'text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary border-l-2 border-transparent',

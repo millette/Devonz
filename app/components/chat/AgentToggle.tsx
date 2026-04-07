@@ -1,7 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { agentModeStore, toggleAgentMode } from '~/lib/stores/agentMode';
 import { IconButton } from '~/components/ui/IconButton';
 
@@ -33,15 +33,15 @@ export function AgentToggle() {
       <Popover.Trigger asChild>
         <IconButton
           title="Agent mode"
-          className={classNames(
+          className={cn(
             'transition-all flex items-center gap-1 px-1.5',
             enabled
               ? 'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent'
               : 'bg-devonz-elements-item-backgroundDefault text-devonz-elements-item-contentDefault',
           )}
         >
-          <div className={classNames(activeModeConfig.icon, 'text-xl')} />
-          <span className="text-xs">Mode</span>
+          <div className={cn(activeModeConfig.icon, 'text-xl')} />
+          <span className="text-xs">{activeModeConfig.label}</span>
         </IconButton>
       </Popover.Trigger>
       <Popover.Portal>
@@ -56,15 +56,16 @@ export function AgentToggle() {
             {agentModes.map((mode) => (
               <button
                 key={mode.id}
-                className={classNames(
+                className={cn(
                   'w-full flex items-center gap-3 px-3 py-2 rounded-md text-left transition-colors border-none',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-focus',
                   activeMode === mode.id
                     ? 'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent'
                     : 'bg-transparent text-[#9ca3af] hover:bg-[#1a1f2e] hover:text-white',
                 )}
                 onClick={() => handleSelect(mode.id)}
               >
-                <div className={classNames(mode.icon, 'text-lg flex-shrink-0')} />
+                <div className={cn(mode.icon, 'text-lg flex-shrink-0')} />
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{mode.label}</span>
                   <span className="text-xs opacity-70">{mode.description}</span>

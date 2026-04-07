@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Dialog, DialogRoot, DialogClose, DialogTitle, DialogButton } from '~/components/ui/Dialog';
 import { IconButton } from '~/components/ui/IconButton';
 import { mcpStore, initializeMCP, checkMCPServersAvailabilities } from '~/lib/stores/mcp';
@@ -75,7 +75,7 @@ export function McpTools() {
                     <button
                       onClick={checkServerAvailability}
                       disabled={isCheckingServers || serverEntries.length === 0}
-                      className={classNames(
+                      className={cn(
                         'px-3 py-1.5 rounded-lg text-sm',
                         'bg-devonz-elements-background-depth-3 hover:bg-devonz-elements-background-depth-4',
                         'text-devonz-elements-textPrimary',

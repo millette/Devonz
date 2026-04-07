@@ -6,8 +6,9 @@ import { useChatHistory } from '~/lib/persistence';
 import { createCommandsMessage, detectProjectCommands, escapeDevonzTags } from '~/utils/projectCommands';
 import { cleanPackageJson } from '~/utils/packageJsonCleaner';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('GitUrlImport');
 
@@ -35,21 +36,24 @@ export function GitUrlImport() {
        * Uses native `git clone --depth 1` on the server, which is
        * orders of magnitude faster than isomorphic-git in the browser.
        */
-      const cloneResponse = await fetch('/api/git-clone', {
+      const cloneResponse = await csrfFetch('/api/git-clone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: baseUrl, branch }),
       });
 
       if (!cloneResponse.ok) {
-        const err = await cloneResponse.json();
-        throw new Error(err.error || 'Server-side clone failed');
+        const err = (await cloneResponse.json()) as { message?: string };
+        throw new Error(err.message || 'Server-side clone failed');
       }
 
-      const { tempId, files } = (await cloneResponse.json()) as {
-        tempId: string;
-        files: Array<{ path: string; content: string }>;
+      const cloneEnvelope = (await cloneResponse.json()) as {
+        data: {
+          tempId: string;
+          files: Array<{ path: string; content: string }>;
+        };
       };
+      const { tempId, files } = cloneEnvelope.data;
 
       /*
        * ── Step 2: Clean package.json ──
@@ -127,7 +131,7 @@ ${escapeDevonzTags(file.content)}
        */
       if (chatId) {
         try {
-          await fetch('/api/git-clone', {
+          await csrfFetch('/api/git-clone', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'finalize', tempId, projectId: chatId }),

@@ -95,14 +95,20 @@ describe('encryption module', () => {
   });
 
   describe('DEVONZ_ENCRYPTION_KEY validation', () => {
-    it('throws descriptive error when env var is missing', async () => {
+    it('auto-generates a key when env var is missing', async () => {
       delete process.env.DEVONZ_ENCRYPTION_KEY;
-      await expect(loadModule()).rejects.toThrow('DEVONZ_ENCRYPTION_KEY environment variable is not set');
+
+      const { encrypt, decrypt } = await loadModule();
+      const plaintext = 'auto-generated key test';
+      const encrypted = encrypt(plaintext);
+      expect(decrypt(encrypted)).toBe(plaintext);
     });
 
     it('throws descriptive error when key is wrong length', async () => {
       process.env.DEVONZ_ENCRYPTION_KEY = 'tooshort';
-      await expect(loadModule()).rejects.toThrow('must be exactly 32 bytes');
+
+      const { encrypt } = await loadModule();
+      expect(() => encrypt('test')).toThrow('must be exactly 32 bytes');
     });
 
     it('accepts a valid hex-encoded key', async () => {

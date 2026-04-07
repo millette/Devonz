@@ -73,6 +73,12 @@ vi.mock('~/utils/logger', () => ({
   }),
 }));
 
+// Mock withSecurity as a pass-through so tests reach the handler directly
+vi.mock('~/lib/security', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
+  withSecurity: (handler: Function) => handler,
+}));
+
 // Import the route handlers AFTER the mocks are set up
 const { loader, action } = await import('~/routes/api.db.chats');
 
@@ -113,8 +119,8 @@ describe('GET /api/db/chats', () => {
     expect(response.status).toBe(200);
 
     const data = await response.json();
-    expect(data.chats).toEqual([]);
-    expect(data.pagination).toMatchObject({
+    expect(data.data.chats).toEqual([]);
+    expect(data.data.pagination).toMatchObject({
       page: 1,
       total: 0,
       totalPages: 0,
@@ -127,15 +133,15 @@ describe('GET /api/db/chats', () => {
     // Page 1, default limit 20
     const res1 = await loader(buildLoaderArgs('/api/db/chats'));
     const data1 = await res1.json();
-    expect(data1.chats).toHaveLength(20);
-    expect(data1.pagination.total).toBe(25);
-    expect(data1.pagination.totalPages).toBe(2);
+    expect(data1.data.chats).toHaveLength(20);
+    expect(data1.data.pagination.total).toBe(25);
+    expect(data1.data.pagination.totalPages).toBe(2);
 
     // Page 2
     const res2 = await loader(buildLoaderArgs('/api/db/chats?page=2'));
     const data2 = await res2.json();
-    expect(data2.chats).toHaveLength(5);
-    expect(data2.pagination.page).toBe(2);
+    expect(data2.data.chats).toHaveLength(5);
+    expect(data2.data.pagination.page).toBe(2);
   });
 
   it('respects custom limit parameter', async () => {
@@ -143,9 +149,9 @@ describe('GET /api/db/chats', () => {
 
     const response = await loader(buildLoaderArgs('/api/db/chats?limit=3&page=1'));
     const data = await response.json();
-    expect(data.chats).toHaveLength(3);
-    expect(data.pagination.limit).toBe(3);
-    expect(data.pagination.totalPages).toBe(4); // ceil(10/3) = 4
+    expect(data.data.chats).toHaveLength(3);
+    expect(data.data.pagination.limit).toBe(3);
+    expect(data.data.pagination.totalPages).toBe(4); // ceil(10/3) = 4
   });
 });
 
@@ -166,10 +172,10 @@ describe('POST /api/db/chats', () => {
     expect(response.status).toBe(201);
 
     const data = await response.json();
-    expect(data.chat).toBeDefined();
-    expect(data.chat.id).toBe('new-chat-1');
-    expect(data.chat.description).toBe('My first chat');
-    expect(data.chat.urlId).toBe('my-first-chat');
+    expect(data.data.chat).toBeDefined();
+    expect(data.data.chat.id).toBe('new-chat-1');
+    expect(data.data.chat.description).toBe('My first chat');
+    expect(data.data.chat.urlId).toBe('my-first-chat');
   });
 
   it('returns 400 for missing required id field', async () => {
@@ -177,9 +183,7 @@ describe('POST /api/db/chats', () => {
     expect(response.status).toBe(400);
 
     const data = await response.json();
-    expect(data.error).toBe('Invalid request');
-    expect(data.details).toBeDefined();
-    expect(data.details.length).toBeGreaterThan(0);
+    expect(data.error.message).toBe('Invalid request');
   });
 
   it('returns 400 for invalid JSON body', async () => {
@@ -192,7 +196,7 @@ describe('POST /api/db/chats', () => {
     expect(response.status).toBe(400);
 
     const data = await response.json();
-    expect(data.error).toBe('Invalid JSON in request body');
+    expect(data.error.message).toBe('Invalid JSON in request body');
   });
 });
 

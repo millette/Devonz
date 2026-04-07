@@ -6,6 +6,7 @@ import { findBestMatch } from './fuzzy-match';
 import { INLINE_TEMPLATES } from './inline-templates';
 import { loadShowcaseTemplates } from './showcase-templates';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('StarterTemplate');
 
@@ -330,7 +331,7 @@ export const selectStarterTemplate = async (options: { message: string; model: s
   };
 
   try {
-    const response = await fetch('/api/llmcall', {
+    const response = await csrfFetch('/api/llmcall', {
       method: 'POST',
       body: JSON.stringify(requestBody),
     });
@@ -375,9 +376,9 @@ const getGitHubRepoContent = async (repoName: string): Promise<{ name: string; p
     }
 
     // Our API will return the files in the format we need
-    const files = (await response.json()) as Array<{ name: string; path: string; content: string }>;
+    const envelope = (await response.json()) as { data: Array<{ name: string; path: string; content: string }> };
 
-    return files;
+    return envelope.data;
   } catch (error) {
     logger.error('Error fetching release contents:', error);
     throw error;

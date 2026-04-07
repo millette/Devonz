@@ -2,7 +2,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AnimatePresence, motion, type Variants } from 'framer-motion';
 import { memo, useEffect, useRef, useState } from 'react';
 import type { FileMap } from '~/lib/stores/files';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { WORK_DIR } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
@@ -90,7 +90,7 @@ export const FileBreadcrumb = memo<FileBreadcrumbProps>(({ files, pathSegments =
                   ref={(ref) => {
                     segmentRefs.current[index] = ref;
                   }}
-                  className={classNames('flex items-center gap-1.5 cursor-pointer shrink-0', {
+                  className={cn('flex items-center gap-1.5 cursor-pointer shrink-0', {
                     'text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary': !isActive,
                     'text-devonz-elements-textPrimary underline': isActive,
                     'pr-4': isLast,

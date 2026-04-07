@@ -1,5 +1,4 @@
-import React from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { formatSize } from '~/utils/formatSize';
 import type { GitHubRepoInfo } from '~/types/GitHub';
 
@@ -122,7 +121,7 @@ export function RepositoryCard({
     return (
       <button
         onClick={onSelect}
-        className={classNames(
+        className={cn(
           'w-full text-left p-3 rounded-lg border border-devonz-elements-borderColor hover:border-devonz-elements-borderColorActive hover:bg-devonz-elements-background-depth-1 transition-all duration-200',
           className,
         )}
@@ -175,7 +174,7 @@ export function RepositoryCard({
   const interactiveProps = onSelect
     ? {
         onClick: onSelect,
-        className: classNames(
+        className: cn(
           'group cursor-pointer hover:border-devonz-elements-borderColorActive dark:hover:border-devonz-elements-borderColorActive transition-all duration-200',
           className,
         ),
@@ -185,7 +184,7 @@ export function RepositoryCard({
   return (
     <Component
       {...interactiveProps}
-      className={classNames(
+      className={cn(
         'block p-4 rounded-lg bg-devonz-elements-background-depth-1 dark:bg-devonz-elements-background-depth-1 border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor relative',
         interactiveProps.className,
       )}
@@ -203,7 +202,7 @@ export function RepositoryCard({
           <div className="flex items-center gap-2">
             <div className="i-ph:git-branch size-4 text-devonz-elements-icon-tertiary" />
             <h5
-              className={classNames(
+              className={cn(
                 'text-sm font-medium text-devonz-elements-textPrimary',
                 onSelect && 'group-hover:text-devonz-elements-item-contentAccent transition-colors',
               )}
@@ -329,7 +328,7 @@ export function RepositoryCard({
 
             {onSelect && (
               <span
-                className={classNames(
+                className={cn(
                   'flex items-center gap-1 ml-2 transition-colors',
                   'group-hover:text-devonz-elements-item-contentAccent',
                 )}

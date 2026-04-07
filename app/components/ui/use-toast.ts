@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { toast as toastify } from 'react-toastify';
+import { toast as toastify } from 'sonner';
 
 // Export the original toast for cases where specific configuration is needed
 export { toastify as toast };
@@ -14,14 +14,7 @@ export function useToast() {
     const { type = 'info', duration = 3000 } = options;
 
     toastify[type](message, {
-      position: 'bottom-right',
-      autoClose: duration,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-      theme: 'dark',
+      duration,
     });
   }, []);
 

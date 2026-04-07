@@ -3,10 +3,13 @@ import { streamText, type Messages } from '~/lib/.server/llm/stream-text';
 import { withSecurity } from '~/lib/security';
 import { requireApiAuth } from '~/lib/.server/api/auth';
 import { v1ChatRequestSchema, formatSSE } from '~/lib/.server/api/types';
+import { errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 import { DEFAULT_PROVIDER } from '~/utils/constants';
 
-const logger = createScopedLogger('API');
+const logger = createScopedLogger('api.v1.chat');
 
 async function v1ChatAction({ context, request }: ActionFunctionArgs): Promise<Response> {
   // Parse and validate request body
@@ -15,13 +18,7 @@ async function v1ChatAction({ context, request }: ActionFunctionArgs): Promise<R
   try {
     rawBody = await request.json();
   } catch {
-    return new Response(
-      JSON.stringify({
-        error: true,
-        message: 'Invalid JSON in request body',
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'));
   }
 
   const parsed = v1ChatRequestSchema.safeParse(rawBody);
@@ -29,17 +26,7 @@ async function v1ChatAction({ context, request }: ActionFunctionArgs): Promise<R
   if (!parsed.success) {
     logger.warn('v1/chat validation failed:', parsed.error.issues);
 
-    return new Response(
-      JSON.stringify({
-        error: true,
-        message: 'Invalid request',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request'));
   }
 
   const { model, prompt, context: userContext } = parsed.data;
@@ -109,6 +96,8 @@ async function v1ChatAction({ context, request }: ActionFunctionArgs): Promise<R
 }
 
 export const action = withSecurity(requireApiAuth(v1ChatAction), {
+  auth: AUTH_PRESETS.public,
+  csrfExempt: true,
   allowedMethods: ['POST'],
   rateLimit: false, // rate limiting is handled by requireApiAuth (separate API pool)
 });

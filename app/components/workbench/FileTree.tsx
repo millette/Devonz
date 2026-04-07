@@ -1,14 +1,13 @@
 import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useStore } from '@nanostores/react';
-import type { FileMap } from '~/lib/stores/files';
-import { fileGenerationStatus, type FileGenerationState } from '~/lib/stores/files';
-import { classNames } from '~/utils/classNames';
+import { fileGenerationStatus, type FileMap, type FileGenerationState } from '~/lib/stores/files';
+import { cn } from '~/utils/cn';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import type { FileHistory } from '~/types/actions';
 import { diffLines, type Change } from 'diff';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { path } from '~/utils/path';
 
 const logger = createScopedLogger('FileTree');
@@ -144,7 +143,7 @@ export const FileTree = memo(
     const genStatus = useDeferredValue(rawGenStatus);
 
     return (
-      <div className={classNames('text-sm', className, 'overflow-y-auto modern-scrollbar')}>
+      <div className={cn('text-sm', className, 'overflow-y-auto modern-scrollbar')}>
         {filteredFileList.map((fileOrFolder) => {
           switch (fileOrFolder.kind) {
             case 'file': {
@@ -501,7 +500,7 @@ function FileContextMenu({
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={classNames('relative', {
+            className={cn('relative', {
               'bg-devonz-elements-background-depth-2 border border-dashed border-devonz-elements-item-contentAccent rounded-md':
                 isDragging,
             })}
@@ -605,13 +604,13 @@ function Folder({ folder, collapsed, selected = false, onCopyPath, onCopyRelativ
   return (
     <FileContextMenu onCopyPath={onCopyPath} onCopyRelativePath={onCopyRelativePath} fullPath={folder.fullPath}>
       <NodeButton
-        className={classNames('group', {
+        className={cn('group', {
           'bg-transparent text-devonz-elements-item-contentDefault hover:text-devonz-elements-item-contentActive hover:bg-devonz-elements-item-backgroundActive':
             !selected,
           'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent': selected,
         })}
         depth={folder.depth}
-        iconClasses={classNames({
+        iconClasses={cn({
           'i-ph:caret-right scale-98': collapsed,
           'i-ph:caret-down scale-98': !collapsed,
         })}
@@ -620,10 +619,7 @@ function Folder({ folder, collapsed, selected = false, onCopyPath, onCopyRelativ
         <div className="flex items-center w-full">
           <div className="flex-1 truncate pr-2">{folder.name}</div>
           {isLocked && (
-            <span
-              className={classNames('shrink-0', 'i-ph:lock-simple scale-80 text-red-500')}
-              title={'Folder is locked'}
-            />
+            <span className={cn('shrink-0', 'i-ph:lock-simple scale-80 text-red-500')} title={'Folder is locked'} />
           )}
         </div>
       </NodeButton>
@@ -699,19 +695,19 @@ function File({
   return (
     <FileContextMenu onCopyPath={onCopyPath} onCopyRelativePath={onCopyRelativePath} fullPath={fullPath}>
       <NodeButton
-        className={classNames('group', {
+        className={cn('group', {
           'bg-transparent hover:bg-devonz-elements-item-backgroundActive text-devonz-elements-item-contentDefault':
             !selected,
           'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent': selected,
         })}
         depth={depth}
-        iconClasses={classNames('i-ph:file-duotone scale-98', {
+        iconClasses={cn('i-ph:file-duotone scale-98', {
           'group-hover:text-devonz-elements-item-contentActive': !selected,
         })}
         onClick={onClick}
       >
         <div
-          className={classNames('flex items-center', {
+          className={cn('flex items-center', {
             'group-hover:text-devonz-elements-item-contentActive': !selected,
           })}
         >
@@ -727,10 +723,7 @@ function File({
               </div>
             )}
             {locked && (
-              <span
-                className={classNames('shrink-0', 'i-ph:lock-simple scale-80 text-red-500')}
-                title={'File is locked'}
-              />
+              <span className={cn('shrink-0', 'i-ph:lock-simple scale-80 text-red-500')} title={'File is locked'} />
             )}
             {unsavedChanges && <span className="i-ph:circle-fill scale-68 shrink-0 text-orange-500" />}
           </div>
@@ -751,14 +744,11 @@ interface ButtonProps {
 function NodeButton({ depth, iconClasses, onClick, className, children }: ButtonProps) {
   return (
     <button
-      className={classNames(
-        'flex items-center gap-1.5 w-full pr-2 border-2 border-transparent text-faded py-0.5',
-        className,
-      )}
+      className={cn('flex items-center gap-1.5 w-full pr-2 border-2 border-transparent text-faded py-0.5', className)}
       style={{ paddingLeft: `${6 + depth * NODE_PADDING_LEFT}px` }}
       onClick={() => onClick?.()}
     >
-      <div className={classNames('scale-120 shrink-0', iconClasses)}></div>
+      <div className={cn('scale-120 shrink-0', iconClasses)}></div>
       <div className="truncate w-full text-left">{children}</div>
     </button>
   );

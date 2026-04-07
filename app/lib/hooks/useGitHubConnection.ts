@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import Cookies from 'js-cookie';
 import type { GitHubUserResponse, GitHubConnection } from '~/types/GitHub';
 import { useGitHubAPI } from './useGitHubAPI';

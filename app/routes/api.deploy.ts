@@ -1,7 +1,9 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { z } from 'zod';
 import { withSecurity } from '~/lib/security';
-import { handleApiError } from '~/lib/api/apiUtils';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 import { DeploymentService } from '~/lib/services/deployment-service';
 import type { DeployStatusEvent } from '~/types/streaming-events';
@@ -17,7 +19,7 @@ const deployRequestSchema = z.object({
 });
 
 async function deployAction({ request }: ActionFunctionArgs) {
-  return handleApiError('Deploy.action', async () => {
+  try {
     const rawBody: unknown = await request.json();
 
     const parsed = deployRequestSchema.safeParse(rawBody);
@@ -25,13 +27,15 @@ async function deployAction({ request }: ActionFunctionArgs) {
     if (!parsed.success) {
       logger.warn('Validation failed:', parsed.error.flatten());
 
-      return Response.json({ error: 'Invalid request', details: parsed.error.flatten().fieldErrors }, { status: 400 });
+      return errorResponse(
+        new AppError(AppErrorType.VALIDATION, 'Invalid request', 400, { details: parsed.error.flatten().fieldErrors }),
+      );
     }
 
     const { provider, projectName, files, token, teamId } = parsed.data;
 
     if (provider !== 'vercel') {
-      return Response.json({ error: `Unsupported provider: ${provider}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unsupported provider: ${provider}`, 400));
     }
 
     logger.info(`Deploy request: provider=${provider}, project=${projectName}, files=${Object.keys(files).length}`);
@@ -52,32 +56,26 @@ async function deployAction({ request }: ActionFunctionArgs) {
       controller.abort();
     });
 
-    try {
-      const result = await service.deployToVercel(files, projectName, onStatus, controller.signal);
+    const result = await service.deployToVercel(files, projectName, onStatus, controller.signal);
 
-      return Response.json({
-        success: true,
-        url: result.url,
-        deploymentId: result.deploymentId,
-        events,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Deployment failed';
-      logger.error('Deployment failed:', message);
-
-      return Response.json(
-        {
-          success: false,
-          error: message,
-          events,
-        },
-        { status: 500 },
-      );
+    return successResponse({
+      url: result.url,
+      deploymentId: result.deploymentId,
+      events,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
-  });
+
+    const message = error instanceof Error ? error.message : 'Deployment failed';
+    logger.error('Deployment failed:', message);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const action = withSecurity(deployAction, {
   allowedMethods: ['POST'],
-  rateLimit: false,
+  auth: AUTH_PRESETS.authenticated,
 });

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '~/components/ui/Collapsible';
 import {
@@ -81,17 +81,21 @@ export default function SupabaseTab() {
       });
 
       if (response.ok) {
-        const data = (await response.json()) as { projects?: Array<unknown> };
+        const envelope = (await response.json()) as { data?: { projects?: Array<unknown> } };
+        const data = envelope.data;
         setConnectionTest({
           status: 'success',
-          message: `Connected successfully using environment token. Found ${data.projects?.length || 0} projects`,
+          message: `Connected successfully using environment token. Found ${data?.projects?.length || 0} projects`,
           timestamp: Date.now(),
         });
       } else {
-        const errorData = (await response.json().catch(() => ({}))) as { error?: string };
+        const errorData = (await response.json().catch(() => ({}))) as {
+          message?: string;
+          error?: { message?: string };
+        };
         setConnectionTest({
           status: 'error',
-          message: `Connection failed: ${errorData.error || `${response.status} ${response.statusText}`}`,
+          message: `Connection failed: ${errorData.message || errorData.error?.message || `${response.status} ${response.statusText}`}`,
           timestamp: Date.now(),
         });
       }
@@ -316,7 +320,7 @@ export default function SupabaseTab() {
               </span>
             </div>
             <div
-              className={classNames(
+              className={cn(
                 'i-ph:caret-down w-4 h-4 transform transition-transform duration-200 text-devonz-elements-textSecondary',
                 isProjectsExpanded ? 'rotate-180' : '',
               )}
@@ -363,7 +367,7 @@ export default function SupabaseTab() {
                 {connection.stats.projects.map((project: SupabaseProject) => (
                   <div
                     key={project.id}
-                    className={classNames(
+                    className={cn(
                       'p-4 rounded-lg border transition-colors bg-devonz-elements-background-depth-1 cursor-pointer',
                       selectedProjectId === project.id
                         ? 'border-devonz-elements-item-contentAccent bg-devonz-elements-item-backgroundActive/10'
@@ -389,7 +393,7 @@ export default function SupabaseTab() {
                           </span>
                           <span>•</span>
                           <span
-                            className={classNames(
+                            className={cn(
                               'flex items-center gap-1 px-2 py-0.5 rounded-full text-xs',
                               project.status === 'ACTIVE_HEALTHY'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
@@ -401,7 +405,7 @@ export default function SupabaseTab() {
                             )}
                           >
                             <div
-                              className={classNames(
+                              className={cn(
                                 'w-2 h-2 rounded-full',
                                 project.status === 'ACTIVE_HEALTHY'
                                   ? 'bg-green-500'
@@ -676,7 +680,7 @@ export default function SupabaseTab() {
       {/* Connection Test Results */}
       {connectionTest && (
         <motion.div
-          className={classNames('p-4 rounded-lg border', {
+          className={cn('p-4 rounded-lg border', {
             'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700':
               connectionTest.status === 'success',
             'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-700': connectionTest.status === 'error',
@@ -696,7 +700,7 @@ export default function SupabaseTab() {
               <div className="i-ph:spinner-gap w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
             )}
             <span
-              className={classNames('text-sm font-medium', {
+              className={cn('text-sm font-medium', {
                 'text-green-800 dark:text-green-200': connectionTest.status === 'success',
                 'text-red-800 dark:text-red-200': connectionTest.status === 'error',
                 'text-blue-800 dark:text-blue-200': connectionTest.status === 'testing',
@@ -742,7 +746,7 @@ export default function SupabaseTab() {
                   onChange={(e) => setTokenInput(e.target.value)}
                   disabled={connecting}
                   placeholder="Enter your Supabase access token"
-                  className={classNames(
+                  className={cn(
                     'w-full px-3 py-2 rounded-lg text-sm',
                     'bg-devonz-elements-background-depth-1',
                     'border border-devonz-elements-borderColor',
@@ -767,7 +771,7 @@ export default function SupabaseTab() {
               <button
                 onClick={handleConnect}
                 disabled={connecting || !tokenInput}
-                className={classNames(
+                className={cn(
                   'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                   'bg-devonz-elements-bg-depth-3 text-devonz-elements-textPrimary',
                   'hover:bg-[#5E41D0] hover:text-white',
@@ -794,7 +798,7 @@ export default function SupabaseTab() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleDisconnect}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                       'bg-red-500 text-white',
                       'hover:bg-red-600',

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
 import { Switch } from '~/components/ui/Switch';
 import type { UserProfile } from '~/components/@settings/core/types';
 import { isMac } from '~/utils/os';
@@ -92,7 +92,7 @@ export default function SettingsTab() {
             aria-label="Language"
             value={settings.language}
             onChange={(e) => setSettings((prev) => ({ ...prev, language: e.target.value }))}
-            className={classNames(
+            className={cn(
               'w-full px-3 py-2 rounded-lg text-sm',
               'bg-devonz-elements-bg-depth-1',
               'border border-devonz-elements-borderColor',
@@ -180,7 +180,7 @@ export default function SettingsTab() {
             aria-label="Timezone"
             value={settings.timezone}
             onChange={(e) => setSettings((prev) => ({ ...prev, timezone: e.target.value }))}
-            className={classNames(
+            className={cn(
               'w-full px-3 py-2 rounded-lg text-sm',
               'bg-devonz-elements-bg-depth-1',
               'border border-devonz-elements-borderColor',

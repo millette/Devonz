@@ -2,168 +2,144 @@
 
 <img width="236" height="79" alt="devonz" src="https://github.com/user-attachments/assets/30c464d9-39a9-4c0d-85f8-64473cfa774c" />
 
-**AI-powered full-stack development agent :-: describe what you want, watch it build.**
+**AI-powered full-stack development agent — describe what you want, watch it build.**
 
 [![Docker Build](https://img.shields.io/github/actions/workflow/status/zebbern/Devonz/ci.yml?branch=main&label=Docker%20Build&logo=docker)](https://github.com/zebbern/Devonz/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/Node-18.18%2B-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[Features](#features) ━━ [Installation](#installation) ━━ [Configuration](#configuration)
-
-[Docker](#docker) ━━ [Scripts](#scripts) ━━ [Keeping Up to Date](#keeping-up-to-date) 
-
-[Project Structure](#project-structure) ━━ [Contributing](#contributing) ━━ [Acknowledgments](#acknowledgments)
+[Features](#features) · [Quick Start](#quick-start) · [Configuration](#configuration) · [Docker](#docker) · [Contributing](#contributing)
 
 ![Devonz Screenshot](https://github.com/user-attachments/assets/e4c3067d-2539-4b5e-abab-d129d90b51dc)
 
 </div>
 
-
-## Quick Start
-
-**Docker** (recommended):
-
-```bash
-docker compose up -d
-# Open http://localhost:5173
-```
-
-**From source**:
-
-```bash
-git clone https://github.com/zebbern/Devonz.git && cd Devonz
-pnpm install
-pnpm run dev
-# Open http://localhost:5173
-```
-
-> First load can take up to 2 minutes while dependencies compile.
-
 ---
 
-## Why Devonz?
+## What is Devonz?
 
-- **22 AI providers** — OpenAI, Anthropic, Google, Groq, Z.ai, Ollama, and more. Swap models mid-conversation.
-- **Full dev environment** — editor, terminal, live preview, powered by a local Node.js runtime.
-- **One-click deploy** — push to GitHub, GitLab, Netlify, or Vercel directly from the UI.
-- **MCP tools** — extend the agent with Model Context Protocol servers for specialized workflows.
-- **Auto-fix** — terminal error detection catches failures and patches them automatically.
-- **Image context** — attach screenshots or design files to prompts for visual understanding.
-- **Design Palette** — pick custom color themes that get injected into AI-generated apps.
-- **3D support** — generate React Three Fiber apps with automatic version pinning and peer dependency resolution.
-- **Template gallery** — start from popular frameworks and boilerplates, then customize with AI.
-- **State-of-the-art AI SDK** — built on the Vercel AI SDK for best-in-class LLM performance and reliability.
+Devonz is a **local-first, AI-powered coding environment** that runs on your machine. Describe what you want to build in natural language, and an AI agent generates full-stack applications in a browser-based IDE with an integrated editor, terminal, and live preview — all powered by your local Node.js runtime.
+
+This is a **local development tool**, not a hosted web service. You run it on your own hardware, bring your own API keys, and keep full control of your code.
 
 ---
 
 ## Features
 
-**AI & Code Generation**
-- Natural language to full-stack apps (Node.js-based)
-- 22 LLM providers with hot-swappable model selection
-- MCP (Model Context Protocol) tool integration
-- Automatic error detection and auto-fix from terminal output
-- Attach images to prompts for visual context
-- **Extended Thinking** — AI reasoning visualization for Anthropic Claude and Google Gemini
-- **MCP Schema Sanitization** — Automatic schema compatibility for Google Gemini (strips unsupported constructs)
-- **MCP Auto-Approve** — Per-server auto-approve toggle for trusted MCP servers
-- **Formatted Tool Results** — MCP tool results render as formatted markdown instead of raw JSON
-- **Design Palette** — UI for picking custom color themes injected into generated code
-- **3D App Generation** — React Three Fiber support with automatic version pinning for React 18/19
-
-**Development Environment**
-- In-browser code editor (CodeMirror) with syntax highlighting
-- Integrated terminal (xterm.js) with full shell access
-- Real-time application preview
-- Diff view for AI-generated changes
-- File locking to prevent conflicts during generation
-
-**Security & Reliability**
-- **Security Hardened** — `withSecurity()` on all 42 API routes with input validation, rate limiting options, URL allowlisting
-
-**Deployment & Integrations**
-- GitHub / GitLab push and repo management
-- Netlify and Vercel one-click deploy
-- Supabase database integration
-- Git version control built-in
-- Template gallery with category filtering, search, live preview, and one-click cloning
+- **22 LLM providers** — OpenAI, Anthropic, Google, Groq, DeepSeek, Ollama, LM Studio, and [more](docs/LLM-PROVIDERS.md). Swap models mid-conversation.
+- **Full dev environment** — in-browser code editor (CodeMirror), integrated terminal (xterm.js), and real-time application preview.
+- **Auto-fix** — terminal error detection catches failures and patches them automatically.
+- **MCP tool integration** — extend the agent with [Model Context Protocol](https://modelcontextprotocol.io/) servers for specialized workflows.
+- **Extended thinking** — AI reasoning visualization for Anthropic Claude and Google Gemini.
+- **Image context** — attach screenshots or design files to prompts for visual understanding.
+- **Deploy from the UI** — push to GitHub, GitLab, Netlify, or Vercel directly.
+- **Design Palette** — pick custom color themes that get injected into generated apps.
+- **3D support** — generate React Three Fiber apps with automatic version pinning.
+- **Template gallery** — start from popular frameworks and boilerplates, then customize with AI.
+- **Security hardened** — all API routes wrapped with input validation, rate limiting, and URL allowlisting.
 
 ---
 
-## Installation
+## Quick Start
 
-<details>
-<summary><strong>From Source (Node.js)</strong></summary>
+### Prerequisites
 
-**Prerequisites**: Node.js 18.18+ and pnpm (latest)
+- **Node.js** 18.18 or later
+- **pnpm** 9.x (`corepack enable && corepack prepare pnpm@9.14.4 --activate`)
+
+### From Source
 
 ```bash
 git clone https://github.com/zebbern/Devonz.git
 cd Devonz
+cp .env.example .env.local   # add your API keys
 pnpm install
 pnpm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
 
-</details>
+> The first load can take up to two minutes while dependencies compile.
 
-<details>
-<summary><strong>Docker</strong></summary>
+### With Docker
 
-No Node.js required. Just Docker.
+No local Node.js required — just Docker.
 
 ```bash
-# Option 1: Docker Compose (pulls from GHCR)
+git clone https://github.com/zebbern/Devonz.git
+cd Devonz
+cp .env.example .env.local   # add your API keys
 docker compose up -d
-
-# Option 2: Build locally
-docker build -t devonz .
-docker run --rm -p 5173:5173 --env-file .env.local devonz
 ```
 
 Open [http://localhost:5173](http://localhost:5173).
-
-</details>
 
 ---
 
 ## Configuration
 
-Copy the example env file and add your API keys:
+### Environment Variables
+
+Copy the example file and fill in your API keys:
 
 ```bash
 cp .env.example .env.local
 ```
 
-Or use the interactive setup wizard (can init `.env.local`, sync `.env` for Docker, and prompt for keys with hidden input):
+Or run the interactive setup wizard, which creates `.env.local` and prompts for keys with hidden input:
 
 ```bash
 pnpm run setup
 ```
 
+At minimum, add one AI provider key:
+
 ```bash
-# AI Provider API Keys (add any you use)
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-GOOGLE_GENERATIVE_AI_API_KEY=your_google_key
-ZAI_API_KEY=your_zai_key
-
-# Local Provider URLs (optional)
-OLLAMA_API_BASE_URL=http://127.0.0.1:11434
-
-# Deployment Tokens (optional — can also be set via UI)
-VITE_GITHUB_ACCESS_TOKEN=your_github_token
-VITE_NETLIFY_ACCESS_TOKEN=your_netlify_token
+# Pick any provider(s) you have keys for
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_GENERATIVE_AI_API_KEY=AI...
 ```
 
-You can also configure providers in-app: **Settings (gear icon) → Providers tab**.
+You can also configure providers at runtime via **Settings → Providers** in the UI.
 
-See [.env.example](.env.example) for all available variables.
+See [`.env.example`](.env.example) for the full list of supported variables, including deployment tokens, local provider URLs, and encryption settings.
+
+### Supported LLM Providers
+
+| Provider | Env Variable | Notes |
+|----------|-------------|-------|
+| OpenAI | `OPENAI_API_KEY` | GPT-4o, o1 series |
+| Anthropic | `ANTHROPIC_API_KEY` | Claude 3.5 / 4 |
+| Google Gemini | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini models |
+| DeepSeek | `DEEPSEEK_API_KEY` | DeepSeek Chat, Coder |
+| Groq | `GROQ_API_KEY` | Fast inference |
+| Mistral | `MISTRAL_API_KEY` | Mistral Large / Small |
+| Cohere | `COHERE_API_KEY` | Command R+ |
+| X.AI | `XAI_API_KEY` | Grok models |
+| Perplexity | `PERPLEXITY_API_KEY` | Search-augmented |
+| Together | `TOGETHER_API_KEY` | Open-source models |
+| Fireworks | `FIREWORKS_API_KEY` | Fast inference |
+| Cerebras | `CEREBRAS_API_KEY` | Fast inference |
+| HuggingFace | `HuggingFace_API_KEY` | Inference API |
+| OpenRouter | `OPEN_ROUTER_API_KEY` | Multi-provider routing |
+| GitHub Models | `GITHUB_API_KEY` | GitHub-hosted models |
+| Moonshot | `MOONSHOT_API_KEY` | Kimi models |
+| Hyperbolic | `HYPERBOLIC_API_KEY` | Hyperbolic inference |
+| Z.ai | `ZAI_API_KEY` | GLM coding models |
+| Amazon Bedrock | `AWS_BEDROCK_CONFIG` | AWS-hosted models (JSON) |
+| Ollama | `OLLAMA_API_BASE_URL` | Local models, no key needed |
+| LM Studio | `LMSTUDIO_API_BASE_URL` | Local models, no key needed |
+| OpenAI-Like | `OPENAI_LIKE_API_BASE_URL` | Any compatible API |
+
+For details on adding a new provider, see [docs/LLM-PROVIDERS.md](docs/LLM-PROVIDERS.md).
 
 ---
 
 ## Docker
+
+All Docker commands are available as pnpm scripts:
 
 ```bash
 pnpm docker:build          # Build image locally
@@ -174,61 +150,67 @@ pnpm docker:dev            # Dev mode with hot reload
 pnpm docker:update         # Pull latest image + restart
 ```
 
-**Auto-update with Watchtower** (polls GHCR every 5 minutes):
+The [`docker-compose.yml`](docker-compose.yml) includes three profiles:
 
-```bash
-docker compose --profile auto-update up -d
-```
+| Profile | Command | Description |
+|---------|---------|-------------|
+| *(default)* | `docker compose up -d` | Production — pulls from GHCR |
+| `dev` | `docker compose --profile dev up` | Development — bind-mount with hot reload |
+| `auto-update` | `docker compose --profile auto-update up -d` | Adds Watchtower to poll GHCR every 5 minutes |
 
 ---
 
-## Scripts
+## Development
+
+### Scripts
 
 ```bash
-# Development
-pnpm run dev               # Start dev server
+pnpm run dev               # Start dev server (http://localhost:5173)
 pnpm run build             # Production build
 pnpm run start             # Run production build
 pnpm run preview           # Build + preview locally
 
-# Quality
 pnpm test                  # Run test suite
 pnpm test:watch            # Tests in watch mode
 pnpm run typecheck         # TypeScript type check
 pnpm run lint              # ESLint check
 pnpm run lint:fix          # Auto-fix lint issues
 
-# Utilities
 pnpm run clean             # Clean build artifacts
 pnpm run update            # Pull latest + install + rebuild
 ```
 
----
+### Updating
 
-## Keeping Up to Date
-
-**Git clone users:**
+**Git clone:**
 
 ```bash
-pnpm run update                    # pulls, installs deps, rebuilds
+pnpm run update                    # pull, install, rebuild
 pnpm run update -- --skip-build    # pull + install only
 ```
 
-**Docker users:**
+**Docker:**
 
 ```bash
-pnpm docker:update                 # pulls latest image, restarts
+pnpm docker:update                 # pull latest image, restart
 ```
 
-**Hands-free (Watchtower):**
+### Tech Stack
 
-```bash
-docker compose --profile auto-update up -d
-```
+| Layer | Technology |
+|-------|-----------|
+| Framework | Remix + React Router v7 |
+| Build | Vite 5 |
+| Language | TypeScript (strict) |
+| Styling | UnoCSS + SCSS + Radix UI |
+| State | Nanostores |
+| AI | Vercel AI SDK (22 providers) |
+| Editor | CodeMirror 6 |
+| Terminal | xterm.js |
+| Runtime | Local Node.js |
+| Testing | Vitest + Testing Library |
 
----
-
-## Project Structure
+### Project Structure
 
 <details>
 <summary>Expand file tree</summary>
@@ -251,14 +233,14 @@ devonz/
 │   │   ├── .server/        # Server-only code (LLM streaming)
 │   │   ├── agent/          # Agent prompts + orchestration
 │   │   ├── common/         # Prompt library + shared prompts
-│   │   ├── hooks/          # 25 custom React hooks
+│   │   ├── hooks/          # Custom React hooks
 │   │   ├── modules/        # Feature modules (22 LLM providers)
 │   │   ├── persistence/    # IndexedDB, localStorage, autoBackup
 │   │   ├── runtime/        # Action runner, message parser, local runtime
 │   │   ├── services/       # API services
-│   │   ├── stores/         # 24 nanostores
+│   │   ├── stores/         # Nanostores
 │   │   └── utils/          # Service-level utilities
-│   ├── routes/             # 48 Remix routes (6 pages + 42 API)
+│   ├── routes/             # Remix routes (pages + API endpoints)
 │   ├── styles/             # Global styles (SCSS + CSS)
 │   └── types/              # TypeScript type definitions
 ├── docs/                   # Extended documentation
@@ -269,29 +251,22 @@ devonz/
 
 ---
 
-## Tech Stack
-
-**Remix** + **Vite** + **TypeScript** · **UnoCSS** · **Radix UI** · **Framer Motion** · **Vercel AI SDK** · **CodeMirror** · **xterm.js** · **Local Runtime (host Node.js)**
-
----
-
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -m 'feat: add my feature'`
-4. Push: `git push origin feature/my-feature`
-5. Open a Pull Request
+3. Run checks: `pnpm lint:fix && pnpm test`
+4. Commit with a [conventional message](https://www.conventionalcommits.org/): `git commit -m 'feat: add my feature'`
+5. Push and open a Pull Request
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed guidelines.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for detailed guidelines including code style, testing patterns, and API route conventions.
 
 ---
 
 ## Acknowledgments
 
-- [bolt.diy](https://github.com/stackblitz-labs/bolt.diy) — original project foundation
-- Originally based on [StackBlitz bolt.new](https://github.com/stackblitz-labs/bolt.diy). Now uses a local Node.js runtime for code execution.
-- [Vercel AI SDK](https://sdk.vercel.ai/) — AI capabilities
+- [bolt.diy](https://github.com/stackblitz-labs/bolt.diy) — original project foundation (originally StackBlitz bolt.new). Devonz replaces the WebContainer runtime with a local Node.js runtime.
+- [Vercel AI SDK](https://sdk.vercel.ai/) — LLM integration layer
 
 ---
 

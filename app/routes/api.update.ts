@@ -1,7 +1,13 @@
 import { type ActionFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
 import { clearVersionCheckCache } from './api.version-check';
 import type { UpdateStepResult } from '~/types/api-types';
+
+const logger = createScopedLogger('Update');
 
 // Concurrency guard — only one update at a time
 let isUpdating = false;
@@ -19,24 +25,18 @@ async function updateAction(_args: ActionFunctionArgs) {
   const isDocker = process.env.RUNNING_IN_DOCKER === 'true';
 
   if (isDocker) {
-    return Response.json(
-      {
-        success: false,
-        message: 'Update is not available in Docker environments. Use `docker compose pull` instead.',
-        steps: [],
-      },
-      { status: 403 },
+    return errorResponse(
+      new AppError(
+        AppErrorType.FORBIDDEN,
+        'Update is not available in Docker environments. Use `docker compose pull` instead.',
+        403,
+      ),
     );
   }
 
   if (isUpdating) {
-    return Response.json(
-      {
-        success: false,
-        message: 'An update is already in progress. Please wait for it to complete.',
-        steps: [],
-      },
-      { status: 409 },
+    return errorResponse(
+      new AppError(AppErrorType.VALIDATION, 'An update is already in progress. Please wait for it to complete.', 409),
     );
   }
 
@@ -55,14 +55,7 @@ async function updateAction(_args: ActionFunctionArgs) {
     if (!existsSync(resolve(ROOT, '.git'))) {
       steps.push({ name: 'Check git repo', status: 'failed', error: 'Not a git repository' });
 
-      return Response.json(
-        {
-          success: false,
-          message: 'Not a git repository. Cannot update.',
-          steps,
-        },
-        { status: 400 },
-      );
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Not a git repository. Cannot update.', 400));
     }
 
     steps.push({ name: 'Check git repo', status: 'completed' });
@@ -81,14 +74,7 @@ async function updateAction(_args: ActionFunctionArgs) {
       const message = err instanceof Error ? err.message : 'Failed to stash changes';
       steps.push({ name: 'Stash changes', status: 'failed', error: message });
 
-      return Response.json(
-        {
-          success: false,
-          message: 'Failed to stash uncommitted changes.',
-          steps,
-        },
-        { status: 500 },
-      );
+      return errorResponse(new AppError(AppErrorType.INTERNAL, 'Failed to stash uncommitted changes.'));
     }
 
     // Step 3: Pull latest from main
@@ -99,13 +85,8 @@ async function updateAction(_args: ActionFunctionArgs) {
       const message = err instanceof Error ? err.message : 'Failed to pull latest changes';
       steps.push({ name: 'Pull latest', status: 'failed', error: message });
 
-      return Response.json(
-        {
-          success: false,
-          message: 'Failed to pull latest changes. You may have merge conflicts.',
-          steps,
-        },
-        { status: 500 },
+      return errorResponse(
+        new AppError(AppErrorType.INTERNAL, 'Failed to pull latest changes. You may have merge conflicts.'),
       );
     }
 
@@ -117,14 +98,7 @@ async function updateAction(_args: ActionFunctionArgs) {
       const message = err instanceof Error ? err.message : 'Failed to install dependencies';
       steps.push({ name: 'Install dependencies', status: 'failed', error: message });
 
-      return Response.json(
-        {
-          success: false,
-          message: 'Failed to install dependencies.',
-          steps,
-        },
-        { status: 500 },
-      );
+      return errorResponse(new AppError(AppErrorType.INTERNAL, 'Failed to install dependencies.'));
     }
 
     // Step 5: Skip build — dev server will rebuild on reload
@@ -142,21 +116,12 @@ async function updateAction(_args: ActionFunctionArgs) {
     // Clear cached version-check so the banner disappears after reload
     clearVersionCheckCache();
 
-    return Response.json({
-      success: true,
-      message: `Updated successfully to ${hash}. Reload the page to apply changes.`,
-      steps,
-    });
+    return successResponse({ steps }, `Updated successfully to ${hash}. Reload the page to apply changes.`);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'An unexpected error occurred during update';
+    logger.error('Update failed', err);
 
-    return Response.json(
-      {
-        success: false,
-        message,
-        steps,
-      },
-      { status: 500 },
+    return errorResponse(
+      err instanceof Error ? err : new AppError(AppErrorType.INTERNAL, 'An unexpected error occurred during update'),
     );
   } finally {
     isUpdating = false;
@@ -164,6 +129,7 @@ async function updateAction(_args: ActionFunctionArgs) {
 }
 
 export const action = withSecurity(updateAction, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['POST'],
   rateLimit: true,
 });
@@ -173,12 +139,10 @@ export const action = withSecurity(updateAction, {
  * Remix requires a loader export to handle GET requests without throwing.
  */
 export function loader() {
-  return Response.json(
-    {
-      success: false,
-      message: 'Method not allowed. Use POST to trigger an update.',
-      steps: [],
-    },
-    { status: 405, headers: { Allow: 'POST' } },
+  const response = errorResponse(
+    new AppError(AppErrorType.FORBIDDEN, 'Method not allowed. Use POST to trigger an update.', 405),
   );
+  response.headers.set('Allow', 'POST');
+
+  return response;
 }

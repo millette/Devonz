@@ -16,8 +16,13 @@ import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 export const action = withSecurity(llmCallAction, {
+  auth: AUTH_PRESETS.authenticated,
+  csrfExempt: true,
   allowedMethods: ['POST'],
   rateLimit: false,
 });
@@ -75,10 +80,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'));
   }
 
   const parsed = llmCallRequestSchema.safeParse(rawBody);
@@ -86,19 +88,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   if (!parsed.success) {
     logger.warn('LLM call request validation failed:', parsed.error.issues);
 
-    return new Response(
-      JSON.stringify({
-        error: 'Invalid request',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request'));
   }
 
   const { system, message, model, provider, streamOutput } = parsed.data as {
@@ -140,11 +130,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       logger.error(error);
 
       if (error instanceof Error && error.message?.includes('API key')) {
-        throw new Response(JSON.stringify({ error: 'Invalid or missing API key' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-          statusText: 'Unauthorized',
-        });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid or missing API key'));
       }
 
       // Handle token limit errors with helpful messages
@@ -155,23 +141,19 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           error.message?.includes('exceeds') ||
           error.message?.includes('maximum'))
       ) {
-        throw new Response(
-          JSON.stringify({
-            error: `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Token Limit Exceeded',
-          },
+        return errorResponse(
+          new AppError(
+            AppErrorType.VALIDATION,
+            `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
+          ),
         );
       }
 
-      throw new Response(JSON.stringify({ error: 'An unexpected error occurred during streaming' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-        statusText: 'Internal Server Error',
-      });
+      return errorResponse(
+        error instanceof Error
+          ? error
+          : new AppError(AppErrorType.INTERNAL, 'An unexpected error occurred during streaming'),
+      );
     }
   } else {
     try {
@@ -188,10 +170,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       const validation = validateTokenLimits(modelDetails, dynamicMaxTokens);
 
       if (!validation.valid) {
-        throw new Response(validation.error, {
-          status: 400,
-          statusText: 'Token Limit Exceeded',
-        });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, validation.error ?? 'Token limit exceeded'));
       }
 
       const providerInfo = PROVIDER_LIST.find((p) => p.name === provider.name);
@@ -245,39 +224,12 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       const result = await generateText(finalParams);
       logger.info(`Generated response`);
 
-      return new Response(JSON.stringify(result), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return successResponse(result);
     } catch (error: unknown) {
       logger.error(error);
 
-      const errObj = error as Record<string, unknown>;
-
-      const errorResponse = {
-        error: true,
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        statusCode: typeof errObj.statusCode === 'number' ? errObj.statusCode : 500,
-        isRetryable: errObj.isRetryable !== false,
-        provider: typeof errObj.provider === 'string' ? errObj.provider : 'unknown',
-      };
-
       if (error instanceof Error && error.message?.includes('API key')) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: 'Invalid or missing API key',
-            statusCode: 401,
-            isRetryable: false,
-          }),
-          {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Unauthorized',
-          },
-        );
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid or missing API key'));
       }
 
       // Handle token limit errors with helpful messages
@@ -288,26 +240,17 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
           error.message?.includes('exceeds') ||
           error.message?.includes('maximum'))
       ) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-            statusCode: 400,
-            isRetryable: false,
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Token Limit Exceeded',
-          },
+        return errorResponse(
+          new AppError(
+            AppErrorType.VALIDATION,
+            `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
+          ),
         );
       }
 
-      return new Response(JSON.stringify(errorResponse), {
-        status: errorResponse.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-        statusText: 'Error',
-      });
+      return errorResponse(
+        error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, 'An unexpected error occurred'),
+      );
     }
   }
 }

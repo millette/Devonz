@@ -1,4 +1,4 @@
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface LoadingStateProps {
   message?: string;
@@ -20,14 +20,9 @@ export function LoadingState({ message = 'Loading...', size = 'md', className = 
   };
 
   return (
-    <div
-      className={classNames(
-        'flex flex-col items-center justify-center py-8 text-devonz-elements-textSecondary',
-        className,
-      )}
-    >
-      <div className={classNames('i-ph:spinner animate-spin mb-2', sizeClasses[size])} />
-      <p className={classNames('text-devonz-elements-textSecondary', textSizeClasses[size])}>{message}</p>
+    <div className={cn('flex flex-col items-center justify-center py-8 text-devonz-elements-textSecondary', className)}>
+      <div className={cn('i-ph:spinner animate-spin mb-2', sizeClasses[size])} />
+      <p className={cn('text-devonz-elements-textSecondary', textSizeClasses[size])}>{message}</p>
     </div>
   );
 }
@@ -62,12 +57,10 @@ export function ErrorState({
   };
 
   return (
-    <div className={classNames('flex flex-col items-center justify-center py-8 text-center', className)}>
-      <div className={classNames('i-ph:warning-circle text-red-500 mb-2', sizeClasses[size])} />
-      <h3 className={classNames('font-medium text-devonz-elements-textPrimary mb-1', textSizeClasses[size])}>
-        {title}
-      </h3>
-      <p className={classNames('text-devonz-elements-textSecondary mb-4', textSizeClasses[size])}>{message}</p>
+    <div className={cn('flex flex-col items-center justify-center py-8 text-center', className)}>
+      <div className={cn('i-ph:warning-circle text-red-500 mb-2', sizeClasses[size])} />
+      <h3 className={cn('font-medium text-devonz-elements-textPrimary mb-1', textSizeClasses[size])}>{title}</h3>
+      <p className={cn('text-devonz-elements-textSecondary mb-4', textSizeClasses[size])}>{message}</p>
       {onRetry && (
         <button
           onClick={onRetry}
@@ -132,10 +125,10 @@ export function ConnectionTestIndicator({ status, message, timestamp, className 
   };
 
   return (
-    <div className={classNames(`p-4 rounded-lg border ${getStatusColor()}`, className)}>
+    <div className={cn(`p-4 rounded-lg border ${getStatusColor()}`, className)}>
       <div className="flex items-center gap-2">
         {getStatusIcon()}
-        <span className={classNames('text-sm font-medium', getStatusTextColor())}>{message || status}</span>
+        <span className={cn('text-sm font-medium', getStatusTextColor())}>{message || status}</span>
       </div>
       {timestamp && <p className="text-xs text-gray-500 mt-1">{new Date(timestamp).toLocaleString()}</p>}
     </div>

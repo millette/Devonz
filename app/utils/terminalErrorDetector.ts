@@ -303,7 +303,7 @@ const ERROR_PATTERNS: ErrorPattern[] = [
     severity: 'error',
     title: 'npm Error',
     autoFixable: true, // Often missing dependencies that can be added
-    extractDetails: (match, fullOutput) => {
+    extractDetails: (_match, fullOutput) => {
       // Get more npm error context
       const lines = fullOutput.split('\n');
       const errorLines = lines.filter((line) => line.includes('npm ERR!'));

@@ -1,4 +1,4 @@
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface HealthStatusBadgeProps {
   status: 'healthy' | 'unhealthy' | 'checking' | 'unknown';
@@ -44,14 +44,14 @@ function HealthStatusBadge({ status, responseTime, className }: HealthStatusBadg
 
   return (
     <div
-      className={classNames(
+      className={cn(
         'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
         config.bgColor,
         config.color,
         className,
       )}
     >
-      <div className={classNames('w-3 h-3', config.iconClass)} />
+      <div className={cn('w-3 h-3', config.iconClass)} />
       <span>{config.label}</span>
       {responseTime !== undefined && status === 'healthy' && <span className="opacity-75">({responseTime}ms)</span>}
     </div>

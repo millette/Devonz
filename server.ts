@@ -153,3 +153,24 @@ server.listen(PORT, () => {
   log('info', `Devonz server listening on http://localhost:${PORT}`);
   log('info', `WebSocket endpoint: ws://localhost:${PORT}/ws`);
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown — release port on SIGINT / SIGTERM
+// ---------------------------------------------------------------------------
+
+function shutdown(signal: string) {
+  log('info', `Received ${signal}, shutting down…`);
+  server.close(() => {
+    log('info', 'Server closed');
+    process.exit(0);
+  });
+
+  // Force exit after 5 s if connections are still draining
+  setTimeout(() => {
+    log('error', 'Forced exit — connections did not drain in time');
+    process.exit(1);
+  }, 5_000).unref();
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import type { ShowcaseTemplate } from '~/types/showcase-template';
-import type { TemplateCategory } from '~/types/showcase-template';
+import type { ShowcaseTemplate, TemplateCategory } from '~/types/showcase-template';
 import { loadShowcaseTemplates } from '~/utils/showcase-templates';
 
 const CATEGORY_BADGE_COLORS: Record<string, { text: string; bg: string }> = {

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '~/components/ui/Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface ProgressiveLoaderProps {
   isLoading: boolean;
@@ -56,7 +56,7 @@ export function GitHubProgressiveLoader({
   // Loading state with progressive steps
   if (isLoading) {
     return (
-      <div className={classNames('flex flex-col items-center justify-center py-8', className)}>
+      <div className={cn('flex flex-col items-center justify-center py-8', className)}>
         <div className="relative mb-4">
           <div className="i-ph:spinner w-8 h-8 animate-spin text-devonz-elements-item-contentAccent" />
           {showProgress && progress > 0 && (
@@ -88,7 +88,7 @@ export function GitHubProgressiveLoader({
               >
                 <span>Show details</span>
                 <div
-                  className={classNames(
+                  className={cn(
                     'i-ph:caret-down w-3 h-3 transform transition-transform duration-200',
                     isExpanded ? 'rotate-180' : '',
                   )}
@@ -117,7 +117,7 @@ export function GitHubProgressiveLoader({
                           <div className="w-3 h-3 rounded-full border border-devonz-elements-borderColor flex-shrink-0" />
                         )}
                         <span
-                          className={classNames(
+                          className={cn(
                             step.error
                               ? 'text-red-500'
                               : step.completed
@@ -144,7 +144,7 @@ export function GitHubProgressiveLoader({
   // Error state
   if (error) {
     return (
-      <div className={classNames('flex flex-col items-center justify-center py-8 text-center space-y-4', className)}>
+      <div className={cn('flex flex-col items-center justify-center py-8 text-center space-y-4', className)}>
         <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
           <div className="i-ph:warning-circle w-5 h-5 text-red-500" />
         </div>
@@ -174,7 +174,7 @@ export function GitHubProgressiveLoader({
 
   // Success state - render children with optional refresh indicator
   return (
-    <div className={classNames('relative', className)}>
+    <div className={cn('relative', className)}>
       {isRefreshing && (
         <div className="absolute top-0 right-0 z-10">
           <div className="flex items-center gap-2 px-2 py-1 bg-devonz-elements-background-depth-1 border border-devonz-elements-borderColor rounded-lg shadow-sm">
@@ -187,79 +187,4 @@ export function GitHubProgressiveLoader({
       {children}
     </div>
   );
-}
-
-// Hook for managing progressive loading steps
-export function useProgressiveLoader() {
-  const [steps, setSteps] = useState<
-    Array<{
-      key: string;
-      label: string;
-      completed: boolean;
-      loading?: boolean;
-      error?: boolean;
-    }>
-  >([]);
-
-  const addStep = useCallback((key: string, label: string) => {
-    setSteps((prev) => [
-      ...prev.filter((step) => step.key !== key),
-      { key, label, completed: false, loading: false, error: false },
-    ]);
-  }, []);
-
-  const updateStep = useCallback(
-    (
-      key: string,
-      updates: {
-        completed?: boolean;
-        loading?: boolean;
-        error?: boolean;
-        label?: string;
-      },
-    ) => {
-      setSteps((prev) => prev.map((step) => (step.key === key ? { ...step, ...updates } : step)));
-    },
-    [],
-  );
-
-  const removeStep = useCallback((key: string) => {
-    setSteps((prev) => prev.filter((step) => step.key !== key));
-  }, []);
-
-  const clearSteps = useCallback(() => {
-    setSteps([]);
-  }, []);
-
-  const startStep = useCallback(
-    (key: string) => {
-      updateStep(key, { loading: true, error: false });
-    },
-    [updateStep],
-  );
-
-  const completeStep = useCallback(
-    (key: string) => {
-      updateStep(key, { completed: true, loading: false, error: false });
-    },
-    [updateStep],
-  );
-
-  const errorStep = useCallback(
-    (key: string) => {
-      updateStep(key, { error: true, loading: false });
-    },
-    [updateStep],
-  );
-
-  return {
-    steps,
-    addStep,
-    updateStep,
-    removeStep,
-    clearSteps,
-    startStep,
-    completeStep,
-    errorStep,
-  };
 }

@@ -1,7 +1,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { motion, type Variants } from 'framer-motion';
 import React, { memo, type ReactNode, useState, useEffect } from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { cubicEasingFn } from '~/utils/easings';
 import { IconButton } from './IconButton';
 import { Button } from './Button';
@@ -21,7 +21,7 @@ interface DialogButtonProps {
 export const DialogButton = memo(({ type, children, onClick, disabled }: DialogButtonProps) => {
   return (
     <button
-      className={classNames(
+      className={cn(
         'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors',
         type === 'primary'
           ? 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'
@@ -40,7 +40,7 @@ export const DialogButton = memo(({ type, children, onClick, disabled }: DialogB
 export const DialogTitle = memo(({ className, children, ...props }: RadixDialog.DialogTitleProps) => {
   return (
     <RadixDialog.Title
-      className={classNames('text-lg font-medium text-devonz-elements-textPrimary flex items-center gap-2', className)}
+      className={cn('text-lg font-medium text-devonz-elements-textPrimary flex items-center gap-2', className)}
       {...props}
     >
       {children}
@@ -50,10 +50,7 @@ export const DialogTitle = memo(({ className, children, ...props }: RadixDialog.
 
 export const DialogDescription = memo(({ className, children, ...props }: RadixDialog.DialogDescriptionProps) => {
   return (
-    <RadixDialog.Description
-      className={classNames('text-sm text-devonz-elements-textSecondary mt-1', className)}
-      {...props}
-    >
+    <RadixDialog.Description className={cn('text-sm text-devonz-elements-textSecondary mt-1', className)} {...props}>
       {children}
     </RadixDialog.Description>
   );
@@ -105,7 +102,7 @@ export const Dialog = memo(({ children, className, showCloseButton = true, onClo
     <RadixDialog.Portal>
       <RadixDialog.Overlay asChild>
         <motion.div
-          className={classNames('fixed inset-0 z-[9999] bg-black/70 dark:bg-black/80 backdrop-blur-sm')}
+          className={cn('fixed inset-0 z-[9999] bg-black/70 dark:bg-black/80 backdrop-blur-sm')}
           initial="closed"
           animate="open"
           exit="closed"
@@ -115,7 +112,7 @@ export const Dialog = memo(({ children, className, showCloseButton = true, onClo
       </RadixDialog.Overlay>
       <RadixDialog.Content asChild>
         <motion.div
-          className={classNames(
+          className={cn(
             'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-devonz-elements-bg-depth-1 rounded-lg shadow-xl border border-devonz-elements-borderColor z-[9999] w-[520px] focus:outline-none',
             className,
           )}
@@ -346,7 +343,7 @@ export function SelectionDialog({
     return (
       <div
         key={item.id}
-        className={classNames(
+        className={cn(
           'flex items-start space-x-3 p-2 rounded-md transition-colors',
           selectedItems.includes(item.id)
             ? 'bg-devonz-elements-item-backgroundAccent'
@@ -366,7 +363,7 @@ export function SelectionDialog({
         <div className="grid gap-1.5 leading-none">
           <Label
             htmlFor={`item-${item.id}`}
-            className={classNames(
+            className={cn(
               'text-sm font-medium cursor-pointer',
               selectedItems.includes(item.id)
                 ? 'text-devonz-elements-item-contentAccent'

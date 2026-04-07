@@ -1,13 +1,14 @@
-import { forwardRef } from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
-export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  ref?: React.Ref<HTMLDivElement>;
+}
 
-const Card = forwardRef<HTMLDivElement, CardProps>(({ className, style, ...props }, ref) => {
+function Card({ className, style, ref, ...props }: CardProps) {
   return (
     <div
       ref={ref}
-      className={classNames('rounded-lg border text-devonz-elements-textPrimary shadow-sm', className)}
+      className={cn('rounded-lg border text-devonz-elements-textPrimary shadow-sm', className)}
       style={{
         backgroundColor: 'var(--devonz-elements-bg-depth-1)',
         borderColor: 'var(--devonz-elements-borderColor)',
@@ -16,50 +17,54 @@ const Card = forwardRef<HTMLDivElement, CardProps>(({ className, style, ...props
       {...props}
     />
   );
-});
-Card.displayName = 'Card';
+}
 
-const CardHeader = forwardRef<HTMLDivElement, CardProps>(({ className, ...props }, ref) => {
-  return <div ref={ref} className={classNames('flex flex-col space-y-1.5 p-6', className)} {...props} />;
-});
-CardHeader.displayName = 'CardHeader';
+function CardHeader({ className, ref, ...props }: CardProps) {
+  return <div ref={ref} className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />;
+}
 
-const CardTitle = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, style, ...props }, ref) => {
-    return (
-      <h3
-        ref={ref}
-        className={classNames('text-2xl font-semibold leading-none tracking-tight', className)}
-        style={{ color: 'var(--devonz-elements-textPrimary)', ...style }}
-        {...props}
-      />
-    );
-  },
-);
-CardTitle.displayName = 'CardTitle';
+function CardTitle({
+  className,
+  style,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement> & { ref?: React.Ref<HTMLParagraphElement> }) {
+  return (
+    <h3
+      ref={ref}
+      className={cn('text-2xl font-semibold leading-none tracking-tight', className)}
+      style={{ color: 'var(--devonz-elements-textPrimary)', ...style }}
+      {...props}
+    />
+  );
+}
 
-const CardDescription = forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, style, ...props }, ref) => {
-    return (
-      <p
-        ref={ref}
-        className={classNames('text-sm', className)}
-        style={{ color: 'var(--devonz-elements-textSecondary)', ...style }}
-        {...props}
-      />
-    );
-  },
-);
-CardDescription.displayName = 'CardDescription';
+function CardDescription({
+  className,
+  style,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement> & { ref?: React.Ref<HTMLParagraphElement> }) {
+  return (
+    <p
+      ref={ref}
+      className={cn('text-sm', className)}
+      style={{ color: 'var(--devonz-elements-textSecondary)', ...style }}
+      {...props}
+    />
+  );
+}
 
-const CardContent = forwardRef<HTMLDivElement, CardProps>(({ className, ...props }, ref) => {
-  return <div ref={ref} className={classNames('p-6 pt-0', className)} {...props} />;
-});
-CardContent.displayName = 'CardContent';
+function CardContent({ className, ref, ...props }: CardProps) {
+  return <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />;
+}
 
-const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, ...props }, ref) => (
-  <div ref={ref} className={classNames('flex items-center p-6 pt-0', className)} {...props} />
-));
-CardFooter.displayName = 'CardFooter';
+function CardFooter({
+  className,
+  ref,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement> }) {
+  return <div ref={ref} className={cn('flex items-center p-6 pt-0', className)} {...props} />;
+}
 
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };

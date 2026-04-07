@@ -26,7 +26,6 @@ export class PreviewsStore {
   #runtime: Promise<RuntimeProvider>;
   #broadcastChannel?: BroadcastChannel;
   #lastUpdate = new Map<string, number>();
-  #watchedFiles = new Set<string>();
   #refreshTimeouts = new Map<string, NodeJS.Timeout>();
   #REFRESH_DELAY = 300;
   #storageChannel?: BroadcastChannel;
@@ -39,6 +38,34 @@ export class PreviewsStore {
     this.#broadcastChannel = this.#maybeCreateChannel(PREVIEW_CHANNEL);
     this.#storageChannel = this.#maybeCreateChannel('storage-sync-channel');
 
+    this.#setupChannelHandlers();
+    this.#init();
+  }
+
+  #maybeCreateChannel(name: string): BroadcastChannel | undefined {
+    if (typeof globalThis === 'undefined') {
+      return undefined;
+    }
+
+    const globalBroadcastChannel = (
+      globalThis as typeof globalThis & {
+        BroadcastChannel?: typeof BroadcastChannel;
+      }
+    ).BroadcastChannel;
+
+    if (typeof globalBroadcastChannel !== 'function') {
+      return undefined;
+    }
+
+    try {
+      return new globalBroadcastChannel(name);
+    } catch (error) {
+      logger.warn('BroadcastChannel unavailable:', error);
+      return undefined;
+    }
+  }
+
+  #setupChannelHandlers() {
     if (this.#broadcastChannel) {
       // Listen for preview updates from other tabs
       this.#broadcastChannel.onmessage = (event) => {
@@ -65,41 +92,6 @@ export class PreviewsStore {
           this._syncStorage(storage);
         }
       };
-    }
-
-    // Override localStorage setItem to catch all changes
-    if (typeof window !== 'undefined') {
-      const originalSetItem = localStorage.setItem;
-
-      localStorage.setItem = (...args) => {
-        originalSetItem.apply(localStorage, args);
-        this._broadcastStorageSync();
-      };
-    }
-
-    this.#init();
-  }
-
-  #maybeCreateChannel(name: string): BroadcastChannel | undefined {
-    if (typeof globalThis === 'undefined') {
-      return undefined;
-    }
-
-    const globalBroadcastChannel = (
-      globalThis as typeof globalThis & {
-        BroadcastChannel?: typeof BroadcastChannel;
-      }
-    ).BroadcastChannel;
-
-    if (typeof globalBroadcastChannel !== 'function') {
-      return undefined;
-    }
-
-    try {
-      return new globalBroadcastChannel(name);
-    } catch (error) {
-      logger.warn('BroadcastChannel unavailable:', error);
-      return undefined;
     }
   }
 
@@ -370,25 +362,38 @@ export class PreviewsStore {
 
   /**
    * Reset the store — clears all preview entries, disposes port-event
-   * listeners, and resets internal tracking maps.  Called on chat switch
-   * so stale previews from the previous project are not displayed.
+   * listeners, closes BroadcastChannels, cancels pending refresh timers,
+   * and resets internal tracking maps.  Called on chat switch so stale
+   * previews from the previous project are not displayed.
+   *
+   * Channels are re-created so the store remains usable after reset.
    */
   reset() {
     this.previews.set([]);
     this.#availablePreviews.clear();
     this.#disposePortEvents?.();
     this.#disposePortEvents = undefined;
+
+    // Close existing BroadcastChannels to prevent leaks
+    this.#broadcastChannel?.close();
+    this.#broadcastChannel = undefined;
+    this.#storageChannel?.close();
+    this.#storageChannel = undefined;
+
+    // Cancel all pending refresh timeouts
+    for (const timeout of this.#refreshTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+
+    this.#refreshTimeouts.clear();
+    this.#lastUpdate.clear();
+
+    // Re-create channels so the store is usable after reset
+    this.#broadcastChannel = this.#maybeCreateChannel(PREVIEW_CHANNEL);
+    this.#storageChannel = this.#maybeCreateChannel('storage-sync-channel');
+    this.#setupChannelHandlers();
+
+    // Re-subscribe to port events from the runtime
+    this.#init();
   }
-}
-
-// Create a singleton instance
-let previewsStore: PreviewsStore | null = null;
-
-export function usePreviewStore() {
-  if (!previewsStore) {
-    /* Initialize with a Promise that resolves to the RuntimeProvider instance */
-    previewsStore = new PreviewsStore(Promise.resolve({} as RuntimeProvider));
-  }
-
-  return previewsStore;
 }

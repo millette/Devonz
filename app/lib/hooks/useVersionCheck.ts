@@ -67,8 +67,8 @@ export function useVersionCheck() {
         const res = await fetch('/api/version-check');
 
         if (res.ok) {
-          const json = (await res.json()) as VersionCheckResponse;
-          setData(json);
+          const envelope = (await res.json()) as { data: VersionCheckResponse };
+          setData(envelope.data);
         }
       } catch {
         // Network error — silently ignore

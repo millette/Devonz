@@ -6,8 +6,8 @@ import { motion } from 'framer-motion';
 import { useDataOperations } from '~/lib/hooks/useDataOperations';
 import { openDatabase } from '~/lib/persistence/db';
 import { getAllChats, type Chat } from '~/lib/persistence/chats';
-import { classNames } from '~/utils/classNames';
-import { toast } from 'react-toastify';
+import { cn } from '~/utils/cn';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
 
 const DataVisualization = lazy(() => import('./DataVisualization').then((mod) => ({ default: mod.DataVisualization })));
@@ -361,7 +361,7 @@ export function DataTab() {
                       disabled={isExporting || availableChats.length === 0}
                       variant="outline"
                       size="sm"
-                      className={classNames(
+                      className={cn(
                         'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                         isExporting || availableChats.length === 0 ? 'cursor-not-allowed' : '',
                       )}
@@ -400,7 +400,7 @@ export function DataTab() {
                       disabled={isExporting || chatItems.length === 0}
                       variant="outline"
                       size="sm"
-                      className={classNames(
+                      className={cn(
                         'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                         isExporting || chatItems.length === 0 ? 'cursor-not-allowed' : '',
                       )}
@@ -437,7 +437,7 @@ export function DataTab() {
                       disabled={isImporting}
                       variant="outline"
                       size="sm"
-                      className={classNames(
+                      className={cn(
                         'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                         isImporting ? 'cursor-not-allowed' : '',
                       )}
@@ -478,7 +478,7 @@ export function DataTab() {
                       disabled={isDeleting || chatItems.length === 0}
                       variant="outline"
                       size="sm"
-                      className={classNames(
+                      className={cn(
                         'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                         isDeleting || chatItems.length === 0 ? 'cursor-not-allowed' : '',
                       )}
@@ -524,7 +524,7 @@ export function DataTab() {
                     disabled={isExporting}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isExporting ? 'cursor-not-allowed' : '',
                     )}
@@ -561,7 +561,7 @@ export function DataTab() {
                     disabled={isExporting || settingsCategories.length === 0}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isExporting || settingsCategories.length === 0 ? 'cursor-not-allowed' : '',
                     )}
@@ -598,7 +598,7 @@ export function DataTab() {
                     disabled={isImporting}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isImporting ? 'cursor-not-allowed' : '',
                     )}
@@ -639,7 +639,7 @@ export function DataTab() {
                     disabled={isResetting}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isResetting ? 'cursor-not-allowed' : '',
                     )}
@@ -819,7 +819,7 @@ export function DataTab() {
                     disabled={isDownloadingTemplate}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isDownloadingTemplate ? 'cursor-not-allowed' : '',
                     )}
@@ -856,7 +856,7 @@ export function DataTab() {
                     disabled={isImportingKeys}
                     variant="outline"
                     size="sm"
-                    className={classNames(
+                    className={cn(
                       'hover:text-devonz-elements-item-contentAccent hover:border-devonz-elements-item-backgroundAccent hover:bg-devonz-elements-item-backgroundAccent transition-colors w-full justify-center',
                       isImportingKeys ? 'cursor-not-allowed' : '',
                     )}

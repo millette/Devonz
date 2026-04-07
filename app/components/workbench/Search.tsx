@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { debounce } from '~/utils/debounce';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('Search');
 
@@ -31,7 +32,7 @@ async function performTextSearch(
     resultLimit?: number;
   },
 ): Promise<DisplayMatch[]> {
-  const response = await fetch('/api/runtime/search', {
+  const response = await csrfFetch('/api/runtime/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -42,13 +43,13 @@ async function performTextSearch(
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorBody.error ?? `Search failed with status ${response.status}`);
+    const errorBody = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(errorBody.message ?? errorBody.error?.message ?? `Search failed with status ${response.status}`);
   }
 
-  const data = await response.json();
+  const envelope = await response.json();
 
-  return data.results as DisplayMatch[];
+  return envelope.data.results as DisplayMatch[];
 }
 
 function groupResultsByFile(results: DisplayMatch[]): Record<string, DisplayMatch[]> {
@@ -160,7 +161,8 @@ export const Search = memo(() => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search"
-            className="w-full px-2 py-1 rounded-md bg-devonz-elements-background-depth-3 text-devonz-elements-textPrimary placeholder-devonz-elements-textTertiary focus:outline-none transition-all"
+            aria-label="Search project files"
+            className="w-full px-2 py-1 rounded-md bg-devonz-elements-background-depth-3 text-devonz-elements-textPrimary placeholder-devonz-elements-textTertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-focus transition-all"
           />
         </div>
       </div>
@@ -181,6 +183,8 @@ export const Search = memo(() => {
               <button
                 className="flex gap-2 items-center w-full text-left py-1 px-2 text-devonz-elements-textSecondary bg-transparent hover:bg-devonz-elements-background-depth-3 group"
                 onClick={() => setExpandedFiles((prev) => ({ ...prev, [file]: !prev[file] }))}
+                aria-expanded={!!expandedFiles[file]}
+                aria-label={`${expandedFiles[file] ? 'Collapse' : 'Expand'} results for ${file.split('/').pop()}`}
               >
                 <span
                   className=" i-ph:caret-down-thin w-3 h-3 text-devonz-elements-textSecondary transition-transform"
@@ -206,8 +210,16 @@ export const Search = memo(() => {
                     return (
                       <div
                         key={idx}
-                        className="hover:bg-devonz-elements-background-depth-3 cursor-pointer transition-colors pl-6 py-1"
+                        role="button"
+                        tabIndex={0}
+                        className="hover:bg-devonz-elements-background-depth-3 cursor-pointer transition-colors pl-6 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-focus"
                         onClick={() => handleResultClick(match.path, match.lineNumber)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleResultClick(match.path, match.lineNumber);
+                          }
+                        }}
                       >
                         <pre className="font-mono text-xs text-devonz-elements-textTertiary truncate">
                           {!isStart && <span>...</span>}

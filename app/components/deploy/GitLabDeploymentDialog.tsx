@@ -1,8 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { getLocalStorage } from '~/lib/persistence/localStorage';
 import type { GitLabUserResponse, GitLabProjectInfo, GitLabConnection } from '~/types/GitLab';
 import { logStore } from '~/lib/stores/logs';
@@ -739,7 +739,7 @@ export function GitLabDeploymentDialog({ isOpen, onClose, projectName, files }: 
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      className={classNames(
+                      className={cn(
                         'flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm inline-flex items-center justify-center gap-2',
                         isLoading ? 'opacity-50 cursor-not-allowed' : '',
                       )}

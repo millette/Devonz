@@ -1,22 +1,12 @@
 import type { AppLoadContext } from 'react-router';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { ApiError } from '~/lib/api/errors';
+
+export { ApiError };
+export { csrfFetch, getCsrfToken } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('ApiUtils');
-
-/**
- * Error with an HTTP status code, so handleApiError can forward upstream
- * status codes (403, 429, 502, etc.) instead of collapsing them to 500.
- */
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
 
 /**
  * Resolve a service token from cookies, Cloudflare env, or process.env.

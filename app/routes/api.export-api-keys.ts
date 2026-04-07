@@ -1,6 +1,8 @@
 import { type LoaderFunctionArgs } from 'react-router';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { successResponse } from '~/lib/api/responses';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 async function exportApiKeysLoader({ request }: LoaderFunctionArgs) {
   /*
@@ -12,10 +14,11 @@ async function exportApiKeysLoader({ request }: LoaderFunctionArgs) {
   const cookieHeader = request.headers.get('Cookie');
   const apiKeys = getApiKeysFromCookie(cookieHeader);
 
-  return Response.json(apiKeys);
+  return successResponse(apiKeys);
 }
 
 export const loader = withSecurity(exportApiKeysLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { SupabaseAlert } from '~/types/actions';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { supabaseConnection } from '~/lib/stores/supabase';
 import { useStore } from '@nanostores/react';
 import { useState } from 'react';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('SupabaseAlert');
 
@@ -47,7 +48,7 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
     setIsExecuting(true);
 
     try {
-      const response = await fetch('/api/supabase/query', {
+      const response = await csrfFetch('/api/supabase/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
             {showConnectButton ? (
               <button
                 onClick={handleConnectClick}
-                className={classNames(
+                className={cn(
                   `px-3 py-2 rounded-md text-sm font-medium`,
                   'bg-[#098F5F]',
                   'hover:bg-[#0aa06c]',
@@ -173,7 +174,7 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
               <button
                 onClick={() => executeSupabaseAction(content ?? '')}
                 disabled={isExecuting}
-                className={classNames(
+                className={cn(
                   `px-3 py-2 rounded-md text-sm font-medium`,
                   'bg-[#098F5F]',
                   'hover:bg-[#0aa06c]',
@@ -189,7 +190,7 @@ export function SupabaseChatAlert({ alert, clearAlert, postMessage }: Props) {
             <button
               onClick={clearAlert}
               disabled={isExecuting}
-              className={classNames(
+              className={cn(
                 `px-3 py-2 rounded-md text-sm font-medium`,
                 'bg-[#503B26]',
                 'hover:bg-[#774f28]',

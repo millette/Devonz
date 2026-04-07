@@ -8,7 +8,12 @@ export const LoadingOverlay = ({
   progressText?: string;
 }) => {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-50 backdrop-blur-sm">
+    <div
+      role="alert"
+      aria-live="assertive"
+      aria-label="Loading"
+      className="fixed inset-0 flex items-center justify-center bg-black/80 z-50 backdrop-blur-sm"
+    >
       <div className="relative flex flex-col items-center gap-4 p-8 rounded-lg bg-devonz-elements-background-depth-2 shadow-lg">
         <div
           className={'i-svg-spinners:90-ring-with-bg text-devonz-elements-loader-progress'}

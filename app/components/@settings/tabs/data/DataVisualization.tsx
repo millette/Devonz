@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
 import type { Chat } from '~/lib/persistence/chats';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -319,13 +319,13 @@ export function DataVisualization({ chats }: DataVisualizationProps) {
     );
   }
 
-  const cardClasses = classNames(
+  const cardClasses = cn(
     'p-6 rounded-lg shadow-sm',
     'bg-devonz-elements-bg-depth-1',
     'border border-devonz-elements-borderColor',
   );
 
-  const statClasses = classNames('text-3xl font-bold text-devonz-elements-textPrimary', 'flex items-center gap-3');
+  const statClasses = cn('text-3xl font-bold text-devonz-elements-textPrimary', 'flex items-center gap-3');
 
   return (
     <div className="space-y-8">

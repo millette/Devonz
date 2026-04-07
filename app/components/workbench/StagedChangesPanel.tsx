@@ -3,13 +3,12 @@ import { useStore } from '@nanostores/react';
 import { AnimatePresence, motion } from 'framer-motion';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { useLocation } from 'react-router';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import { IconButton } from '~/components/ui/IconButton';
 import { runtime } from '~/lib/runtime';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { usePreviewStore } from '~/lib/stores/previews';
 import { WORK_DIR } from '~/utils/constants';
 import { takeDelayedSnapshot } from '~/lib/persistence/snapshotUtils';
 import { createScopedLogger } from '~/utils/logger';
@@ -174,13 +173,13 @@ const ChangeItem = memo(({ change, onAccept, onReject, onPreview }: ChangeItemPr
       onClick={() => onPreview(change.filePath)}
     >
       {/* File icon */}
-      <div className={classNames('w-4 h-4 flex-shrink-0', getFileIcon(change.filePath))} />
+      <div className={cn('w-4 h-4 flex-shrink-0', getFileIcon(change.filePath))} />
 
       {/* File info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-devonz-elements-textPrimary truncate">{name}</span>
-          <span className={classNames('w-4 h-4', getChangeTypeIcon(change.type), getChangeTypeColor(change.type))} />
+          <span className={cn('w-4 h-4', getChangeTypeIcon(change.type), getChangeTypeColor(change.type))} />
         </div>
         {dir && <span className="text-xs text-devonz-elements-textTertiary truncate block">{dir}</span>}
       </div>
@@ -242,7 +241,7 @@ const ChangeGroup = memo(({ title, icon, iconColor, changes, onAccept, onReject,
   return (
     <div className="mb-2">
       <div className="flex items-center gap-2 px-3 py-1">
-        <span className={classNames('w-4 h-4', icon, iconColor)} />
+        <span className={cn('w-4 h-4', icon, iconColor)} />
         <span className="text-xs font-medium text-devonz-elements-textSecondary uppercase tracking-wide">{title}</span>
         <span className="text-xs text-devonz-elements-textTertiary">({changes.length})</span>
       </div>
@@ -502,8 +501,7 @@ export const StagedChangesPanel = memo(() => {
             await new Promise((resolve) => setTimeout(resolve, 500));
 
             // Trigger hard refresh for all previews
-            const previewStore = usePreviewStore();
-            previewStore.hardRefreshAllPreviews();
+            workbenchStore.previewsStore.hardRefreshAllPreviews();
 
             toast.info('Reloading preview for config changes...');
           }
@@ -724,7 +722,7 @@ export const StagedChangesPanel = memo(() => {
                       className="flex items-center gap-2 px-3 py-2 hover:bg-devonz-elements-background-depth-2 rounded-md"
                     >
                       <span
-                        className={classNames(
+                        className={cn(
                           'w-4 h-4 flex-shrink-0',
                           cmd.type === 'shell' ? 'i-ph:terminal-window text-blue-400' : 'i-ph:play text-green-400',
                         )}
@@ -768,7 +766,7 @@ export const StagedChangesPanel = memo(() => {
                   size="sm"
                   onClick={handleTogglePreviewMode}
                   disabled={isApplying}
-                  className={classNames(
+                  className={cn(
                     'disabled:opacity-50',
                     isPreviewMode
                       ? 'bg-yellow-600 hover:bg-yellow-700 text-white'

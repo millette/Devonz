@@ -2,15 +2,13 @@ import type { Message } from 'ai';
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { atom } from 'nanostores';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { AssistantMessage } from './AssistantMessage';
 import { UserMessage } from './UserMessage';
 import { useLocation, useNavigate } from 'react-router';
 import { db, chatId } from '~/lib/persistence/useChatHistory';
 import { forkChat, getBranchesByParentChatId } from '~/lib/persistence/db';
-import { toast } from 'react-toastify';
-import { forwardRef } from 'react';
-import type { ForwardedRef } from 'react';
+import { toast } from 'sonner';
 import type { ProviderInfo } from '~/types/model';
 import type { BranchMetadata } from '~/lib/agent/types';
 import { agentModeStore } from '~/lib/stores/agentMode';
@@ -57,6 +55,7 @@ interface MessagesProps {
   model?: string;
   provider?: ProviderInfo;
   addToolResult: ({ toolCallId, result }: { toolCallId: string; result: unknown }) => void;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -121,7 +120,7 @@ function BranchSelector({ messageId, count }: { messageId: string; count: number
     <div className="relative mt-1">
       <button
         onClick={handleToggle}
-        className={classNames(
+        className={cn(
           'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors',
           'text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary',
           'hover:bg-devonz-elements-background-depth-2',
@@ -131,7 +130,7 @@ function BranchSelector({ messageId, count }: { messageId: string; count: number
         <span>
           {count} {count === 1 ? 'branch' : 'branches'}
         </span>
-        <div className={classNames('i-ph:caret-down w-3 h-3 transition-transform', { 'rotate-180': open })} />
+        <div className={cn('i-ph:caret-down w-3 h-3 transition-transform', { 'rotate-180': open })} />
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 z-40 min-w-56 rounded-lg border border-devonz-elements-borderColor bg-devonz-elements-background-depth-2 shadow-lg overflow-hidden">
@@ -201,157 +200,155 @@ function AgentPhaseIndicator({ phase }: { phase: string }) {
   return (
     <div className="flex items-center gap-2 py-2 px-3 my-1 rounded-md bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor">
       <div className="i-svg-spinners:90-ring-with-bg text-devonz-elements-textTertiary w-3.5 h-3.5" />
-      <div className={classNames('w-4 h-4', iconClass)} />
-      <span className={classNames('text-xs font-medium px-1.5 py-0.5 rounded-md', colorClass)}>{label}</span>
+      <div className={cn('w-4 h-4', iconClass)} />
+      <span className={cn('text-xs font-medium px-1.5 py-0.5 rounded-md', colorClass)}>{label}</span>
       <span className="text-xs text-devonz-elements-textTertiary">in progress</span>
     </div>
   );
 }
 
-export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
-  (props: MessagesProps, ref: ForwardedRef<HTMLDivElement> | undefined) => {
-    const { id, isStreaming = false, messages = [] } = props;
-    const location = useLocation();
+export function Messages(props: MessagesProps) {
+  const { id, isStreaming = false, messages = [], ref } = props;
+  const location = useLocation();
 
-    // Subscribe to branch state atoms
-    const branchParent = useStore(currentBranchParentAtom);
-    const branchCounts = useStore(messageBranchCountsAtom);
+  // Subscribe to branch state atoms
+  const branchParent = useStore(currentBranchParentAtom);
+  const branchCounts = useStore(messageBranchCountsAtom);
 
-    // Subscribe to agent phase for inline progress indicator
-    const agentState = useStore(agentModeStore);
+  // Subscribe to agent phase for inline progress indicator
+  const agentState = useStore(agentModeStore);
 
-    // Load branch info when the chat changes
-    useEffect(() => {
-      const urlIdMatch = location.pathname.match(/\/chat\/(.+)/);
-      const currentUrlId = urlIdMatch?.[1];
+  // Load branch info when the chat changes
+  useEffect(() => {
+    const urlIdMatch = location.pathname.match(/\/chat\/(.+)/);
+    const currentUrlId = urlIdMatch?.[1];
 
-      // Check if the current chat is a branch (child) by looking up localStorage
-      if (currentUrlId) {
-        try {
-          const stored = localStorage.getItem(`devonz_branch_parent_${currentUrlId}`);
+    // Check if the current chat is a branch (child) by looking up localStorage
+    if (currentUrlId) {
+      try {
+        const stored = localStorage.getItem(`devonz_branch_parent_${currentUrlId}`);
 
-          if (stored) {
-            currentBranchParentAtom.set(JSON.parse(stored));
-          } else {
-            currentBranchParentAtom.set(null);
-          }
-        } catch {
+        if (stored) {
+          currentBranchParentAtom.set(JSON.parse(stored));
+        } else {
           currentBranchParentAtom.set(null);
         }
-      } else {
+      } catch {
         currentBranchParentAtom.set(null);
       }
+    } else {
+      currentBranchParentAtom.set(null);
+    }
 
-      // Load branch counts for all messages in this chat (as a parent)
-      const currentId = chatId.get();
+    // Load branch counts for all messages in this chat (as a parent)
+    const currentId = chatId.get();
 
-      if (db && currentId) {
-        getBranchesByParentChatId(db, currentId)
-          .then((allBranches) => {
-            const counts: Record<string, number> = {};
+    if (db && currentId) {
+      getBranchesByParentChatId(db, currentId)
+        .then((allBranches) => {
+          const counts: Record<string, number> = {};
 
-            for (const branch of allBranches) {
-              counts[branch.branchPointMessageId] = (counts[branch.branchPointMessageId] || 0) + 1;
+          for (const branch of allBranches) {
+            counts[branch.branchPointMessageId] = (counts[branch.branchPointMessageId] || 0) + 1;
+          }
+
+          messageBranchCountsAtom.set(counts);
+        })
+        .catch((error) => {
+          logger.error('Failed to load branch counts', error);
+          messageBranchCountsAtom.set({});
+        });
+    } else {
+      messageBranchCountsAtom.set({});
+    }
+  }, [location.pathname]);
+
+  const handleRewind = (messageId: string) => {
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('rewindTo', messageId);
+    window.location.search = searchParams.toString();
+  };
+
+  const handleFork = async (messageId: string) => {
+    try {
+      if (!db || !chatId.get()) {
+        toast.error('Chat persistence is not available');
+        return;
+      }
+
+      const parentId = chatId.get()!;
+      const urlId = await forkChat(db, parentId, messageId, { branchPointMessageId: messageId });
+
+      // Store parent mapping so the child chat can display its branch indicator
+      try {
+        localStorage.setItem(
+          `devonz_branch_parent_${urlId}`,
+          JSON.stringify({ parentChatId: parentId, branchPointMessageId: messageId }),
+        );
+      } catch {
+        // localStorage full or unavailable — branch indicator won't show, but fork still works
+      }
+
+      window.location.href = `/chat/${urlId}`;
+    } catch (error) {
+      toast.error('Failed to fork chat: ' + (error as Error).message);
+    }
+  };
+
+  return (
+    <div id={id} className={props.className} ref={ref}>
+      {branchParent && <BranchIndicator parentChatId={branchParent.parentChatId} />}
+      {messages.length > 0
+        ? messages.map((message, index) => {
+            const { role, content, id: messageId, annotations, parts } = message;
+            const isUserMessage = role === 'user';
+            const isFirst = index === 0;
+            const isHidden = annotations?.includes('hidden');
+
+            if (isHidden) {
+              return <Fragment key={message.id} />;
             }
 
-            messageBranchCountsAtom.set(counts);
-          })
-          .catch((error) => {
-            logger.error('Failed to load branch counts', error);
-            messageBranchCountsAtom.set({});
-          });
-      } else {
-        messageBranchCountsAtom.set({});
-      }
-    }, [location.pathname]);
+            const branchCount = messageId ? (branchCounts[messageId] ?? 0) : 0;
 
-    const handleRewind = (messageId: string) => {
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('rewindTo', messageId);
-      window.location.search = searchParams.toString();
-    };
-
-    const handleFork = async (messageId: string) => {
-      try {
-        if (!db || !chatId.get()) {
-          toast.error('Chat persistence is not available');
-          return;
-        }
-
-        const parentId = chatId.get()!;
-        const urlId = await forkChat(db, parentId, messageId, { branchPointMessageId: messageId });
-
-        // Store parent mapping so the child chat can display its branch indicator
-        try {
-          localStorage.setItem(
-            `devonz_branch_parent_${urlId}`,
-            JSON.stringify({ parentChatId: parentId, branchPointMessageId: messageId }),
-          );
-        } catch {
-          // localStorage full or unavailable — branch indicator won't show, but fork still works
-        }
-
-        window.location.href = `/chat/${urlId}`;
-      } catch (error) {
-        toast.error('Failed to fork chat: ' + (error as Error).message);
-      }
-    };
-
-    return (
-      <div id={id} className={props.className} ref={ref}>
-        {branchParent && <BranchIndicator parentChatId={branchParent.parentChatId} />}
-        {messages.length > 0
-          ? messages.map((message, index) => {
-              const { role, content, id: messageId, annotations, parts } = message;
-              const isUserMessage = role === 'user';
-              const isFirst = index === 0;
-              const isHidden = annotations?.includes('hidden');
-
-              if (isHidden) {
-                return <Fragment key={index} />;
-              }
-
-              const branchCount = messageId ? (branchCounts[messageId] ?? 0) : 0;
-
-              return (
-                <div
-                  key={index}
-                  className={classNames('flex gap-4 py-3 w-full rounded-lg', {
-                    'mt-4': !isFirst,
-                  })}
-                >
-                  <div className="grid grid-col-1 w-full">
-                    {isUserMessage ? (
-                      <UserMessage content={content} parts={parts} />
-                    ) : (
-                      <AssistantMessage
-                        content={content}
-                        annotations={message.annotations}
-                        messageId={messageId}
-                        onRewind={handleRewind}
-                        onFork={handleFork}
-                        append={props.append}
-                        chatMode={props.chatMode}
-                        setChatMode={props.setChatMode}
-                        model={props.model}
-                        provider={props.provider}
-                        parts={parts}
-                        addToolResult={props.addToolResult}
-                      />
-                    )}
-                    {!isUserMessage && messageId && branchCount > 0 && (
-                      <BranchSelector messageId={messageId} count={branchCount} />
-                    )}
-                  </div>
+            return (
+              <div
+                key={message.id}
+                className={cn('flex gap-4 py-3 w-full rounded-lg', {
+                  'mt-4': !isFirst,
+                })}
+              >
+                <div className="grid grid-col-1 w-full">
+                  {isUserMessage ? (
+                    <UserMessage content={content} parts={parts} />
+                  ) : (
+                    <AssistantMessage
+                      content={content}
+                      annotations={message.annotations}
+                      messageId={messageId}
+                      onRewind={handleRewind}
+                      onFork={handleFork}
+                      append={props.append}
+                      chatMode={props.chatMode}
+                      setChatMode={props.setChatMode}
+                      model={props.model}
+                      provider={props.provider}
+                      parts={parts}
+                      addToolResult={props.addToolResult}
+                    />
+                  )}
+                  {!isUserMessage && messageId && branchCount > 0 && (
+                    <BranchSelector messageId={messageId} count={branchCount} />
+                  )}
                 </div>
-              );
-            })
-          : null}
-        {isStreaming && agentState.planPhase !== 'idle' && <AgentPhaseIndicator phase={agentState.planPhase} />}
-        {isStreaming && (
-          <div className="text-center w-full  text-devonz-elements-item-contentAccent i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
-        )}
-      </div>
-    );
-  },
-);
+              </div>
+            );
+          })
+        : null}
+      {isStreaming && agentState.planPhase !== 'idle' && <AgentPhaseIndicator phase={agentState.planPhase} />}
+      {isStreaming && (
+        <div className="text-center w-full  text-devonz-elements-item-contentAccent i-svg-spinners:3-dots-fade text-4xl mt-4"></div>
+      )}
+    </div>
+  );
+}

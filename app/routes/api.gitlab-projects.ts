@@ -1,6 +1,12 @@
-import { ApiError, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
 import type { GitLabProjectInfo } from '~/types/GitLab';
+
+const logger = createScopedLogger('GitLabProjects');
 
 interface GitLabProject {
   id: number;
@@ -17,12 +23,12 @@ interface GitLabProject {
 }
 
 async function gitlabProjectsLoader({ request }: { request: Request }) {
-  return handleApiError('GitLabProjects', async () => {
+  try {
     const body = (await request.json()) as { token?: string; gitlabUrl?: string };
     const { token, gitlabUrl = 'https://gitlab.com' } = body;
 
     if (!token) {
-      return Response.json({ error: 'GitLab token is required' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'GitLab token is required', 400));
     }
 
     const url = `${gitlabUrl}/api/v4/projects?membership=true&per_page=100&order_by=updated_at&sort=desc`;
@@ -35,11 +41,11 @@ async function gitlabProjectsLoader({ request }: { request: Request }) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        return Response.json({ error: 'Invalid GitLab token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid GitLab token', 401));
       }
 
       const errorText = await response.text().catch(() => 'Unknown error');
-      throw new ApiError(`GitLab API error: ${response.status} – ${errorText}`, response.status);
+      throw new AppError(AppErrorType.NETWORK, `GitLab API error: ${response.status} – ${errorText}`, response.status);
     }
 
     const projects: GitLabProject[] = await response.json();
@@ -57,11 +63,19 @@ async function gitlabProjectsLoader({ request }: { request: Request }) {
       visibility: project.visibility,
     }));
 
-    return Response.json({
+    return successResponse({
       projects: transformedProjects,
       total: transformedProjects.length,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitLab projects fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(gitlabProjectsLoader);
+export const action = withSecurity(gitlabProjectsLoader, { auth: AUTH_PRESETS.authenticated });

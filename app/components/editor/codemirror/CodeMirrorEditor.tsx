@@ -18,7 +18,7 @@ import {
 } from '@codemirror/view';
 import { memo, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import type { Theme } from '~/types/theme';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { debounce } from '~/utils/debounce';
 import { createScopedLogger, renderLogger } from '~/utils/logger';
 import { isFileLocked, getCurrentChatId } from '~/utils/fileLocks';
@@ -312,18 +312,13 @@ export const CodeMirrorEditor = memo(
     }, [doc?.value, editable, doc?.filePath, autoFocusOnDocumentChange]);
 
     return (
-      <div
-        className={classNames('relative h-full', className)}
-        style={{ background: 'var(--cm-backgroundColor, #0d1117)' }}
-      >
+      <div className={cn('relative h-full', className)} style={{ background: 'var(--cm-backgroundColor, #0d1117)' }}>
         {doc?.isBinary && <BinaryContent />}
         <div className="h-full overflow-hidden" ref={containerRef} />
       </div>
     );
   },
 );
-
-export default CodeMirrorEditor;
 
 CodeMirrorEditor.displayName = 'CodeMirrorEditor';
 

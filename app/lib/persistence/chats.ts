@@ -7,8 +7,9 @@
  */
 
 import type { Message } from 'ai';
-import type { IChatMetadata } from './db';
+import type { IChatMetadata } from './types';
 import { clearProjectPlanMode } from './projectPlanMode';
+import { csrfFetch } from '~/lib/api/csrf-client';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('ChatsDB');
@@ -99,7 +100,7 @@ async function sqliteGetChatById(id: string): Promise<Chat | null> {
 }
 
 async function sqliteDeleteChat(id: string): Promise<void> {
-  const res = await fetch(`/api/db/chats/${encodeURIComponent(id)}`, {
+  const res = await csrfFetch(`/api/db/chats/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 
@@ -110,7 +111,7 @@ async function sqliteDeleteChat(id: string): Promise<void> {
 }
 
 async function sqliteDeleteAllChats(): Promise<void> {
-  const res = await fetch('/api/db/chats', {
+  const res = await csrfFetch('/api/db/chats', {
     method: 'DELETE',
   });
 
@@ -121,7 +122,7 @@ async function sqliteDeleteAllChats(): Promise<void> {
 }
 
 async function sqliteSaveChat(chat: Chat): Promise<void> {
-  const res = await fetch('/api/db/chats', {
+  const res = await csrfFetch('/api/db/chats', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

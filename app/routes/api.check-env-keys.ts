@@ -2,6 +2,8 @@ import { type LoaderFunctionArgs } from 'react-router';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { successResponse } from '~/lib/api/responses';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 /**
  * Bulk endpoint to check which cloud providers have server-side env keys configured.
@@ -23,11 +25,7 @@ async function checkEnvKeysLoader({ context, request }: LoaderFunctionArgs) {
 
     // Check server-side env vars only (not cookie)
     const hasEnvKey = tokenKey
-      ? !!(
-          (context?.cloudflare?.env as Record<string, any>)?.[tokenKey] ||
-          process.env[tokenKey] ||
-          llmManager.env[tokenKey]
-        )
+      ? !!(context?.cloudflare?.env?.[tokenKey] || process.env[tokenKey] || llmManager.env[tokenKey])
       : false;
 
     // Check cookie key
@@ -36,10 +34,11 @@ async function checkEnvKeysLoader({ context, request }: LoaderFunctionArgs) {
     result[providerName] = { hasEnvKey, hasCookieKey };
   }
 
-  return Response.json(result);
+  return successResponse(result);
 }
 
 export const loader = withSecurity(checkEnvKeysLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

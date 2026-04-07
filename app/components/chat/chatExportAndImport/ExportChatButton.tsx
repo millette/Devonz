@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 export const ExportChatButton = ({ exportChat }: { exportChat?: () => void }) => {
   return (
@@ -8,11 +8,11 @@ export const ExportChatButton = ({ exportChat }: { exportChat?: () => void }) =>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger className="rounded-md items-center justify-center [&:is(:disabled,.disabled)]:cursor-not-allowed [&:is(:disabled,.disabled)]:opacity-60 px-3 py-1.5 text-xs bg-devonz-elements-background-depth-3 text-devonz-elements-textPrimary border border-devonz-elements-borderColor hover:bg-devonz-elements-background-depth-4 [&:not(:disabled,.disabled)]:hover:text-accent-400 outline-accent-500 flex gap-1.7">
           Export
-          <span className={classNames('i-ph:caret-down transition-transform')} />
+          <span className={cn('i-ph:caret-down transition-transform')} />
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className={classNames(
+            className={cn(
               'z-[9999]',
               'bg-devonz-elements-background-depth-2',
               'rounded-lg shadow-lg',
@@ -24,7 +24,7 @@ export const ExportChatButton = ({ exportChat }: { exportChat?: () => void }) =>
             align="end"
           >
             <DropdownMenu.Item
-              className={classNames(
+              className={cn(
                 'cursor-pointer flex items-center w-auto px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
               )}
               onClick={() => {
@@ -35,7 +35,7 @@ export const ExportChatButton = ({ exportChat }: { exportChat?: () => void }) =>
               <span>Download Code</span>
             </DropdownMenu.Item>
             <DropdownMenu.Item
-              className={classNames(
+              className={cn(
                 'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
               )}
               onClick={() => exportChat?.()}

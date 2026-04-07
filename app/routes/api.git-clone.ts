@@ -18,6 +18,10 @@ import * as os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { createScopedLogger } from '~/utils/logger';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { z } from 'zod';
 
 const logger = createScopedLogger('GitClone');
 
@@ -165,24 +169,56 @@ function isValidId(id: string): boolean {
   return /^[\w-]{1,64}$/.test(id);
 }
 
+const gitCloneRequestSchema = z.union([
+  z.object({
+    action: z.literal('finalize'),
+    tempId: z.string(),
+    projectId: z.string(),
+  }),
+  z.object({
+    url: z.string(),
+    branch: z.string().optional(),
+  }),
+]);
+
 async function handleGitClone({ request }: ActionFunctionArgs) {
-  const body = await request.json();
+  let rawBody: unknown;
+
+  try {
+    rawBody = await request.json();
+  } catch {
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body', 400));
+  }
+
+  const validatedBody = gitCloneRequestSchema.safeParse(rawBody);
+
+  if (!validatedBody.success) {
+    logger.warn('Validation failed:', validatedBody.error.flatten());
+
+    return errorResponse(
+      new AppError(AppErrorType.VALIDATION, 'Invalid request body', 400, {
+        details: validatedBody.error.flatten().fieldErrors,
+      }),
+    );
+  }
+
+  const body = validatedBody.data;
 
   /*
    * ── Finalize: move temp clone → real project dir ──
    */
-  if (body.action === 'finalize') {
+  if ('action' in body && body.action === 'finalize') {
     const { tempId, projectId } = body;
 
     if (!tempId || !isValidId(tempId) || !projectId || !isValidId(projectId)) {
-      return Response.json({ error: 'Invalid tempId or projectId' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid tempId or projectId', 400));
     }
 
     const tempDir = nodePath.join(PROJECTS_DIR, `_clone_${tempId}`);
     const projectDir = nodePath.join(PROJECTS_DIR, projectId);
 
     if (!fsSync.existsSync(tempDir)) {
-      return Response.json({ error: 'Temp clone directory not found' }, { status: 404 });
+      return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Temp clone directory not found', 404));
     }
 
     try {
@@ -192,12 +228,11 @@ async function handleGitClone({ request }: ActionFunctionArgs) {
 
       logger.info(`Finalized clone: _clone_${tempId} → ${projectId}`);
 
-      return Response.json({ success: true });
+      return successResponse({ finalized: true });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Finalize failed';
       logger.error('Finalize error:', error);
 
-      return Response.json({ error: message }, { status: 500 });
+      return errorResponse(error instanceof Error ? error : String(error));
     }
   }
 
@@ -207,7 +242,7 @@ async function handleGitClone({ request }: ActionFunctionArgs) {
   const { url, branch } = body as { url?: string; branch?: string };
 
   if (!url || typeof url !== 'string') {
-    return Response.json({ error: 'Missing or invalid "url"' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Missing or invalid "url"', 400));
   }
 
   /* Validate URL against allowed domains. */
@@ -216,13 +251,16 @@ async function handleGitClone({ request }: ActionFunctionArgs) {
   try {
     parsed = new URL(url);
   } catch {
-    return Response.json({ error: 'Invalid URL format' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid URL format', 400));
   }
 
   if (!ALLOWED_DOMAINS.has(parsed.hostname)) {
-    return Response.json(
-      { error: `Domain "${parsed.hostname}" is not allowed. Allowed: ${[...ALLOWED_DOMAINS].join(', ')}` },
-      { status: 400 },
+    return errorResponse(
+      new AppError(
+        AppErrorType.VALIDATION,
+        `Domain "${parsed.hostname}" is not allowed. Allowed: ${[...ALLOWED_DOMAINS].join(', ')}`,
+        400,
+      ),
     );
   }
 
@@ -254,7 +292,7 @@ async function handleGitClone({ request }: ActionFunctionArgs) {
 
     logger.info(`Clone complete: ${files.length} files read from ${url}`);
 
-    return Response.json({ tempId, files });
+    return successResponse({ tempId, files });
   } catch (error) {
     /* Clean up on failure. */
     await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {
@@ -264,8 +302,8 @@ async function handleGitClone({ request }: ActionFunctionArgs) {
     const message = error instanceof Error ? error.message : 'Clone failed';
     logger.error('Git clone error:', message);
 
-    return Response.json({ error: message }, { status: 500 });
+    return errorResponse(error instanceof Error ? error : String(error));
   }
 }
 
-export const action = withSecurity(handleGitClone);
+export const action = withSecurity(handleGitClone, { auth: AUTH_PRESETS.authenticated });

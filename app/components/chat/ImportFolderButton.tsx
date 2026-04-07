@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { toast } from 'react-toastify';
+import React, { useRef, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { MAX_FILES, isBinaryFile, shouldIncludeFile } from '~/utils/fileUtils';
 import { createChatFromFolder } from '~/utils/folderImport';
 import { logStore } from '~/lib/stores/logs'; // Assuming logStore is imported from this location
 import { Button } from '~/components/ui/Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
 import type { ImportChatFn } from '~/lib/persistence/db';
 
@@ -18,6 +18,14 @@ interface ImportFolderButtonProps {
 
 export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ className, style, importChat }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.setAttribute('webkitdirectory', '');
+      inputRef.current.setAttribute('directory', '');
+    }
+  }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const allFiles = Array.from(e.target.files || []);
@@ -110,23 +118,19 @@ export const ImportFolderButton: React.FC<ImportFolderButtonProps> = ({ classNam
   return (
     <>
       <input
+        ref={inputRef}
         type="file"
         id="folder-import"
         className="hidden"
-        webkitdirectory=""
-        directory=""
         onChange={handleFileChange}
-        {...({} as any)}
+        aria-label="Select folder to import"
       />
       <Button
-        onClick={() => {
-          const input = document.getElementById('folder-import');
-          input?.click();
-        }}
+        onClick={() => inputRef.current?.click()}
         title="Import Folder"
         variant="default"
         size="lg"
-        className={classNames(
+        className={cn(
           'flex gap-2 bg-devonz-elements-background-depth-1',
           'text-devonz-elements-textPrimary',
           'hover:bg-devonz-elements-background-depth-2',

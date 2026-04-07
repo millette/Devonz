@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import { useGitLabConnection } from '~/lib/hooks';
 import { createScopedLogger } from '~/utils/logger';
@@ -110,7 +110,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
                 onChange={(e) => setGitlabUrl(e.target.value)}
                 disabled={isConnecting || isConnected}
                 placeholder="https://gitlab.com"
-                className={classNames(
+                className={cn(
                   'w-full px-3 py-2 rounded-lg text-sm',
                   'bg-devonz-elements-background-depth-1',
                   'border border-devonz-elements-borderColor',
@@ -131,7 +131,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
                 onChange={(e) => setToken(e.target.value)}
                 disabled={isConnecting || isConnected}
                 placeholder="Enter your GitLab access token"
-                className={classNames(
+                className={cn(
                   'w-full px-3 py-2 rounded-lg text-sm',
                   'bg-devonz-elements-background-depth-1',
                   'border border-devonz-elements-borderColor',
@@ -168,7 +168,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
                 <button
                   type="submit"
                   disabled={isConnecting || !token.trim()}
-                  className={classNames(
+                  className={cn(
                     'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                     'bg-[#FC6D26] text-white',
                     'hover:bg-[#E24329] hover:text-white',
@@ -205,7 +205,7 @@ export default function GitLabConnection({ connectionTest, onTestConnection }: G
                     <button
                       type="button"
                       onClick={handleDisconnect}
-                      className={classNames(
+                      className={cn(
                         'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                         'bg-red-500 text-white',
                         'hover:bg-red-600',

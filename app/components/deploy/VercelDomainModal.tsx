@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useStore } from '@nanostores/react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { vercelConnection } from '~/lib/stores/vercel';
 import { vercelApi } from '~/lib/api/vercel-client';
 import { chatId } from '~/lib/persistence/useChatHistory';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { dialogBackdropVariants, dialogVariants } from '~/components/ui/Dialog';
 import { IconButton } from '~/components/ui/IconButton';
 
@@ -326,7 +326,7 @@ export function VercelDomainModal({ isOpen, onClose, projectId: propProjectId, c
                           >
                             <div className="flex items-center gap-3">
                               <div
-                                className={classNames(
+                                className={cn(
                                   'w-2 h-2 rounded-full',
                                   domain.verified ? 'bg-green-500' : 'bg-yellow-500',
                                 )}

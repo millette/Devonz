@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import type { GitHubStats, GitHubConnection } from '~/types/GitHub';
 import { gitHubApiService } from '~/lib/services/githubApiService';
 import { createScopedLogger } from '~/utils/logger';
@@ -180,11 +180,12 @@ export function useGitHubStats(
             throw new Error('GitHub authentication required');
           }
 
-          const errorData = (await response.json()) as { error?: string };
-          throw new Error(errorData.error || 'Failed to fetch stats from server');
+          const errorData = (await response.json()) as { message?: string };
+          throw new Error(errorData.message || 'Failed to fetch stats from server');
         }
 
-        stats = await response.json();
+        const statsEnvelope = (await response.json()) as { data: GitHubStats };
+        stats = statsEnvelope.data;
       } else {
         // Use client-side API service for stats
         if (!apiService) {

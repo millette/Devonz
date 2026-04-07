@@ -17,9 +17,11 @@
  *   const deployment = await vercelApi.post('/v1/deployments', token, { name: 'my-project' });
  */
 
+import { csrfFetch } from '~/lib/api/csrf-client';
+
 interface VercelApiError {
-  error: string;
-  details?: unknown;
+  error?: { message?: string };
+  message?: string;
 }
 
 interface ApiResult<T> {
@@ -74,7 +76,7 @@ class VercelApiClient {
         Authorization: `Bearer ${token}`,
       };
 
-      const response = await fetch(this._proxyEndpoint, {
+      const response = await csrfFetch(this._proxyEndpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -88,10 +90,13 @@ class VercelApiClient {
 
       if (!response.ok) {
         const error = data as VercelApiError;
-        return { success: false, error: error.error || `Vercel API error: ${response.status}` };
+        return {
+          success: false,
+          error: error.message || error.error?.message || `Vercel API error: ${response.status}`,
+        };
       }
 
-      return { success: true, data: data as T };
+      return { success: true, data: (data as { data: T }).data };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Request failed' };
     }
@@ -106,7 +111,7 @@ class VercelApiClient {
     error?: string;
   }> {
     try {
-      const response = await fetch(this._proxyEndpoint, {
+      const response = await csrfFetch(this._proxyEndpoint, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -114,17 +119,17 @@ class VercelApiClient {
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as { error?: string };
-        return { success: false, error: errorData.error || 'Connection failed' };
+        const errorData = (await response.json()) as { message?: string; error?: { message?: string } };
+        return { success: false, error: errorData.message || errorData.error?.message || 'Connection failed' };
       }
 
-      const data = (await response.json()) as {
-        user?: { id: string; username: string; email: string; name?: string; avatar?: string };
+      const envelope = (await response.json()) as {
+        data?: { user?: { id: string; username: string; email: string; name?: string; avatar?: string } };
       };
 
       return {
         success: true,
-        data,
+        data: envelope.data,
       };
     } catch (err) {
       return {
@@ -146,7 +151,7 @@ class VercelApiClient {
     error?: string;
   }> {
     try {
-      const response = await fetch(`/api/vercel-domains?projectId=${encodeURIComponent(projectId)}`, {
+      const response = await csrfFetch(`/api/vercel-domains?projectId=${encodeURIComponent(projectId)}`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -156,10 +161,12 @@ class VercelApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to list domains' };
+        return { success: false, error: data.message || data.error?.message || 'Failed to list domains' };
       }
 
-      return { success: true, domains: data.domains || [] };
+      const envelope = data as { data?: { domains?: Array<{ name: string; verified: boolean }> } };
+
+      return { success: true, domains: envelope.data?.domains || [] };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Failed to list domains' };
     }
@@ -178,7 +185,7 @@ class VercelApiClient {
     error?: string;
   }> {
     try {
-      const response = await fetch('/api/vercel-domains', {
+      const response = await csrfFetch('/api/vercel-domains', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,10 +201,12 @@ class VercelApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to add domain' };
+        return { success: false, error: data.message || data.error?.message || 'Failed to add domain' };
       }
 
-      return { success: true, domain: data.domain };
+      const envelope = data as { data?: { domain?: { name: string; verified: boolean } } };
+
+      return { success: true, domain: envelope.data?.domain };
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : 'Failed to add domain' };
     }
@@ -215,7 +224,7 @@ class VercelApiClient {
     error?: string;
   }> {
     try {
-      const response = await fetch('/api/vercel-domains', {
+      const response = await csrfFetch('/api/vercel-domains', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +240,7 @@ class VercelApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        return { success: false, error: data.error || 'Failed to remove domain' };
+        return { success: false, error: data.message || data.error?.message || 'Failed to remove domain' };
       }
 
       return { success: true };
@@ -268,7 +277,7 @@ export async function fetchVercelApi(
     Authorization: `Bearer ${token}`,
   };
 
-  const response = await fetch('/api/vercel-proxy', {
+  const response = await csrfFetch('/api/vercel-proxy', {
     method: 'POST',
     headers,
     body: JSON.stringify({

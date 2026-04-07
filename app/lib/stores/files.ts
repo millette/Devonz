@@ -52,6 +52,12 @@ type Dirent = File | Folder;
 
 export type FileMap = Record<string, Dirent | undefined>;
 
+/**
+ * Symbol used to mark `history` as already monkey-patched.
+ * Prevents listener/patch stacking across HMR reloads.
+ */
+const HISTORY_PATCHED = Symbol.for('FilesStore.historyPatched');
+
 export class FilesStore {
   #runtime: Promise<RuntimeProvider>;
 
@@ -59,6 +65,15 @@ export class FilesStore {
    * Tracks the number of files without folders.
    */
   #size = 0;
+
+  /** AbortController for URL-change event listeners; aborted on dispose. */
+  #urlListenerAbort: AbortController | null = null;
+
+  /** Original `history.pushState` before monkey-patching, for restoration. */
+  #originalPushState: History['pushState'] | null = null;
+
+  /** Original `history.replaceState` before monkey-patching, for restoration. */
+  #originalReplaceState: History['replaceState'] | null = null;
 
   /**
    * @note Keeps track all modified files with their original content since the last user message.
@@ -105,49 +120,111 @@ export class FilesStore {
     this.#loadLockedFiles();
 
     if (import.meta.hot) {
+      // Dispose previous instance's listeners/patches before setting up new ones
+      const prev: FilesStore | undefined = import.meta.hot.data._filesStoreInstance;
+
+      if (prev && typeof prev.dispose === 'function') {
+        prev.dispose();
+      }
+
       // Persist our state across hot reloads
       import.meta.hot.data.files = this.files;
       import.meta.hot.data.modifiedFiles = this.#modifiedFiles;
       import.meta.hot.data.deletedPaths = this.#deletedPaths;
+      import.meta.hot.data._filesStoreInstance = this;
     }
 
     // Listen for URL changes to detect chat ID changes
     if (typeof window !== 'undefined') {
-      let lastChatId = getCurrentChatId();
+      this.#setupUrlChangeListeners();
+    }
 
-      // Handler for URL changes - used by both popstate and hashchange
-      const handleUrlChange = () => {
-        const currentChatId = getCurrentChatId();
+    this.#init();
+  }
 
-        if (currentChatId !== lastChatId) {
-          logger.info(`Chat ID changed from ${lastChatId} to ${currentChatId}, reloading locks`);
-          lastChatId = currentChatId;
-          this.#loadLockedFiles(currentChatId);
-        }
-      };
+  /**
+   * Set up URL-change listeners (popstate, hashchange) and monkey-patch
+   * `history.pushState`/`replaceState` to detect programmatic navigation.
+   *
+   * Guards against double-patching so HMR or multiple constructions don't
+   * stack listeners or wrappers.
+   */
+  #setupUrlChangeListeners() {
+    // Abort any previous listeners owned by this instance
+    this.#urlListenerAbort?.abort();
 
-      // Use popstate for browser back/forward navigation
-      window.addEventListener('popstate', handleUrlChange);
+    const abort = new AbortController();
+    this.#urlListenerAbort = abort;
 
-      // Use hashchange for hash-based routing
-      window.addEventListener('hashchange', handleUrlChange);
+    let lastChatId = getCurrentChatId();
 
-      // Also listen for pushState/replaceState via a patched history API
+    const handleUrlChange = () => {
+      const currentChatId = getCurrentChatId();
+
+      if (currentChatId !== lastChatId) {
+        logger.info(`Chat ID changed from ${lastChatId} to ${currentChatId}, reloading locks`);
+        lastChatId = currentChatId;
+        this.#loadLockedFiles(currentChatId);
+      }
+    };
+
+    // Use popstate for browser back/forward navigation
+    window.addEventListener('popstate', handleUrlChange, { signal: abort.signal });
+
+    // Use hashchange for hash-based routing
+    window.addEventListener('hashchange', handleUrlChange, { signal: abort.signal });
+
+    // Monkey-patch history only once (guard via symbol on the history object)
+    const hist = history as History & { [key: symbol]: boolean };
+
+    if (!hist[HISTORY_PATCHED]) {
       const originalPushState = history.pushState.bind(history);
       const originalReplaceState = history.replaceState.bind(history);
 
-      history.pushState = (...args) => {
+      this.#originalPushState = originalPushState;
+      this.#originalReplaceState = originalReplaceState;
+
+      history.pushState = (...args: Parameters<History['pushState']>) => {
         originalPushState(...args);
         handleUrlChange();
       };
 
-      history.replaceState = (...args) => {
+      history.replaceState = (...args: Parameters<History['replaceState']>) => {
         originalReplaceState(...args);
         handleUrlChange();
       };
+
+      hist[HISTORY_PATCHED] = true;
+    }
+  }
+
+  /**
+   * Clean up URL-change listeners and restore the original `history.pushState`
+   * / `replaceState` functions. Safe to call multiple times.
+   */
+  dispose() {
+    // Remove popstate / hashchange listeners
+    if (this.#urlListenerAbort) {
+      this.#urlListenerAbort.abort();
+      this.#urlListenerAbort = null;
     }
 
-    this.#init();
+    // Restore original history methods if we were the ones who patched them
+    if (typeof window !== 'undefined') {
+      const hist = history as History & { [key: symbol]: boolean };
+
+      if (this.#originalPushState) {
+        history.pushState = this.#originalPushState;
+        this.#originalPushState = null;
+      }
+
+      if (this.#originalReplaceState) {
+        history.replaceState = this.#originalReplaceState;
+        this.#originalReplaceState = null;
+      }
+
+      delete hist[HISTORY_PATCHED];
+    }
   }
 
   /**

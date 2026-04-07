@@ -13,6 +13,5 @@ if (dsn) {
     tracesSampleRate: isProduction ? 0.1 : 1.0,
   });
 } else {
-  // eslint-disable-next-line no-console
   console.warn('[Sentry] SENTRY_DSN not set — server-side error monitoring disabled.');
 }

@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { AppError, AppErrorType } from './errors';
 
 /*
  * ---------------------------------------------------------------------------
@@ -204,6 +205,99 @@ export function parseOrError<T>(
           headers: { 'Content-Type': 'application/json' },
         },
       ),
+    };
+  }
+
+  return { success: true, data: result.data };
+}
+
+/** Default maximum request body size in bytes (1 MB). */
+const DEFAULT_MAX_BODY_SIZE = 1_048_576;
+
+/** Options accepted by {@link validateInput}. */
+export interface ValidateInputOptions {
+  /** Maximum allowed body size in bytes. Defaults to 1 MB. */
+  maxBodySize?: number;
+}
+
+/** Successful validation result containing the typed data. */
+export interface ValidationSuccess<T> {
+  success: true;
+  data: T;
+}
+
+/** Failed validation result containing the structured error. */
+export interface ValidationFailure {
+  success: false;
+  error: AppError;
+}
+
+/** Discriminated union returned by {@link validateInput}. */
+export type ValidationResult<T> = ValidationSuccess<T> | ValidationFailure;
+
+/**
+ * Centralized input validation helper.
+ *
+ * Reads the request body as JSON, enforces a size limit, validates it against
+ * the given Zod schema, and returns a typed discriminated union. Never throws —
+ * all failures are surfaced through the `{ success: false, error }` branch.
+ */
+export async function validateInput<T>(
+  request: Request,
+  schema: z.ZodSchema<T>,
+  options?: ValidateInputOptions,
+): Promise<ValidationResult<T>> {
+  const maxBodySize = options?.maxBodySize ?? DEFAULT_MAX_BODY_SIZE;
+
+  // --- 1. Read body text and enforce size limit --------------------------------
+  let bodyText: string;
+
+  try {
+    bodyText = await request.text();
+  } catch {
+    return {
+      success: false,
+      error: new AppError(AppErrorType.VALIDATION, 'Failed to read request body', 400),
+    };
+  }
+
+  if (bodyText.length > maxBodySize) {
+    return {
+      success: false,
+      error: new AppError(AppErrorType.VALIDATION, `Request body exceeds maximum size of ${maxBodySize} bytes`, 413, {
+        maxBodySize,
+        receivedSize: bodyText.length,
+      }),
+    };
+  }
+
+  // --- 2. Parse JSON -----------------------------------------------------------
+  let body: unknown;
+
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return {
+      success: false,
+      error: new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body', 400),
+    };
+  }
+
+  // --- 3. Validate against Zod schema ------------------------------------------
+  const result = schema.safeParse(body);
+
+  if (!result.success) {
+    const fieldErrors = result.error.issues.map((issue) => ({
+      path: issue.path.join('.'),
+      message: issue.message,
+      code: issue.code,
+    }));
+
+    return {
+      success: false,
+      error: new AppError(AppErrorType.VALIDATION, 'Request validation failed', 400, {
+        fields: fieldErrors,
+      }),
     };
   }
 

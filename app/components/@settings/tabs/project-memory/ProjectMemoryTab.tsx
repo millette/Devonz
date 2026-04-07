@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '@nanostores/react';
 import { runtime } from '~/lib/runtime';
-import { classNames } from '~/utils/classNames';
-import { toast } from 'react-toastify';
+import { cn } from '~/utils/cn';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
 import { useFileContent } from '~/lib/hooks/useFileContent';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -215,7 +215,7 @@ export default function ProjectMemoryTab() {
         <div className="flex items-center gap-1 p-1 rounded-lg bg-devonz-elements-background-depth-2 w-fit">
           <button
             onClick={() => setActiveSection('project')}
-            className={classNames(
+            className={cn(
               'px-3 py-1.5 text-xs rounded-md font-medium transition-colors duration-200',
               activeSection === 'project'
                 ? 'bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text'
@@ -229,7 +229,7 @@ export default function ProjectMemoryTab() {
           </button>
           <button
             onClick={() => setActiveSection('agent')}
-            className={classNames(
+            className={cn(
               'px-3 py-1.5 text-xs rounded-md font-medium transition-colors duration-200',
               activeSection === 'agent'
                 ? 'bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text'
@@ -276,7 +276,7 @@ export default function ProjectMemoryTab() {
 
             {/* Info Card */}
             <div
-              className={classNames(
+              className={cn(
                 'p-4 rounded-lg',
                 'bg-devonz-elements-background-depth-2',
                 'border border-devonz-elements-borderColor',
@@ -302,7 +302,7 @@ export default function ProjectMemoryTab() {
                 {!content && !fileExists && (
                   <button
                     onClick={handleCreateTemplate}
-                    className={classNames(
+                    className={cn(
                       'px-3 py-1.5 text-xs rounded-md',
                       'bg-devonz-elements-button-primary-background',
                       'text-devonz-elements-button-primary-text',
@@ -320,7 +320,7 @@ export default function ProjectMemoryTab() {
                 onChange={(e) => setContent(e.target.value)}
                 aria-label="Project instructions"
                 placeholder="Enter your project instructions here... The AI will follow these rules in every conversation."
-                className={classNames(
+                className={cn(
                   'w-full h-64 p-3 rounded-lg resize-y',
                   'bg-devonz-elements-background-depth-3',
                   'border border-devonz-elements-borderColor',
@@ -337,7 +337,7 @@ export default function ProjectMemoryTab() {
                 <button
                   onClick={handleSave}
                   disabled={isSaving || !hasUnsavedChanges}
-                  className={classNames(
+                  className={cn(
                     'px-4 py-2 rounded-lg text-sm font-medium',
                     'bg-devonz-elements-button-primary-background',
                     'text-devonz-elements-button-primary-text',
@@ -352,7 +352,7 @@ export default function ProjectMemoryTab() {
                 {hasUnsavedChanges && (
                   <button
                     onClick={handleReset}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm font-medium',
                       'bg-devonz-elements-background-depth-2',
                       'text-devonz-elements-textSecondary',
@@ -395,7 +395,7 @@ export default function ProjectMemoryTab() {
                 </div>
                 <button
                   onClick={() => setShowAddForm((prev) => !prev)}
-                  className={classNames(
+                  className={cn(
                     'px-3 py-1.5 text-xs rounded-md font-medium',
                     'bg-devonz-elements-button-primary-background',
                     'text-devonz-elements-button-primary-text',
@@ -417,7 +417,7 @@ export default function ProjectMemoryTab() {
             {/* Usage Summary */}
             {totalEntries > 0 && (
               <div
-                className={classNames(
+                className={cn(
                   'p-4 rounded-lg',
                   'bg-devonz-elements-background-depth-2',
                   'border border-devonz-elements-borderColor',
@@ -434,7 +434,7 @@ export default function ProjectMemoryTab() {
                     return (
                       <div
                         key={category}
-                        className={classNames(
+                        className={cn(
                           'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs',
                           'bg-devonz-elements-background-depth-3',
                           'border border-devonz-elements-borderColor',
@@ -448,7 +448,7 @@ export default function ProjectMemoryTab() {
                     );
                   })}
                   <div
-                    className={classNames(
+                    className={cn(
                       'flex items-center gap-2 px-3 py-1.5 rounded-md text-xs',
                       'bg-devonz-elements-item-contentAccent/10',
                       'border border-devonz-elements-item-contentAccent/20',
@@ -464,7 +464,7 @@ export default function ProjectMemoryTab() {
             {/* Add Entry Form */}
             {showAddForm && (
               <motion.div
-                className={classNames(
+                className={cn(
                   'p-4 rounded-lg',
                   'bg-devonz-elements-background-depth-2',
                   'border border-devonz-elements-borderColor',
@@ -486,7 +486,7 @@ export default function ProjectMemoryTab() {
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
                         placeholder="e.g., preferences, decisions, patterns"
-                        className={classNames(
+                        className={cn(
                           'w-full px-3 py-2 rounded-md text-sm',
                           'bg-devonz-elements-background-depth-3',
                           'border border-devonz-elements-borderColor',
@@ -504,7 +504,7 @@ export default function ProjectMemoryTab() {
                         value={newKey}
                         onChange={(e) => setNewKey(e.target.value)}
                         placeholder="e.g., preferred-framework"
-                        className={classNames(
+                        className={cn(
                           'w-full px-3 py-2 rounded-md text-sm',
                           'bg-devonz-elements-background-depth-3',
                           'border border-devonz-elements-borderColor',
@@ -523,7 +523,7 @@ export default function ProjectMemoryTab() {
                       onChange={(e) => setNewValue(e.target.value)}
                       placeholder="Describe the memory entry..."
                       rows={3}
-                      className={classNames(
+                      className={cn(
                         'w-full px-3 py-2 rounded-md text-sm resize-y',
                         'bg-devonz-elements-background-depth-3',
                         'border border-devonz-elements-borderColor',
@@ -537,7 +537,7 @@ export default function ProjectMemoryTab() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleAddEntry}
-                      className={classNames(
+                      className={cn(
                         'px-4 py-2 rounded-lg text-sm font-medium',
                         'bg-devonz-elements-button-primary-background',
                         'text-devonz-elements-button-primary-text',
@@ -554,7 +554,7 @@ export default function ProjectMemoryTab() {
                         setNewKey('');
                         setNewValue('');
                       }}
-                      className={classNames(
+                      className={cn(
                         'px-4 py-2 rounded-lg text-sm font-medium',
                         'bg-devonz-elements-background-depth-2',
                         'text-devonz-elements-textSecondary',
@@ -593,7 +593,7 @@ export default function ProjectMemoryTab() {
                         {entries.map((entry) => (
                           <div
                             key={`${category}-${entry.key}`}
-                            className={classNames(
+                            className={cn(
                               'flex items-start justify-between gap-3 p-3 rounded-lg',
                               'bg-devonz-elements-background-depth-2',
                               'border border-devonz-elements-borderColor',
@@ -621,7 +621,7 @@ export default function ProjectMemoryTab() {
                                   </span>
                                   <button
                                     onClick={() => handleDeleteEntry(category, entry.key)}
-                                    className={classNames(
+                                    className={cn(
                                       'px-2 py-1 text-[10px] rounded font-medium',
                                       'bg-red-500/15 text-red-500',
                                       'hover:bg-red-500/25',
@@ -632,7 +632,7 @@ export default function ProjectMemoryTab() {
                                   </button>
                                   <button
                                     onClick={() => setDeleteTarget(null)}
-                                    className={classNames(
+                                    className={cn(
                                       'px-2 py-1 text-[10px] rounded font-medium',
                                       'text-devonz-elements-textTertiary',
                                       'hover:text-devonz-elements-textPrimary',
@@ -645,7 +645,7 @@ export default function ProjectMemoryTab() {
                               ) : (
                                 <button
                                   onClick={() => setDeleteTarget({ category, key: entry.key })}
-                                  className={classNames(
+                                  className={cn(
                                     'p-1 rounded opacity-0 group-hover:opacity-100',
                                     'text-devonz-elements-textTertiary',
                                     'hover:text-red-500 hover:bg-red-500/10',
@@ -666,7 +666,7 @@ export default function ProjectMemoryTab() {
               </div>
             ) : (
               <div
-                className={classNames(
+                className={cn(
                   'flex flex-col items-center justify-center gap-3 p-8 rounded-lg',
                   'bg-devonz-elements-background-depth-2',
                   'border border-devonz-elements-borderColor border-dashed',
@@ -684,7 +684,7 @@ export default function ProjectMemoryTab() {
                 </div>
                 <button
                   onClick={() => setShowAddForm(true)}
-                  className={classNames(
+                  className={cn(
                     'mt-2 px-3 py-1.5 text-xs rounded-md font-medium',
                     'bg-devonz-elements-button-primary-background',
                     'text-devonz-elements-button-primary-text',

@@ -1,25 +1,32 @@
 import { type LoaderFunctionArgs, type ActionFunctionArgs } from 'react-router';
-import { ApiError, resolveToken, unauthorizedResponse, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { resolveToken, externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('NetlifyUser');
 
 const NETLIFY_TOKEN_KEYS = ['VITE_NETLIFY_ACCESS_TOKEN'];
 
 async function netlifyUserLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('NetlifyUser', async () => {
-    const token = resolveToken(request, context, ...NETLIFY_TOKEN_KEYS);
+  const token = resolveToken(request, context, ...NETLIFY_TOKEN_KEYS);
 
-    if (!token) {
-      return unauthorizedResponse('Netlify');
-    }
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Netlify token not found'));
+  }
 
+  try {
     const response = await externalFetch({ url: 'https://api.netlify.com/api/v1/user', token });
 
     if (!response.ok) {
       if (response.status === 401) {
-        return Response.json({ error: 'Invalid Netlify token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid Netlify token'));
       }
 
-      throw new ApiError(`Netlify API error: ${response.status}`, response.status);
+      const errorText = await response.text();
+      throw new AppError(AppErrorType.NETWORK, `Netlify API error: ${errorText}`, response.status);
     }
 
     const userData = (await response.json()) as {
@@ -30,29 +37,34 @@ async function netlifyUserLoader({ request, context }: LoaderFunctionArgs) {
       full_name: string | null;
     };
 
-    return Response.json({
+    return successResponse({
       id: userData.id,
       name: userData.name,
       email: userData.email,
       avatar_url: userData.avatar_url,
       full_name: userData.full_name,
     });
-  });
-}
-
-export const loader = withSecurity(netlifyUserLoader, {
-  rateLimit: true,
-  allowedMethods: ['GET'],
-});
-
-async function netlifyUserAction({ request, context }: ActionFunctionArgs) {
-  return handleApiError('NetlifyUser', async () => {
-    const token = resolveToken(request, context, ...NETLIFY_TOKEN_KEYS);
-
-    if (!token) {
-      return unauthorizedResponse('Netlify');
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
 
+    logger.error('Netlify user loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
+}
+
+export const loader = withSecurity(netlifyUserLoader, { auth: AUTH_PRESETS.authenticated });
+
+async function netlifyUserAction({ request, context }: ActionFunctionArgs) {
+  const token = resolveToken(request, context, ...NETLIFY_TOKEN_KEYS);
+
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Netlify token not found'));
+  }
+
+  try {
     const formData = await request.formData();
     const action = formData.get('action');
 
@@ -60,7 +72,8 @@ async function netlifyUserAction({ request, context }: ActionFunctionArgs) {
       const response = await externalFetch({ url: 'https://api.netlify.com/api/v1/sites', token });
 
       if (!response.ok) {
-        throw new ApiError(`Netlify API error: ${response.status}`, response.status);
+        const errorText = await response.text();
+        throw new AppError(AppErrorType.NETWORK, `Netlify API error: ${errorText}`, response.status);
       }
 
       const sites = (await response.json()) as Array<{
@@ -73,7 +86,7 @@ async function netlifyUserAction({ request, context }: ActionFunctionArgs) {
         updated_at: string;
       }>;
 
-      return Response.json({
+      return successResponse({
         sites: sites.map((site) => ({
           id: site.id,
           name: site.name,
@@ -87,11 +100,16 @@ async function netlifyUserAction({ request, context }: ActionFunctionArgs) {
       });
     }
 
-    return Response.json({ error: 'Invalid action' }, { status: 400 });
-  });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid action'));
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Netlify user action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(netlifyUserAction, {
-  rateLimit: true,
-  allowedMethods: ['POST'],
-});
+export const action = withSecurity(netlifyUserAction, { auth: AUTH_PRESETS.authenticated });

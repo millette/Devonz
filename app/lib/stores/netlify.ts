@@ -1,7 +1,7 @@
 import { atom } from 'nanostores';
 import type { NetlifyConnection, NetlifyUser, NetlifySite } from '~/types/netlify';
 import { logStore } from './logs';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('NetlifyStore');

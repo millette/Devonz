@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { MCPConfig } from '~/lib/services/mcpService';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { mcpStore, initializeMCP, updateMCPSettings, checkMCPServersAvailabilities } from '~/lib/stores/mcp';
 import McpServerList from '~/components/@settings/tabs/mcp/McpServerList';
 
@@ -134,7 +134,7 @@ export default function McpTab() {
           <button
             onClick={checkServerAvailability}
             disabled={isCheckingServers || !parsedConfig || serverEntries.length === 0}
-            className={classNames(
+            className={cn(
               'px-3 py-1.5 rounded-lg text-sm',
               'bg-devonz-elements-background-depth-3 hover:bg-devonz-elements-background-depth-4',
               'text-devonz-elements-textPrimary',
@@ -174,7 +174,7 @@ export default function McpTab() {
               spellCheck={false}
               value={mcpConfigText}
               onChange={(e) => setMCPConfigText(e.target.value)}
-              className={classNames(
+              className={cn(
                 'w-full px-3 py-2 rounded-lg text-sm font-mono h-72',
                 'bg-devonz-elements-background-depth-1',
                 'border',
@@ -230,7 +230,7 @@ export default function McpTab() {
             onClick={handleSave}
             disabled={isSaving || !parsedConfig}
             aria-disabled={isSaving || !parsedConfig}
-            className={classNames(
+            className={cn(
               'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
               'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent',
               'hover:bg-devonz-elements-item-backgroundActive',

@@ -31,6 +31,7 @@ import type {
 } from './runtime-provider';
 import { WORK_DIR } from '~/utils/constants';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('RuntimeClient');
 
@@ -68,7 +69,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       encoding,
     });
 
-    const response = await fetch(`/api/runtime/fs?${params}&op=readFile`);
+    const response = await csrfFetch(`/api/runtime/fs?${params}&op=readFile`);
 
     if (!response.ok || response.status === 204) {
       throw new Error(`Failed to read file "${path}": not found`);
@@ -86,7 +87,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'readFileRaw',
     });
 
-    const response = await fetch(`/api/runtime/fs?${params}`);
+    const response = await csrfFetch(`/api/runtime/fs?${params}`);
 
     if (!response.ok || response.status === 204) {
       throw new Error(`Failed to read file "${path}": not found`);
@@ -130,7 +131,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       binary: isBinary,
     });
 
-    const response = await fetch('/api/runtime/fs', {
+    const response = await csrfFetch('/api/runtime/fs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
@@ -152,7 +153,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'mkdir',
     });
 
-    const response = await fetch('/api/runtime/fs', {
+    const response = await csrfFetch('/api/runtime/fs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
@@ -173,14 +174,16 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'readdir',
     });
 
-    const response = await fetch(`/api/runtime/fs?${params}`);
+    const response = await csrfFetch(`/api/runtime/fs?${params}`);
 
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to read directory "${path}": ${error}`);
     }
 
-    return response.json();
+    const { data } = await response.json();
+
+    return data;
   }
 
   async stat(path: string): Promise<FileStat> {
@@ -192,7 +195,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'stat',
     });
 
-    const response = await fetch(`/api/runtime/fs?${params}`);
+    const response = await csrfFetch(`/api/runtime/fs?${params}`);
 
     // 204 = file does not exist (server returns 204 to avoid browser console 404 noise)
     if (response.status === 204) {
@@ -204,7 +207,9 @@ class ClientFileSystem implements RuntimeFileSystem {
       throw new Error(`Failed to stat "${path}": ${error}`);
     }
 
-    return response.json();
+    const { data } = await response.json();
+
+    return data;
   }
 
   async rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {
@@ -218,7 +223,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'rm',
     });
 
-    const response = await fetch('/api/runtime/fs', {
+    const response = await csrfFetch('/api/runtime/fs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
@@ -241,15 +246,15 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'exists',
     });
 
-    const response = await fetch(`/api/runtime/fs?${params}`);
+    const response = await csrfFetch(`/api/runtime/fs?${params}`);
 
     if (!response.ok) {
       return false;
     }
 
-    const result = await response.json();
+    const { data } = await response.json();
 
-    return result.exists;
+    return data.exists;
   }
 
   async rename(oldPath: string, newPath: string): Promise<void> {
@@ -262,7 +267,7 @@ class ClientFileSystem implements RuntimeFileSystem {
       op: 'rename',
     });
 
-    const response = await fetch('/api/runtime/fs', {
+    const response = await csrfFetch('/api/runtime/fs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
@@ -364,7 +369,7 @@ export class RuntimeClient implements RuntimeProvider {
   }
 
   async boot(projectId: string): Promise<void> {
-    const response = await fetch('/api/runtime/exec', {
+    const response = await csrfFetch('/api/runtime/exec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ op: 'boot', projectId }),
@@ -395,7 +400,7 @@ export class RuntimeClient implements RuntimeProvider {
   }
 
   async spawn(command: string, args: string[] = [], options: SpawnOptions = {}): Promise<SpawnedProcess> {
-    const response = await fetch('/api/runtime/terminal', {
+    const response = await csrfFetch('/api/runtime/terminal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -414,7 +419,8 @@ export class RuntimeClient implements RuntimeProvider {
       throw new Error(`Failed to spawn process: ${error}`);
     }
 
-    const { sessionId, pid } = await response.json();
+    const { data } = await response.json();
+    const { sessionId, pid } = data;
     const dataListeners: Array<(data: string) => void> = [];
 
     // Open SSE connection for this session's output
@@ -542,7 +548,7 @@ export class RuntimeClient implements RuntimeProvider {
       pid,
 
       write: (data: string) => {
-        fetch('/api/runtime/terminal', {
+        csrfFetch('/api/runtime/terminal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ op: 'write', sessionId, data }),
@@ -550,7 +556,7 @@ export class RuntimeClient implements RuntimeProvider {
       },
 
       kill: (signal?: string) => {
-        fetch('/api/runtime/terminal', {
+        csrfFetch('/api/runtime/terminal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ op: 'kill', sessionId, signal }),
@@ -558,7 +564,7 @@ export class RuntimeClient implements RuntimeProvider {
       },
 
       resize: (dimensions: { cols: number; rows: number }) => {
-        fetch('/api/runtime/terminal', {
+        csrfFetch('/api/runtime/terminal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ op: 'resize', sessionId, ...dimensions }),
@@ -582,7 +588,7 @@ export class RuntimeClient implements RuntimeProvider {
   }
 
   async exec(command: string, options: SpawnOptions = {}): Promise<ProcessResult> {
-    const response = await fetch('/api/runtime/exec', {
+    const response = await csrfFetch('/api/runtime/exec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -600,7 +606,9 @@ export class RuntimeClient implements RuntimeProvider {
       throw new Error(`Failed to exec command: ${error}`);
     }
 
-    return response.json();
+    const { data } = await response.json();
+
+    return data;
   }
 
   getPreviewUrl(port: number): string {
@@ -608,7 +616,7 @@ export class RuntimeClient implements RuntimeProvider {
   }
 
   async allocatePort(): Promise<number> {
-    const response = await fetch('/api/runtime/exec', {
+    const response = await csrfFetch('/api/runtime/exec', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ op: 'allocatePort', projectId: this.#projectId }),
@@ -619,9 +627,9 @@ export class RuntimeClient implements RuntimeProvider {
       throw new Error(`Failed to allocate port: ${error}`);
     }
 
-    const { port } = await response.json();
+    const { data } = await response.json();
 
-    return port;
+    return data.port;
   }
 
   onPortEvent(callback: (event: PortEvent) => void): Disposer {
@@ -654,7 +662,7 @@ export class RuntimeClient implements RuntimeProvider {
 
     // Tell the server to tear down
     if (this.#projectId) {
-      await fetch('/api/runtime/exec', {
+      await csrfFetch('/api/runtime/exec', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ op: 'teardown', projectId: this.#projectId }),

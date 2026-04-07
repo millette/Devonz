@@ -3,6 +3,7 @@
  * Client-side git operations via the /api/runtime/git endpoint.
  */
 
+import { csrfFetch } from '~/lib/api/csrf-client';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('GitClient');
@@ -18,18 +19,20 @@ export interface GitCommitInfo {
 }
 
 async function gitApi<T>(op: string, projectId: string, extra: Record<string, unknown> = {}): Promise<T> {
-  const response = await fetch('/api/runtime/git', {
+  const response = await csrfFetch('/api/runtime/git', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ op, projectId, ...extra }),
   });
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(err.error || `Git API error: ${response.status}`);
+    const err = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(err.message ?? err.error?.message ?? `Git API error: ${response.status}`);
   }
 
-  return response.json();
+  const { data } = await response.json();
+
+  return data;
 }
 
 /**
@@ -155,7 +158,7 @@ export async function getCommitDiff(projectId: string, sha: string): Promise<str
  */
 export async function downloadArchive(projectId: string, sha: string, type: 'full' | 'changed'): Promise<void> {
   try {
-    const response = await fetch('/api/runtime/git', {
+    const response = await csrfFetch('/api/runtime/git', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ op: 'archive', projectId, sha, type }),

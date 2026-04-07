@@ -1,7 +1,6 @@
-import React from 'react';
 import { Card, CardContent } from '~/components/ui/Card';
 import { Progress } from '~/components/ui/Progress';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { OllamaModel } from './types';
 
 // Model Card Component
@@ -21,7 +20,7 @@ function ModelCard({ model, onUpdate, onDelete }: ModelCardProps) {
               <h4 className="text-sm font-medium text-devonz-elements-textPrimary font-mono">{model.name}</h4>
               {model.status && model.status !== 'idle' && (
                 <span
-                  className={classNames('px-2 py-0.5 rounded-full text-xs font-medium', {
+                  className={cn('px-2 py-0.5 rounded-full text-xs font-medium', {
                     'bg-yellow-500/10 text-yellow-500': model.status === 'updating',
                     'bg-green-500/10 text-green-500': model.status === 'updated',
                     'bg-red-500/10 text-red-500': model.status === 'error',
@@ -56,7 +55,7 @@ function ModelCard({ model, onUpdate, onDelete }: ModelCardProps) {
             <button
               onClick={onUpdate}
               disabled={model.status === 'updating'}
-              className={classNames(
+              className={cn(
                 'flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-all duration-200',
                 'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent hover:bg-devonz-elements-item-backgroundAccent hover:shadow-sm',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-devonz-elements-item-backgroundAccent',
@@ -77,7 +76,7 @@ function ModelCard({ model, onUpdate, onDelete }: ModelCardProps) {
             <button
               onClick={onDelete}
               disabled={model.status === 'updating'}
-              className={classNames(
+              className={cn(
                 'flex items-center gap-2 px-3 py-2 text-xs rounded-lg transition-all duration-200',
                 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:shadow-sm',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500/10',

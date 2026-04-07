@@ -11,6 +11,8 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 export default defineConfig((config) => {
   return {
     server: {
+      port: Number(process.env.PORT) || 5173,
+      strictPort: true,
       fs: {
         /*
          * Allow serving files when ?url= query param is used. Vite reserves ?url for
@@ -127,51 +129,34 @@ export default defineConfig((config) => {
     },
     optimizeDeps: {
       include: [
-        /*
-         * Pre-bundle all known client deps at startup to avoid runtime discovery + page reload.
-         * Without this, Vite discovers ~40 deps during first page load, re-bundles, and forces a reload.
-         *
-         * React + React-DOM MUST be listed here so that all other pre-bundled deps share
-         * the same React internals instead of inlining a separate copy.
-         */
+        // React core — must be pre-bundled so every dep shares one React instance
         'react',
         'react-dom',
         'react/jsx-runtime',
         'react/jsx-dev-runtime',
         'react-dom/client',
-        'react-dnd',
-        'react-dnd-html5-backend',
+
+        // React ecosystem — CJS or complex dependency graphs
         '@ai-sdk/react',
         '@nanostores/react',
+        'nanostores',
         'framer-motion',
-        'react-toastify',
-        'react-markdown',
-        'react-resizable-panels',
         'react-window',
-        'react-qrcode-logo',
-        'react-chartjs-2',
-        'class-variance-authority',
-        'date-fns',
+
+        // CJS / UMD packages — need Vite conversion to ESM
         'diff',
         'dompurify',
-        'shiki',
-        'chart.js',
         'file-saver',
-        'jspdf',
-        'jszip',
         'ignore',
-        'istextorbinary',
-        'js-cookie',
-        'nanostores',
-        'path-browserify',
-        'mime',
-        'rehype-raw',
-        'rehype-sanitize',
-        'remark-gfm',
-        'unist-util-visit',
         'isomorphic-git',
+        'jszip',
+        'path-browserify',
+        'react-qrcode-logo',
 
-        /* Radix UI */
+        // Complex ESM — deep dep graphs or dynamic/lazy loading
+        'shiki',
+
+        // Radix UI — CJS with many shared internal sub-packages
         '@radix-ui/react-checkbox',
         '@radix-ui/react-collapsible',
         '@radix-ui/react-context-menu',
@@ -180,13 +165,12 @@ export default defineConfig((config) => {
         '@radix-ui/react-label',
         '@radix-ui/react-popover',
         '@radix-ui/react-scroll-area',
-        '@radix-ui/react-separator',
         '@radix-ui/react-switch',
         '@radix-ui/react-tabs',
         '@radix-ui/react-tooltip',
         '@radix-ui/react-visually-hidden',
 
-        /* CodeMirror */
+        // CodeMirror — tightly coupled modules, must be pre-bundled together
         '@codemirror/autocomplete',
         '@codemirror/commands',
         '@codemirror/lang-cpp',
@@ -204,9 +188,8 @@ export default defineConfig((config) => {
         '@codemirror/state',
         '@codemirror/view',
         '@uiw/codemirror-theme-vscode',
-        '@lezer/highlight',
 
-        /* Terminal */
+        // Terminal emulator
         '@xterm/addon-fit',
         '@xterm/addon-web-links',
         '@xterm/xterm',

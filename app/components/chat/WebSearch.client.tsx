@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { IconButton } from '~/components/ui/IconButton';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 interface WebSearchProps {
   onSearchResult: (result: string) => void;
@@ -18,7 +19,8 @@ interface WebSearchData {
 interface WebSearchResponse {
   success?: boolean;
   data?: WebSearchData;
-  error?: string;
+  error?: { message: string; name: string; type?: string };
+  message?: string;
 }
 
 function formatSearchResult(data: WebSearchData): string {
@@ -80,7 +82,7 @@ export function WebSearch({ onSearchResult, disabled }: WebSearchProps) {
     setIsSearching(true);
 
     try {
-      const response = await fetch('/api/web-search', {
+      const response = await csrfFetch('/api/web-search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmedUrl }),
@@ -95,7 +97,7 @@ export function WebSearch({ onSearchResult, disabled }: WebSearchProps) {
         setIsOpen(false);
         toast.success('URL content fetched successfully');
       } else {
-        toast.error(result.error || 'Failed to fetch URL');
+        toast.error(result.message || result.error?.message || 'Failed to fetch URL');
       }
     } catch {
       toast.error('Failed to fetch URL');
@@ -120,7 +122,7 @@ export function WebSearch({ onSearchResult, disabled }: WebSearchProps) {
       </IconButton>
       {isOpen && (
         <div
-          className={classNames(
+          className={cn(
             'absolute bottom-full left-0 mb-2 flex items-center gap-2',
             'rounded-lg border border-devonz-elements-borderColor bg-devonz-elements-background-depth-2 p-2 shadow-lg',
           )}
@@ -142,7 +144,8 @@ export function WebSearch({ onSearchResult, disabled }: WebSearchProps) {
               }
             }}
             placeholder="Enter URL to fetch..."
-            className={classNames(
+            aria-label="URL to fetch"
+            className={cn(
               'w-64 px-3 py-1.5 rounded-md text-sm',
               'bg-devonz-elements-background-depth-1 text-devonz-elements-textPrimary',
               'placeholder-devonz-elements-textTertiary',
@@ -152,7 +155,7 @@ export function WebSearch({ onSearchResult, disabled }: WebSearchProps) {
           <button
             onClick={handleFetch}
             disabled={isSearching || !url.trim()}
-            className={classNames(
+            className={cn(
               'px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap',
               'bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text',
               'hover:bg-devonz-elements-button-primary-backgroundHover',

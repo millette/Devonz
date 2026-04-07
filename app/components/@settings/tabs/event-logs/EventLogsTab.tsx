@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { Switch } from '~/components/ui/Switch';
 import { logStore, type LogEntry } from '~/lib/stores/logs';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Dialog, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('EventLogs');
@@ -249,7 +249,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={classNames(
+      className={cn(
         'flex flex-col gap-2',
         'rounded-lg p-4',
         'bg-devonz-elements-bg-depth-1',
@@ -260,7 +260,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <span className={classNames('text-lg', style.icon, style.color)} />
+          <span className={cn('text-lg', style.icon, style.color)} />
           <div className="flex flex-col gap-1">
             <div className="text-sm font-medium text-devonz-elements-textPrimary">{log.message}</div>
             {log.details && (
@@ -270,7 +270,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
                   className="inline-flex items-center gap-1 text-xs text-devonz-elements-item-contentAccent hover:underline transition-colors w-fit bg-transparent border-none p-0 cursor-pointer"
                 >
                   <span
-                    className={classNames(
+                    className={cn(
                       'text-sm transition-transform',
                       localExpanded ? 'i-ph:caret-down' : 'i-ph:caret-right',
                     )}
@@ -281,9 +281,7 @@ const LogEntryItem = ({ log, isExpanded: forceExpanded, use24Hour, showTimestamp
               </>
             )}
             <div className="flex items-center gap-2">
-              <div className={classNames('px-2 py-0.5 rounded text-xs font-medium uppercase', style.badge)}>
-                {log.level}
-              </div>
+              <div className={cn('px-2 py-0.5 rounded text-xs font-medium uppercase', style.badge)}>{log.level}</div>
               {log.category && (
                 <div className="px-2 py-0.5 rounded-full text-xs text-devonz-elements-textTertiary border border-devonz-elements-borderColor">
                   {log.category}
@@ -848,7 +846,7 @@ export function EventLogsTab() {
       <DialogRoot open={isOpen} onOpenChange={handleOpenChange}>
         <button
           onClick={() => setIsOpen(true)}
-          className={classNames(
+          className={cn(
             'group flex items-center gap-2',
             'rounded-lg px-3 py-1.5',
             'text-sm text-devonz-elements-textPrimary',
@@ -874,7 +872,7 @@ export function EventLogsTab() {
                 <button
                   key={format.id}
                   onClick={() => handleFormatClick(format.handler)}
-                  className={classNames(
+                  className={cn(
                     'flex items-center gap-3 px-4 py-3 text-sm rounded-lg transition-colors w-full text-left',
                     'bg-devonz-elements-bg-depth-1',
                     'border border-devonz-elements-borderColor',
@@ -883,7 +881,7 @@ export function EventLogsTab() {
                     'text-devonz-elements-textPrimary',
                   )}
                 >
-                  <div className={classNames(format.icon, 'w-5 h-5')} />
+                  <div className={cn(format.icon, 'w-5 h-5')} />
                   <div>
                     <div className="font-medium">{format.label}</div>
                     <div className="text-xs text-devonz-elements-textSecondary mt-0.5">
@@ -910,7 +908,7 @@ export function EventLogsTab() {
           <DropdownMenu.Root open={showLevelFilter} onOpenChange={setShowLevelFilter}>
             <DropdownMenu.Trigger asChild>
               <button
-                className={classNames(
+                className={cn(
                   'flex items-center gap-2',
                   'rounded-lg px-3 py-1.5',
                   'text-sm text-devonz-elements-textPrimary',
@@ -921,7 +919,7 @@ export function EventLogsTab() {
                 )}
               >
                 <span
-                  className={classNames('text-lg', selectedLevelOption?.icon || 'i-ph:funnel')}
+                  className={cn('text-lg', selectedLevelOption?.icon || 'i-ph:funnel')}
                   style={{ color: selectedLevelOption?.color }}
                 />
                 {selectedLevelOption?.label || 'All Types'}
@@ -945,7 +943,7 @@ export function EventLogsTab() {
                   >
                     <div className="mr-3 flex h-5 w-5 items-center justify-center">
                       <div
-                        className={classNames(
+                        className={cn(
                           option.icon,
                           'text-lg group-hover:text-devonz-elements-item-contentAccent transition-colors',
                         )}
@@ -967,7 +965,7 @@ export function EventLogsTab() {
               placeholder="Search logs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={classNames(
+              className={cn(
                 'w-full px-4 py-1.5 pl-10 rounded-lg',
                 'bg-devonz-elements-background-depth-1',
                 'border border-devonz-elements-borderColor',
@@ -1017,7 +1015,7 @@ export function EventLogsTab() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
-              className={classNames(
+              className={cn(
                 'group flex items-center gap-2',
                 'rounded-lg px-3 py-1.5',
                 'text-sm text-devonz-elements-textPrimary',
@@ -1042,7 +1040,7 @@ export function EventLogsTab() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={classNames(
+            className={cn(
               'flex flex-col items-center justify-center gap-4',
               'rounded-lg p-8 text-center',
               'bg-devonz-elements-bg-depth-1',

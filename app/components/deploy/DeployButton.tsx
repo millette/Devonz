@@ -6,7 +6,7 @@ import { isGitLabConnected } from '~/lib/stores/gitlab';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { streamingState } from '~/lib/stores/streaming';
 import { deploymentStatus, resetDeployment } from '~/lib/stores/deployment';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { lazy, Suspense, useState } from 'react';
 import { NetlifyDeploymentLink } from '~/components/chat/NetlifyDeploymentLink.client';
 import { VercelDeploymentLink } from '~/components/chat/VercelDeploymentLink.client';
@@ -156,11 +156,11 @@ export const DeployButton = ({
                 : isDeploying
                   ? `Deploying to ${deployingTo}...`
                   : 'Deploy'}
-            <span className={classNames('i-ph:caret-down transition-transform')} />
+            <span className={cn('i-ph:caret-down transition-transform')} />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content
-              className={classNames(
+              className={cn(
                 'z-[9999]',
                 'bg-devonz-elements-background-depth-2',
                 'rounded-lg shadow-lg',
@@ -172,7 +172,7 @@ export const DeployButton = ({
               align="end"
             >
               <DropdownMenu.Item
-                className={classNames(
+                className={cn(
                   'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
                   {
                     'opacity-60 cursor-not-allowed': isDeploying || !activePreview || !netlifyConn.user,
@@ -196,7 +196,7 @@ export const DeployButton = ({
               </DropdownMenu.Item>
 
               <DropdownMenu.Item
-                className={classNames(
+                className={cn(
                   'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
                   {
                     'opacity-60 cursor-not-allowed': isDeploying || !activePreview || !vercelConn.user,
@@ -218,7 +218,7 @@ export const DeployButton = ({
               </DropdownMenu.Item>
 
               <DropdownMenu.Item
-                className={classNames(
+                className={cn(
                   'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
                   {
                     'opacity-60 cursor-not-allowed': isDeploying || !activePreview,
@@ -239,7 +239,7 @@ export const DeployButton = ({
               </DropdownMenu.Item>
 
               <DropdownMenu.Item
-                className={classNames(
+                className={cn(
                   'cursor-pointer flex items-center w-full px-4 py-2 text-sm text-devonz-elements-textPrimary hover:bg-devonz-elements-item-backgroundActive gap-2 rounded-md group relative',
                   {
                     'opacity-60 cursor-not-allowed': isDeploying || !activePreview || !gitlabIsConnected,

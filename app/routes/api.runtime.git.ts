@@ -27,24 +27,19 @@ import {
   archiveChangedFiles,
 } from '~/lib/runtime/git-manager';
 import { withSecurity } from '~/lib/security';
-import { gitRequestSchema, parseOrError } from '~/lib/api/schemas';
+import { gitRequestSchema, validateInput } from '~/lib/api/schemas';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 async function gitAction({ request }: ActionFunctionArgs) {
-  let rawBody: unknown;
+  const validation = await validateInput(request, gitRequestSchema);
 
-  try {
-    rawBody = await request.json();
-  } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+  if (!validation.success) {
+    return errorResponse(validation.error);
   }
 
-  const parsed = parseOrError(gitRequestSchema, rawBody, 'RuntimeGit');
-
-  if (!parsed.success) {
-    return parsed.response;
-  }
-
-  const body = parsed.data;
+  const body = validation.data;
   const { op, projectId } = body;
 
   const manager = RuntimeManager.getInstance();
@@ -54,7 +49,7 @@ async function gitAction({ request }: ActionFunctionArgs) {
   try {
     runtime = await manager.getRuntime(projectId);
   } catch {
-    return Response.json({ error: 'Runtime not found for project' }, { status: 404 });
+    return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Runtime not found for project'));
   }
 
   const workdir = runtime.workdir;
@@ -64,61 +59,61 @@ async function gitAction({ request }: ActionFunctionArgs) {
       const { message } = body;
       const sha = autoCommit(workdir, message);
 
-      return Response.json({ sha, committed: !!sha });
+      return successResponse({ sha, committed: !!sha });
     }
 
     case 'log': {
       const maxCount = body.maxCount ?? 50;
       const commits = getGitLog(workdir, maxCount);
 
-      return Response.json({ commits });
+      return successResponse({ commits });
     }
 
     case 'checkout': {
       const { sha } = body;
       const success = checkoutCommit(workdir, sha);
 
-      return Response.json({ success });
+      return successResponse({ success });
     }
 
     case 'checkout-main': {
       const success = checkoutMain(workdir);
-      return Response.json({ success });
+      return successResponse({ success });
     }
 
     case 'diff': {
       const { sha } = body;
       const diff = getDiff(workdir, sha);
 
-      return Response.json({ diff });
+      return successResponse({ diff });
     }
 
     case 'commit-files': {
       const { sha } = body;
       const files = getCommitFiles(workdir, sha);
 
-      return Response.json({ files });
+      return successResponse({ files });
     }
 
     case 'commit-files-status': {
       const { sha } = body;
       const files = getCommitFilesWithStatus(workdir, sha);
 
-      return Response.json({ files });
+      return successResponse({ files });
     }
 
     case 'file-diff': {
       const { sha, file } = body;
       const diff = getFileDiff(workdir, sha, file);
 
-      return Response.json({ diff });
+      return successResponse({ diff });
     }
 
     case 'commit-diff': {
       const { sha } = body;
       const diff = getCommitDiff(workdir, sha);
 
-      return Response.json({ diff });
+      return successResponse({ diff });
     }
 
     case 'archive': {
@@ -136,15 +131,14 @@ async function gitAction({ request }: ActionFunctionArgs) {
           },
         });
       } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Archive failed';
-        return Response.json({ error: msg }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Archive failed');
       }
     }
 
     default: {
-      return Response.json({ error: `Unknown git operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown git operation: ${op}`));
     }
   }
 }
 
-export const action = withSecurity(gitAction, { rateLimit: false });
+export const action = withSecurity(gitAction, { auth: AUTH_PRESETS.authenticated, rateLimit: false });

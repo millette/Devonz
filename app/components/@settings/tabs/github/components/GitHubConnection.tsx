@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '~/components/ui/Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { useGitHubConnection } from '~/lib/hooks';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -94,7 +94,7 @@ export function GitHubConnection({ connectionTest, onTestConnection }: GitHubCon
                 value={tokenType}
                 onChange={(e) => setTokenType(e.target.value as 'classic' | 'fine-grained')}
                 disabled={isConnecting || isConnected}
-                className={classNames(
+                className={cn(
                   'w-full px-3 py-2 rounded-lg text-sm',
                   'bg-devonz-elements-background-depth-1 dark:bg-devonz-elements-background-depth-1',
                   'border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor',
@@ -122,7 +122,7 @@ export function GitHubConnection({ connectionTest, onTestConnection }: GitHubCon
                 placeholder={`Enter your GitHub ${
                   tokenType === 'classic' ? 'personal access token' : 'fine-grained token'
                 }`}
-                className={classNames(
+                className={cn(
                   'w-full px-3 py-2 rounded-lg text-sm',
                   'bg-devonz-elements-background-depth-1',
                   'border border-devonz-elements-borderColor',
@@ -161,7 +161,7 @@ export function GitHubConnection({ connectionTest, onTestConnection }: GitHubCon
               <button
                 type="submit"
                 disabled={isConnecting || !token.trim()}
-                className={classNames(
+                className={cn(
                   'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                   'bg-devonz-elements-bg-depth-3 text-devonz-elements-textPrimary',
                   'hover:bg-[#5E41D0] hover:text-white',
@@ -187,7 +187,7 @@ export function GitHubConnection({ connectionTest, onTestConnection }: GitHubCon
                   <button
                     onClick={disconnect}
                     type="button"
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                       'bg-red-500 text-white',
                       'hover:bg-red-600',

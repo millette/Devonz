@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGitHubConnection, useGitHubStats } from '~/lib/hooks';
 import { LoadingState, ErrorState, ConnectionTestIndicator, RepositoryCard } from './components/shared';
@@ -7,7 +7,7 @@ import { GitHubUserProfile } from './components/GitHubUserProfile';
 import { GitHubStats } from './components/GitHubStats';
 import { Button } from '~/components/ui/Button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '~/components/ui/Collapsible';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { GitHubErrorBoundary } from './components/GitHubErrorBoundary';
 import { GitHubProgressiveLoader } from './components/GitHubProgressiveLoader';
 import { GitHubCacheManager } from './components/GitHubCacheManager';
@@ -201,7 +201,7 @@ export default function GitHubTab() {
                     </span>
                   </div>
                   <div
-                    className={classNames(
+                    className={cn(
                       'i-ph:caret-down w-4 h-4 transform transition-transform duration-200 text-devonz-elements-textSecondary',
                       isReposExpanded ? 'rotate-180' : '',
                     )}

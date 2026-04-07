@@ -315,5 +315,8 @@ export function getPreviewErrorHandler(): PreviewErrorHandler {
  * Call this when user requests a fix so the same error can be detected again
  */
 export function resetPreviewErrorHandler(): void {
-  getPreviewErrorHandler().reset();
+  if (handlerInstance) {
+    handlerInstance.destroy();
+    handlerInstance = null;
+  }
 }

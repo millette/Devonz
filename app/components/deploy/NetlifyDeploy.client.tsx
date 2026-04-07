@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useStore } from '@nanostores/react';
 import { netlifyConnection } from '~/lib/stores/netlify';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -10,6 +10,7 @@ import { chatId } from '~/lib/persistence/useChatHistory';
 import { createScopedLogger } from '~/utils/logger';
 import type { NetlifyDeployResponse } from '~/types/netlify';
 import { formatBuildFailureOutput } from './deployUtils';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('NetlifyDeploy');
 
@@ -146,7 +147,7 @@ export function useNetlifyDeploy() {
       // Use chatId instead of artifact.id
       const existingSiteId = localStorage.getItem(`netlify-site-${currentChatId}`);
 
-      const response = await fetch('/api/netlify-deploy', {
+      const response = await csrfFetch('/api/netlify-deploy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,21 +160,24 @@ export function useNetlifyDeploy() {
         }),
       });
 
-      const data = (await response.json()) as {
-        deploy?: { id: string; ssl_url?: string };
-        site?: { id: string };
-        error?: string;
+      const envelope = (await response.json()) as {
+        success: boolean;
+        data?: { deploy?: { id: string; ssl_url?: string }; site?: { id: string } };
+        message?: string;
+        error?: { message?: string };
       };
+      const data = envelope.data;
 
-      if (!response.ok || !data.deploy || !data.site) {
-        logger.error('Invalid deploy response:', data);
+      if (!response.ok || !data?.deploy || !data?.site) {
+        const errorMsg = envelope.message || envelope.error?.message || 'Invalid deployment response';
+        logger.error('Invalid deploy response:', envelope);
 
         // Notify that deployment failed
         deployArtifact.runner.handleDeployAction('deploying', 'failed', {
-          error: data.error || 'Invalid deployment response',
+          error: errorMsg,
           source: 'netlify',
         });
-        throw new Error(data.error || 'Invalid deployment response');
+        throw new Error(errorMsg);
       }
 
       const maxAttempts = 20; // 2 minutes timeout

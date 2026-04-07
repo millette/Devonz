@@ -16,22 +16,15 @@ export * from './Tabs';
 export * from './ThemeSwitch';
 
 // Loading components
-export * from './LoadingDots';
 export * from './LoadingOverlay';
 
 // New components
-export * from './Breadcrumbs';
-export * from './CloseButton';
 export * from './EmptyState';
-export * from './FileIcon';
 export * from './SearchInput';
-export * from './SearchResultItem';
 export * from './StatusIndicator';
-export * from './TabsWithSlider';
 
 // Tooltip components
 export { default as WithTooltip } from './Tooltip';
-export { Tooltip } from './Tooltip';
 
 // Resize components
 export * from './ResizeHandle';

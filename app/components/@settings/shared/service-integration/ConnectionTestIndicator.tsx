@@ -1,6 +1,5 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 export interface ConnectionTestResult {
   status: 'success' | 'error' | 'testing';
@@ -20,7 +19,7 @@ export function ConnectionTestIndicator({ testResult, className }: ConnectionTes
 
   return (
     <motion.div
-      className={classNames(
+      className={cn(
         'p-4 rounded-lg border',
         {
           'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700': testResult.status === 'success',
@@ -43,7 +42,7 @@ export function ConnectionTestIndicator({ testResult, className }: ConnectionTes
           <div className="i-ph:spinner-gap w-5 h-5 animate-spin text-blue-600 dark:text-blue-400" />
         )}
         <span
-          className={classNames('text-sm font-medium', {
+          className={cn('text-sm font-medium', {
             'text-green-800 dark:text-green-200': testResult.status === 'success',
             'text-red-800 dark:text-red-200': testResult.status === 'error',
             'text-blue-800 dark:text-blue-200': testResult.status === 'testing',

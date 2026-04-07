@@ -197,7 +197,7 @@ class LogStore {
   private _addApiLog(
     message: string,
     method: string,
-    url: string,
+    _url: string,
     details: {
       method: string;
       url: string;

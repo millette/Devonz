@@ -7,6 +7,10 @@
 #   docker compose up -d --build      → build locally + run
 #   docker compose pull                → pull latest image
 #   docker compose --profile dev up    → dev mode (hot reload)
+#
+# First-time setup:
+#   cp .env.example .env.local        → create env file (optional)
+#   Edit .env.local and add your API keys
 # ─────────────────────────────────────────────────────────────
 
 services:
@@ -22,10 +26,17 @@ services:
     ports:
       - "${PORT:-5173}:5173"
     env_file:
-      - .env.local
+      - path: .env.local
+        required: false
     environment:
       - NODE_ENV=production
       - RUNNING_IN_DOCKER=true
+      # Encryption key for API key cookie encryption.
+      # If not set, a random key is auto-generated on each startup
+      # (encrypted cookies will not persist across container restarts).
+      # For persistent encryption, generate a key and uncomment:
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      # - DEVONZ_ENCRYPTION_KEY=your_64_char_hex_key_here
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
@@ -49,7 +60,8 @@ services:
     ports:
       - "${PORT:-5173}:5173"
     env_file:
-      - .env.local
+      - path: .env.local
+        required: false
     environment:
       - NODE_ENV=development
     volumes:

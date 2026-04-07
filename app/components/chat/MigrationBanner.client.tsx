@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { openDatabase, getAll, getSnapshot } from '~/lib/persistence/db';
 import { createScopedLogger } from '~/utils/logger';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('MigrationBanner');
 
@@ -117,7 +118,7 @@ export function MigrationBanner() {
         const chatIds = new Set(chatBatch.map((c) => c.id));
         const snapshotBatch = snapshots.filter((s) => chatIds.has(s.chatId));
 
-        const response = await fetch('/api/db/migrate', {
+        const response = await csrfFetch('/api/db/migrate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

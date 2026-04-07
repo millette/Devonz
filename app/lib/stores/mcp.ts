@@ -1,6 +1,7 @@
 import { map } from 'nanostores';
 import type { MCPConfig, MCPServerTools } from '~/lib/services/mcpService';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('MCPStore');
 
@@ -82,15 +83,13 @@ export async function updateMCPSettings(newSettings: MCPSettings): Promise<void>
 
     mcpStore.setKey('settings', newSettings);
     mcpStore.setKey('serverTools', serverTools);
-  } catch (error) {
-    throw error;
   } finally {
     mcpStore.setKey('isUpdatingConfig', false);
   }
 }
 
 export async function checkMCPServersAvailabilities(): Promise<void> {
-  const response = await fetch('/api/mcp-check', {
+  const response = await csrfFetch('/api/mcp-check', {
     method: 'GET',
   });
 
@@ -98,13 +97,13 @@ export async function checkMCPServersAvailabilities(): Promise<void> {
     throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
   }
 
-  const serverTools = (await response.json()) as MCPServerTools;
+  const serverTools = ((await response.json()) as { data: MCPServerTools }).data;
 
   mcpStore.setKey('serverTools', serverTools);
 }
 
 async function updateServerConfig(config: MCPConfig): Promise<MCPServerTools> {
-  const response = await fetch('/api/mcp-update-config', {
+  const response = await csrfFetch('/api/mcp-update-config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(config),
@@ -114,7 +113,7 @@ async function updateServerConfig(config: MCPConfig): Promise<MCPServerTools> {
     throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
   }
 
-  const data = (await response.json()) as MCPServerTools;
+  const data = ((await response.json()) as { data: MCPServerTools }).data;
 
   return data;
 }

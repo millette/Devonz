@@ -1,11 +1,10 @@
 import { memo, Fragment, useState } from 'react';
 import { Markdown } from './Markdown';
-import type { JSONValue } from 'ai';
+import type { JSONValue, Message } from 'ai';
 import Popover from '~/components/ui/Popover';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { WORK_DIR } from '~/utils/constants';
 import WithTooltip from '~/components/ui/Tooltip';
-import type { Message } from 'ai';
 import type { ProviderInfo } from '~/types/model';
 import type {
   TextUIPart,
@@ -162,10 +161,10 @@ export const AssistantMessage = memo(
                     <div className="code-context flex flex-col p4 border border-devonz-elements-borderColor rounded-md">
                       <h2>Context</h2>
                       <div className="flex gap-4 mt-4 devonz" style={{ zoom: 0.6 }}>
-                        {codeContext.map((x) => {
+                        {codeContext.map((x, i) => {
                           const normalized = normalizedFilePath(x);
                           return (
-                            <Fragment key={normalized}>
+                            <Fragment key={`${normalized}-${i}`}>
                               <code
                                 className="bg-devonz-elements-artifacts-inlineCode-background text-devonz-elements-artifacts-inlineCode-text px-1.5 py-1 rounded-md text-devonz-elements-item-contentAccent hover:underline cursor-pointer"
                                 onClick={(e) => {

@@ -125,6 +125,10 @@ export class WorkbenchStore {
     return this.#previewsStore.previews;
   }
 
+  get previewsStore(): PreviewsStore {
+    return this.#previewsStore;
+  }
+
   resetPreviews() {
     this.#previewsStore.reset();
   }

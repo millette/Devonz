@@ -1,5 +1,7 @@
 import { type LoaderFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse } from '~/lib/api/responses';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { parseCookies } from '~/lib/api/cookies';
 
 /**
@@ -110,31 +112,34 @@ async function diagnosticsLoader({ request, context }: LoaderFunctionArgs & { co
   };
 
   // Return diagnostics
-  return Response.json(
-    {
-      status: 'success',
-      environment: envVars,
-      cookies: {
-        hasGithubTokenCookie,
-        hasGithubUsernameCookie,
-        hasNetlifyCookie,
-      },
-      localStorage: localStorageStatus,
-      apiEndpoints,
-      externalApis: {
-        github: githubApiStatus,
-        netlify: netlifyApiStatus,
-      },
-      corsStatus,
-      technicalDetails,
+  const response = successResponse({
+    status: 'success',
+    environment: envVars,
+    cookies: {
+      hasGithubTokenCookie,
+      hasGithubUsernameCookie,
+      hasNetlifyCookie,
     },
-    {
-      headers: corsStatus.headers,
+    localStorage: localStorageStatus,
+    apiEndpoints,
+    externalApis: {
+      github: githubApiStatus,
+      netlify: netlifyApiStatus,
     },
-  );
+    corsStatus,
+    technicalDetails,
+  });
+
+  // Apply CORS headers
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return response;
 }
 
 export const loader = withSecurity(diagnosticsLoader, {
+  auth: AUTH_PRESETS.public,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '~/components/ui/Button';
 import { RepositoryCard } from './RepositoryCard';
 import type { GitLabProjectInfo } from '~/types/GitLab';

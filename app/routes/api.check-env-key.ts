@@ -2,20 +2,22 @@ import { type LoaderFunctionArgs } from 'react-router';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 import { withSecurity } from '~/lib/security';
+import { successResponse } from '~/lib/api/responses';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 async function checkEnvKeyLoader({ context, request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const provider = url.searchParams.get('provider');
 
   if (!provider) {
-    return Response.json({ isSet: false });
+    return successResponse({ isSet: false });
   }
 
   const llmManager = LLMManager.getInstance(context?.cloudflare?.env ?? {});
   const providerInstance = llmManager.getProvider(provider);
 
   if (!providerInstance || !providerInstance.config.apiTokenKey) {
-    return Response.json({ isSet: false });
+    return successResponse({ isSet: false });
   }
 
   const envVarName = providerInstance.config.apiTokenKey;
@@ -33,15 +35,16 @@ async function checkEnvKeyLoader({ context, request }: LoaderFunctionArgs) {
    */
   const isSet = !!(
     apiKeys?.[provider] ||
-    (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
+    context?.cloudflare?.env?.[envVarName] ||
     process.env[envVarName] ||
     llmManager.env[envVarName]
   );
 
-  return Response.json({ isSet });
+  return successResponse({ isSet });
 }
 
 export const loader = withSecurity(checkEnvKeyLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

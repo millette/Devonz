@@ -27,6 +27,9 @@ import type { StreamingEvent } from '~/types/streaming-events';
 import type { PlanPhase, TokenBudgetState, ContextWindowConfig } from '~/lib/agent/types';
 import { withSecurity } from '~/lib/security';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
+import { errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import {
   generateBlueprint,
   buildPhaseEvent,
@@ -51,6 +54,8 @@ import {
 import { getAgentOrchestrator } from '~/lib/services/agentOrchestratorService';
 
 export const action = withSecurity(chatAction, {
+  auth: AUTH_PRESETS.authenticated,
+  csrfExempt: true,
   allowedMethods: ['POST'],
   rateLimit: false,
 });
@@ -78,10 +83,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'));
   }
 
   const parsed = chatRequestSchema.safeParse(rawBody);
@@ -89,19 +91,7 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
   if (!parsed.success) {
     logger.warn('Chat request validation failed:', parsed.error.issues);
 
-    return new Response(
-      JSON.stringify({
-        error: 'Invalid request',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request'));
   }
 
   const {
@@ -1043,36 +1033,13 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
     logger.error(error);
 
     const errMsg = error instanceof Error ? error.message : String(error);
-    const errObj = (error && typeof error === 'object' ? error : {}) as Record<string, unknown>;
-
-    const errorResponse = {
-      error: true,
-      message: errMsg || 'An unexpected error occurred',
-      statusCode: (errObj.statusCode as number) || 500,
-      isRetryable: errObj.isRetryable !== false, // Default to retryable unless explicitly false
-      provider: (errObj.provider as string) || 'unknown',
-    };
 
     if (errMsg?.includes('API key')) {
-      return new Response(
-        JSON.stringify({
-          ...errorResponse,
-          message: 'Invalid or missing API key',
-          statusCode: 401,
-          isRetryable: false,
-        }),
-        {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-          statusText: 'Unauthorized',
-        },
-      );
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid or missing API key'));
     }
 
-    return new Response(JSON.stringify(errorResponse), {
-      status: errorResponse.statusCode,
-      headers: { 'Content-Type': 'application/json' },
-      statusText: 'Error',
-    });
+    return errorResponse(
+      error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, errMsg || 'An unexpected error occurred'),
+    );
   }
 }

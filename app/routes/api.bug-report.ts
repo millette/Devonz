@@ -3,6 +3,9 @@ import { Octokit } from '@octokit/rest';
 import { z } from 'zod';
 import { createScopedLogger } from '~/utils/logger';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 const logger = createScopedLogger('BugReport');
 
@@ -159,7 +162,7 @@ function formatIssueBody(data: z.infer<typeof bugReportSchema>): string {
 async function bugReportAction({ request, context }: ActionFunctionArgs) {
   // Only allow POST requests
   if (request.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return errorResponse(new AppError(AppErrorType.FORBIDDEN, 'Method not allowed'), 405);
   }
 
   try {
@@ -167,9 +170,9 @@ async function bugReportAction({ request, context }: ActionFunctionArgs) {
     const clientIP = getClientIP(request);
 
     if (!checkRateLimit(clientIP)) {
-      return Response.json(
-        { error: 'Rate limit exceeded. Please wait before submitting another report.' },
-        { status: 429 },
+      return errorResponse(
+        new AppError(AppErrorType.RATE_LIMITED, 'Rate limit exceeded. Please wait before submitting another report.'),
+        429,
       );
     }
 
@@ -202,9 +205,12 @@ async function bugReportAction({ request, context }: ActionFunctionArgs) {
 
     // Spam detection
     if (isSpam(sanitizedData.title, sanitizedData.description)) {
-      return Response.json(
-        { error: 'Your report was flagged as potential spam. Please contact support if this is an error.' },
-        { status: 400 },
+      return errorResponse(
+        new AppError(
+          AppErrorType.VALIDATION,
+          'Your report was flagged as potential spam. Please contact support if this is an error.',
+        ),
+        400,
       );
     }
 
@@ -214,9 +220,12 @@ async function bugReportAction({ request, context }: ActionFunctionArgs) {
 
     if (!githubToken) {
       logger.error('GitHub bug report token not configured');
-      return Response.json(
-        { error: 'Bug reporting is not properly configured. Please contact the administrators.' },
-        { status: 500 },
+      return errorResponse(
+        new AppError(
+          AppErrorType.INTERNAL,
+          'Bug reporting is not properly configured. Please contact the administrators.',
+        ),
+        500,
       );
     }
 
@@ -236,8 +245,7 @@ async function bugReportAction({ request, context }: ActionFunctionArgs) {
       labels: ['bug', 'user-reported'],
     });
 
-    return Response.json({
-      success: true,
+    return successResponse({
       issueNumber: issue.data.number,
       issueUrl: issue.data.html_url,
       message: 'Bug report submitted successfully!',
@@ -247,32 +255,42 @@ async function bugReportAction({ request, context }: ActionFunctionArgs) {
 
     // Handle validation errors
     if (error instanceof z.ZodError) {
-      return Response.json({ error: 'Invalid input data', details: error.errors }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid input data'), 400);
     }
 
     // Handle GitHub API errors
     if (error && typeof error === 'object' && 'status' in error) {
       if (error.status === 401) {
-        return Response.json(
-          { error: 'GitHub authentication failed. Please contact administrators.' },
-          { status: 500 },
+        return errorResponse(
+          new AppError(AppErrorType.UNAUTHORIZED, 'GitHub authentication failed. Please contact administrators.'),
+          500,
         );
       }
 
       if (error.status === 403) {
-        return Response.json({ error: 'GitHub rate limit reached. Please try again later.' }, { status: 503 });
+        return errorResponse(
+          new AppError(AppErrorType.RATE_LIMITED, 'GitHub rate limit reached. Please try again later.'),
+          503,
+        );
       }
 
       if (error.status === 404) {
-        return Response.json({ error: 'Target repository not found. Please contact administrators.' }, { status: 500 });
+        return errorResponse(
+          new AppError(AppErrorType.NOT_FOUND, 'Target repository not found. Please contact administrators.'),
+          500,
+        );
       }
     }
 
-    return Response.json({ error: 'Failed to submit bug report. Please try again later.' }, { status: 500 });
+    return errorResponse(
+      new AppError(AppErrorType.INTERNAL, 'Failed to submit bug report. Please try again later.'),
+      500,
+    );
   }
 }
 
 export const action = withSecurity(bugReportAction, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['POST'],
   rateLimit: false,
 });

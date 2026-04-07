@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { profileStore, updateProfile } from '~/lib/stores/profile';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { debounce } from '~/utils/debounce';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -76,7 +76,7 @@ export default function ProfileTab() {
           {/* Avatar Upload */}
           <div className="flex items-start gap-6 mb-8">
             <div
-              className={classNames(
+              className={cn(
                 'w-24 h-24 rounded-full overflow-hidden',
                 'bg-gray-100 dark:bg-gray-800/50',
                 'flex items-center justify-center',
@@ -92,7 +92,7 @@ export default function ProfileTab() {
                   loading="lazy"
                   src={profile.avatar}
                   alt="Profile"
-                  className={classNames(
+                  className={cn(
                     'w-full h-full object-cover',
                     'transition-all duration-300 ease-out',
                     'group-hover:scale-105 group-hover:brightness-90',
@@ -103,7 +103,7 @@ export default function ProfileTab() {
               )}
 
               <label
-                className={classNames(
+                className={cn(
                   'absolute inset-0',
                   'flex items-center justify-center',
                   'bg-black/0 group-hover:bg-black/40',
@@ -146,7 +146,7 @@ export default function ProfileTab() {
                 autoComplete="username"
                 value={profile.username}
                 onChange={(e) => handleProfileUpdate('username', e.target.value)}
-                className={classNames(
+                className={cn(
                   'w-full pl-11 pr-4 py-2.5 rounded-xl',
                   'bg-white dark:bg-gray-800/50',
                   'border border-gray-200 dark:border-gray-700/50',
@@ -173,7 +173,7 @@ export default function ProfileTab() {
                 id="profile-bio"
                 value={profile.bio}
                 onChange={(e) => handleProfileUpdate('bio', e.target.value)}
-                className={classNames(
+                className={cn(
                   'w-full pl-11 pr-4 py-2.5 rounded-xl',
                   'bg-white dark:bg-gray-800/50',
                   'border border-gray-200 dark:border-gray-700/50',

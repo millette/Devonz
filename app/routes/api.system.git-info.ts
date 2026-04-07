@@ -1,9 +1,21 @@
 import { type LoaderFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { parseCookies } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('GitInfo');
+
+/** Apply CORS headers to a response. */
+function withCors(response: Response): Response {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return response;
+}
 
 interface GitInfo {
   local: {
@@ -95,16 +107,7 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
 
     if (!token) {
       logger.error('No GitHub token available');
-      return Response.json(
-        { error: 'No GitHub token available' },
-        {
-          status: 401,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          },
-        },
-      );
+      return withCors(errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'No GitHub token available', 401)));
     }
 
     try {
@@ -124,15 +127,7 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
 
         const userData = await response.json();
 
-        return Response.json(
-          { user: userData },
-          {
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            },
-          },
-        );
+        return withCors(successResponse({ user: userData }));
       }
 
       if (action === 'getRepos') {
@@ -201,8 +196,8 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
            */
         }
 
-        return Response.json(
-          {
+        return withCors(
+          successResponse({
             repos,
             stats: {
               totalStars,
@@ -210,13 +205,7 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
               languages: languageStats,
               totalGists: gists.length,
             },
-          },
-          {
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            },
-          },
+          }),
         );
       }
 
@@ -236,15 +225,7 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
 
         const orgs = await response.json();
 
-        return Response.json(
-          { organizations: orgs },
-          {
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            },
-          },
-        );
+        return withCors(successResponse({ organizations: orgs }));
       }
 
       if (action === 'getActivity') {
@@ -252,15 +233,8 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
 
         if (!username) {
           logger.error('GitHub username not found in cookies');
-          return Response.json(
-            { error: 'GitHub username not found in cookies' },
-            {
-              status: 400,
-              headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-              },
-            },
+          return withCors(
+            errorResponse(new AppError(AppErrorType.VALIDATION, 'GitHub username not found in cookies', 400)),
           );
         }
 
@@ -279,27 +253,12 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
 
         const events = await response.json();
 
-        return Response.json(
-          { recentActivity: events },
-          {
-            headers: {
-              'Access-Control-Allow-Origin': '*',
-              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            },
-          },
-        );
+        return withCors(successResponse({ recentActivity: events }));
       }
     } catch (error) {
       logger.error('GitHub API error:', error);
-      return Response.json(
-        { error: error instanceof Error ? error.message : 'Unknown error' },
-        {
-          status: 500,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          },
-        },
+      return withCors(
+        errorResponse(error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, 'Unknown error')),
       );
     }
   }
@@ -317,15 +276,11 @@ async function gitInfoSystemLoader({ request, context }: LoaderFunctionArgs & { 
     timestamp: new Date().toISOString(),
   };
 
-  return Response.json(gitInfo, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    },
-  });
+  return withCors(successResponse(gitInfo));
 }
 
 export const loader = withSecurity(gitInfoSystemLoader, {
+  auth: AUTH_PRESETS.public,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

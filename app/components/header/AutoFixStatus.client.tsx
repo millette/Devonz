@@ -10,7 +10,7 @@
 import { useStore } from '@nanostores/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { autoFixStore, isAutoFixing, autoFixRetryCount, resetAutoFix } from '~/lib/stores/autofix';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 export function AutoFixStatus() {
   const store = useStore(autoFixStore);
@@ -46,7 +46,7 @@ export function AutoFixStatus() {
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
         onClick={handleClick}
-        className={classNames(
+        className={cn(
           'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors',
           fixing
             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -64,7 +64,7 @@ export function AutoFixStatus() {
       >
         {/* Icon */}
         <motion.div
-          className={classNames(
+          className={cn(
             'text-sm',
             fixing ? 'i-ph:wrench-duotone' : wasSuccessful ? 'i-ph:check-circle-duotone' : 'i-ph:x-circle-duotone',
           )}

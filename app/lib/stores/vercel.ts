@@ -1,7 +1,7 @@
 import { atom } from 'nanostores';
 import type { VercelConnection, VercelUserResponse, VercelProject } from '~/types/vercel';
 import { logStore } from './logs';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { vercelApi } from '~/lib/api/vercel-client';
 import { createScopedLogger } from '~/utils/logger';
 

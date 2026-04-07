@@ -12,7 +12,7 @@ import {
 import type { ActionState } from '~/lib/runtime/action-runner';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getChangeForFile } from '~/lib/stores/staging';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { cubicEasingFn } from '~/utils/easings';
 import { WORK_DIR } from '~/utils/constants';
 import {
@@ -42,6 +42,10 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
 
   const artifacts = useStore(workbenchStore.artifacts);
   const artifact = artifacts[artifactId];
+
+  if (!artifact) {
+    return null;
+  }
 
   const actions = useStore(
     computed(artifact.runner.actions, (actions) => {
@@ -107,9 +111,7 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
               Used tools {actions.length > 0 && <span className="text-white/50">{actions.length} times</span>}
             </span>
           </div>
-          <div
-            className={classNames('transition-transform duration-200 text-white/40', showActions ? 'rotate-180' : '')}
-          >
+          <div className={cn('transition-transform duration-200 text-white/40', showActions ? 'rotate-180' : '')}>
             <div className="i-ph:caret-down" />
           </div>
         </button>
@@ -175,7 +177,7 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
         {/* Bundled artifact status */}
         {artifact.type === 'bundled' && (
           <div className="flex items-center gap-2.5 px-4 py-3 border-t border-white/8">
-            <div className={classNames('text-lg', getIconColor(allActionFinished ? 'complete' : 'running'))}>
+            <div className={cn('text-lg', getIconColor(allActionFinished ? 'complete' : 'running'))}>
               {allActionFinished ? (
                 <div className="i-ph:check-circle-fill"></div>
               ) : (
@@ -229,7 +231,7 @@ function CodeBlock({ className, code, language = 'shell', maxLines }: CodeBlockP
    */
   return (
     <div
-      className={classNames('text-xs overflow-x-auto', className)}
+      className={cn('text-xs overflow-x-auto', className)}
       dangerouslySetInnerHTML={{
         __html: codeHighlighter.codeToHtml(displayCode || '', {
           lang: lang as BundledLanguage,
@@ -338,7 +340,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                     openArtifactInWorkbench(action.filePath);
                   }
                 }}
-                className={classNames(
+                className={cn(
                   'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-all duration-150',
                   'bg-devonz-elements-background-depth-2 hover:bg-devonz-elements-background-depth-3',
                   isExpanded && 'ring-1 ring-devonz-elements-borderColor',
@@ -346,7 +348,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
               >
                 {/* Status indicator - small checkmark */}
                 <div
-                  className={classNames(
+                  className={cn(
                     'w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0',
                     isComplete
                       ? 'bg-green-500 text-white'
@@ -368,7 +370,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
 
                 {/* File type icon (for file actions) */}
                 {type === 'file' && fileIcon && (
-                  <div className={classNames(fileIcon, fileIconColor, 'text-sm flex-shrink-0')} />
+                  <div className={cn(fileIcon, fileIconColor, 'text-sm flex-shrink-0')} />
                 )}
 
                 {/* Action label */}
@@ -395,7 +397,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                 {/* Expand arrow */}
                 {hasExpandableContent && (
                   <div
-                    className={classNames(
+                    className={cn(
                       'transition-transform duration-200 text-devonz-elements-textTertiary',
                       !diffStats && 'ml-auto',
                       isExpanded ? 'rotate-180' : '',

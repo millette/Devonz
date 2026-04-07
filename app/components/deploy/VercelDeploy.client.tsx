@@ -1,4 +1,4 @@
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useStore } from '@nanostores/react';
 import { vercelConnection } from '~/lib/stores/vercel';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -9,6 +9,7 @@ import type { ActionCallbackData } from '~/lib/runtime/message-parser';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { createScopedLogger } from '~/utils/logger';
 import { formatBuildFailureOutput } from './deployUtils';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('VercelDeploy');
 
@@ -182,7 +183,7 @@ export function useVercelDeploy() {
       // Use chatId instead of artifact.id
       const existingProjectId = localStorage.getItem(`vercel-project-${currentChatId}`);
 
-      const response = await fetch('/api/vercel-deploy', {
+      const response = await csrfFetch('/api/vercel-deploy', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,21 +197,24 @@ export function useVercelDeploy() {
         }),
       });
 
-      const data = (await response.json()) as {
-        deploy?: { id: string; url?: string };
-        project?: { id: string; name?: string };
-        error?: string;
+      const envelope = (await response.json()) as {
+        success: boolean;
+        data?: { deploy?: { id: string; url?: string }; project?: { id: string; name?: string } };
+        message?: string;
+        error?: { message?: string };
       };
+      const data = envelope.data;
 
-      if (!response.ok || !data.deploy || !data.project) {
-        logger.error('Invalid deploy response:', data);
+      if (!response.ok || !data?.deploy || !data?.project) {
+        const errorMsg = envelope.message || envelope.error?.message || 'Invalid deployment response';
+        logger.error('Invalid deploy response:', envelope);
 
         // Notify that deployment failed
         deployArtifact.runner.handleDeployAction('deploying', 'failed', {
-          error: data.error || 'Invalid deployment response',
+          error: errorMsg,
           source: 'vercel',
         });
-        throw new Error(data.error || 'Invalid deployment response');
+        throw new Error(errorMsg);
       }
 
       if (data.project) {

@@ -1,4 +1,5 @@
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('EncryptValue');
 
@@ -17,7 +18,7 @@ export async function encryptApiKeyValue(value: string): Promise<string> {
   }
 
   try {
-    const response = await fetch('/api/encrypt', {
+    const response = await csrfFetch('/api/encrypt', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value }),
@@ -28,7 +29,8 @@ export async function encryptApiKeyValue(value: string): Promise<string> {
       return value;
     }
 
-    const data = (await response.json()) as { encrypted?: string };
+    const envelope = (await response.json()) as { data?: { encrypted?: string } };
+    const data = envelope.data || {};
 
     if (data.encrypted && data.encrypted.startsWith(ENC_PREFIX)) {
       return data.encrypted;

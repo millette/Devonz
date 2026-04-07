@@ -11,7 +11,7 @@ import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import {
   TOOL_EXECUTION_APPROVAL,
   TOOL_EXECUTION_DENIED,
@@ -152,7 +152,7 @@ function JsonCodeBlock({ className, code, theme }: JsonCodeBlockProps) {
 
   return (
     <div
-      className={classNames('text-xs rounded-md overflow-hidden mcp-tool-invocation-code', className)}
+      className={cn('text-xs rounded-md overflow-hidden mcp-tool-invocation-code', className)}
       dangerouslySetInnerHTML={{
         __html: sanitizedHtml,
       }}
@@ -239,6 +239,7 @@ export const ToolInvocations = memo(({ toolInvocations, toolCallAnnotations, add
       <AnimatePresence>
         {hasToolCalls && (
           <motion.div
+            key="tool-calls"
             className="details"
             initial={{ height: 0 }}
             animate={{ height: 'auto' }}
@@ -260,6 +261,7 @@ export const ToolInvocations = memo(({ toolInvocations, toolCallAnnotations, add
 
         {hasToolResults && showDetails && (
           <motion.div
+            key="tool-results"
             className="details"
             initial={{ height: 0 }}
             animate={{ height: 'auto' }}
@@ -308,16 +310,12 @@ interface ToolResultItemProps {
 const FormattedResultContent = memo(({ text, theme }: { text: string; theme: Theme }) => {
   return (
     <div
-      className={classNames(
-        'prose prose-sm max-w-none',
-        theme === 'dark' ? 'prose-invert' : '',
-        'text-xs leading-relaxed',
-      )}
+      className={cn('prose prose-sm max-w-none', theme === 'dark' ? 'prose-invert' : '', 'text-xs leading-relaxed')}
       style={{
         color: theme === 'dark' ? '#e5e7eb' : '#1f2937',
       }}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+      <ReactMarkdown key={text.length} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
         {text}
       </ReactMarkdown>
     </div>
@@ -453,7 +451,7 @@ const ToolResultItem = memo(({ tool, annotation, theme }: ToolResultItemProps) =
                     setViewMode('formatted');
                     setIsExpanded(false);
                   }}
-                  className={classNames(
+                  className={cn(
                     'px-2 py-0.5 text-xs transition-colors',
                     viewMode === 'formatted'
                       ? 'bg-accent-500/15 text-accent-500'
@@ -468,7 +466,7 @@ const ToolResultItem = memo(({ tool, annotation, theme }: ToolResultItemProps) =
                     setViewMode('raw');
                     setIsExpanded(false);
                   }}
-                  className={classNames(
+                  className={cn(
                     'px-2 py-0.5 text-xs transition-colors',
                     viewMode === 'raw'
                       ? 'bg-accent-500/15 text-accent-500'
@@ -484,7 +482,7 @@ const ToolResultItem = memo(({ tool, annotation, theme }: ToolResultItemProps) =
 
           <button
             onClick={handleCopy}
-            className={classNames(
+            className={cn(
               'flex items-center gap-1 px-1.5 py-0.5 text-xs rounded transition-colors',
               copied ? 'text-green-400' : 'text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary',
             )}
@@ -750,7 +748,7 @@ const ToolCallsList = memo(({ toolInvocations, toolCallAnnotations, addToolResul
                     ) : (
                       <>
                         <button
-                          className={classNames(
+                          className={cn(
                             'h-10 px-2.5 py-1.5 rounded-lg text-xs h-auto',
                             'bg-transparent',
                             'text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary',
@@ -767,7 +765,7 @@ const ToolCallsList = memo(({ toolInvocations, toolCallAnnotations, addToolResul
                           Cancel <span className="opacity-70 text-xs ml-1">{isMac ? '⌘⌫' : 'Ctrl+Backspace'}</span>
                         </button>
                         <button
-                          className={classNames(
+                          className={cn(
                             'h-10 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-normal rounded-lg transition-colors',
                             'bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor',
                             'text-accent-500 hover:text-devonz-elements-textPrimary',

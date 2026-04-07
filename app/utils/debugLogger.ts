@@ -457,17 +457,17 @@ class DebugLogger {
   private _interceptConsole(): void {
     const self = this;
 
-    console.log = function (...args: any[]) {
+    console.log = function (...args: unknown[]) {
       self.captureLog('info', undefined, args);
       self._originalConsoleLog.apply(console, args);
     };
 
-    console.error = function (...args: any[]) {
+    console.error = function (...args: unknown[]) {
       self.captureLog('error', undefined, args);
       self._originalConsoleError.apply(console, args);
     };
 
-    console.warn = function (...args: any[]) {
+    console.warn = function (...args: unknown[]) {
       self.captureLog('warn', undefined, args);
       self._originalConsoleWarn.apply(console, args);
     };
@@ -590,7 +590,7 @@ class DebugLogger {
     });
   }
 
-  captureLog(level: LogEntry['level'], scope?: string, args: any[] = []): void {
+  captureLog(level: LogEntry['level'], scope?: string, args: unknown[] = []): void {
     if (!this._isCapturing) {
       return;
     }
@@ -603,7 +603,10 @@ class DebugLogger {
 
         /* Lazy stringification - only convert to string when needed */
         message: this._formatMessage(args),
-        data: args.length === 1 && typeof args[0] === 'object' ? args[0] : undefined,
+        data:
+          args.length === 1 && typeof args[0] === 'object' && args[0] !== null
+            ? (args[0] as Record<string, unknown>)
+            : undefined,
       };
 
       this._logs.push(entry);
@@ -613,7 +616,7 @@ class DebugLogger {
     }
   }
 
-  private _formatMessage(args: any[]): string {
+  private _formatMessage(args: unknown[]): string {
     this._seenObjects = new WeakSet(); // Reset for each message
 
     return args
@@ -632,7 +635,7 @@ class DebugLogger {
       .join(' ');
   }
 
-  private _jsonReplacer(_key: string, value: any): any {
+  private _jsonReplacer(_key: string, value: unknown): unknown {
     // Prevent circular references and limit object depth
     if (typeof value === 'object' && value !== null) {
       if (this._seenObjects.has(value)) {
@@ -935,7 +938,8 @@ class DebugLogger {
       const response = await fetch('/api/system/git-info');
 
       if (response.ok) {
-        const gitInfo = await response.json();
+        const envelope = (await response.json()) as { data?: unknown };
+        const gitInfo = envelope.data;
 
         // Transform the API response to match our interface
         const gitInfoTyped = gitInfo as {

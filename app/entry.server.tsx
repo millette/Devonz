@@ -13,6 +13,10 @@ import '~/lib/.server/init-decryptor';
 export { handleUpgrade as handleWebSocketUpgrade } from '~/lib/.server/ws/ws-server';
 
 export function handleError(error: unknown) {
+  if (!import.meta.env.PROD) {
+    console.error(error instanceof Error ? error.stack : error);
+  }
+
   if (Sentry.isInitialized()) {
     Sentry.captureException(error);
   }

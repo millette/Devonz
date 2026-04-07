@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useSupabaseConnection } from '~/lib/hooks/useSupabaseConnection';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { useStore } from '@nanostores/react';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import { fetchSupabaseStats } from '~/lib/stores/supabase';
@@ -131,7 +131,7 @@ export function SupabaseConnection() {
                     onChange={(e) => updateToken(e.target.value)}
                     disabled={connecting}
                     placeholder="Enter your Supabase access token"
-                    className={classNames(
+                    className={cn(
                       'w-full px-3 py-2 rounded-lg text-sm',
                       'bg-devonz-elements-bg-depth-2',
                       'border border-devonz-elements-borderColor',
@@ -160,7 +160,7 @@ export function SupabaseConnection() {
                   <button
                     onClick={handleConnect}
                     disabled={connecting || !supabaseConn.token}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                       'bg-[#3ECF8E] text-white',
                       'hover:bg-[#3BBF84]',
@@ -220,7 +220,7 @@ export function SupabaseConnection() {
                         <div className="i-ph:database w-4 h-4" />
                         Your Projects ({supabaseConn.stats?.totalProjects || 0})
                         <div
-                          className={classNames(
+                          className={cn(
                             'i-ph:caret-down w-4 h-4 transition-transform',
                             isProjectsExpanded ? 'rotate-180' : '',
                           )}
@@ -272,7 +272,7 @@ export function SupabaseConnection() {
                                   </div>
                                   <button
                                     onClick={() => selectProject(project.id)}
-                                    className={classNames(
+                                    className={cn(
                                       'px-3 py-1 rounded-md text-xs',
                                       supabaseConn.selectedProjectId === project.id
                                         ? 'bg-[#3ECF8E] text-white'
@@ -332,7 +332,7 @@ interface ButtonProps {
 function Button({ active = false, disabled = false, children, onClick, className }: ButtonProps) {
   return (
     <button
-      className={classNames(
+      className={cn(
         'flex items-center p-1.5',
         {
           'bg-devonz-elements-item-backgroundDefault hover:bg-devonz-elements-item-backgroundActive text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary':

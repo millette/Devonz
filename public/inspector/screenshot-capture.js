@@ -123,6 +123,12 @@ async function captureScreenshot(requestId, options) {
     }
 
     try {
+      // Early exit when the iframe hasn't been laid out yet
+      if (window.innerWidth === 0 || window.innerHeight === 0) {
+        sendScreenshotResponse(requestId, generatePlaceholderScreenshot(width, height), true);
+        return;
+      }
+
       const canvas = await html2canvas(document.body, {
         useCORS: true,
         allowTaint: true,
@@ -140,6 +146,14 @@ async function captureScreenshot(requestId, options) {
           return tag === 'vite-error-overlay';
         },
       });
+
+      // Guard: html2canvas can return a 0-size canvas when the iframe
+      // hasn't rendered yet.  Fall back to a placeholder instead of
+      // crashing on drawImage / division-by-zero.
+      if (!canvas || canvas.width === 0 || canvas.height === 0) {
+        sendScreenshotResponse(requestId, generatePlaceholderScreenshot(width, height), true);
+        return;
+      }
 
       const thumbCanvas = document.createElement('canvas');
       thumbCanvas.width = width;

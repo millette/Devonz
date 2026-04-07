@@ -1,5 +1,4 @@
-import React from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface LoadingSkeletonProps {
   className?: string;
@@ -9,11 +8,11 @@ interface LoadingSkeletonProps {
 
 function LoadingSkeleton({ className, lines = 1, height = 'h-4' }: LoadingSkeletonProps) {
   return (
-    <div className={classNames('space-y-2', className)}>
+    <div className={cn('space-y-2', className)}>
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className={classNames('bg-devonz-elements-background-depth-3 rounded', height, 'animate-pulse')}
+          className={cn('bg-devonz-elements-background-depth-3 rounded', height, 'animate-pulse')}
           style={{ animationDelay: `${i * 0.1}s` }}
         />
       ))}
@@ -28,7 +27,7 @@ interface ModelCardSkeletonProps {
 export function ModelCardSkeleton({ className }: ModelCardSkeletonProps) {
   return (
     <div
-      className={classNames(
+      className={cn(
         'border rounded-lg p-4',
         'bg-devonz-elements-background-depth-2',
         'border-devonz-elements-borderColor',

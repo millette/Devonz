@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('BranchSelector');
 
@@ -57,7 +58,7 @@ export function BranchSelector({
       let response: Response;
 
       if (provider === 'github') {
-        response = await fetch('/api/github-branches', {
+        response = await csrfFetch('/api/github-branches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -72,7 +73,7 @@ export function BranchSelector({
           throw new Error('Project ID is required for GitLab repositories');
         }
 
-        response = await fetch('/api/gitlab-branches', {
+        response = await csrfFetch('/api/gitlab-branches', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -84,17 +85,17 @@ export function BranchSelector({
       }
 
       if (!response.ok) {
-        const errorData: { error?: string } = await response
+        const errorData: { message?: string } = await response
           .json()
-          .catch(() => ({ error: 'Failed to fetch branches' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+          .catch(() => ({ message: 'Failed to fetch branches' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
 
-      const data: { branches?: BranchInfo[]; defaultBranch?: string } = await response.json();
-      setBranches(data.branches || []);
+      const envelope: { data: { branches?: BranchInfo[]; defaultBranch?: string } } = await response.json();
+      setBranches(envelope.data.branches || []);
 
       // Set default selected branch
-      const defaultBranchToSelect = data.defaultBranch || defaultBranch || 'main';
+      const defaultBranchToSelect = envelope.data.defaultBranch || defaultBranch || 'main';
       setSelectedBranch(defaultBranchToSelect);
     } catch (err) {
       logger.error('Failed to fetch branches:', err);
@@ -139,7 +140,7 @@ export function BranchSelector({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className={classNames(
+          className={cn(
             'bg-devonz-elements-bg-depth-1 rounded-xl shadow-xl border border-devonz-elements-borderColor max-w-md w-full max-h-[80vh] flex flex-col',
             className,
           )}
@@ -206,7 +207,7 @@ export function BranchSelector({
                         <button
                           key={branch.name}
                           onClick={() => handleBranchSelect(branch.name)}
-                          className={classNames(
+                          className={cn(
                             'w-full text-left p-3 rounded-lg transition-all duration-200 border',
                             selectedBranch === branch.name
                               ? 'bg-blue-50 border-blue-200 text-blue-900 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-100'

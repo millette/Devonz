@@ -2,6 +2,7 @@ import { atom } from 'nanostores';
 import type { GitHubConnection, GitHubRepoInfo } from '~/types/GitHub';
 import { logStore } from './logs';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('GitHubStore');
 
@@ -27,7 +28,10 @@ if (storedConnection) {
     initialConnection = JSON.parse(storedConnection);
   } catch {
     logger.warn('Failed to parse stored GitHub connection, using defaults');
-    localStorage.removeItem('github_connection');
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('github_connection');
+    }
   }
 }
 
@@ -40,7 +44,7 @@ export async function fetchGitHubStatsViaAPI() {
   try {
     isFetchingStats.set(true);
 
-    const response = await fetch('/api/github-user', {
+    const response = await csrfFetch('/api/github-user', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,8 +56,8 @@ export async function fetchGitHubStatsViaAPI() {
       throw new Error(`Failed to fetch repositories: ${response.status}`);
     }
 
-    const data = (await response.json()) as { repos: GitHubRepoInfo[] };
-    const repos = data.repos || [];
+    const envelope = (await response.json()) as { data: { repos: GitHubRepoInfo[] } };
+    const repos = envelope.data.repos || [];
 
     const currentState = githubConnection.get();
     updateGitHubConnection({

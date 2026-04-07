@@ -1,5 +1,4 @@
-import React from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from './Button';
 import { motion } from 'framer-motion';
 
@@ -85,7 +84,7 @@ export function EmptyState({
 
   return (
     <div
-      className={classNames(
+      className={cn(
         'flex flex-col items-center justify-center',
         'text-devonz-elements-textSecondary dark:text-devonz-elements-textSecondary-dark',
         'bg-devonz-elements-background-depth-2 dark:bg-devonz-elements-background-depth-3 rounded-lg',
@@ -95,13 +94,13 @@ export function EmptyState({
     >
       {/* Icon */}
       <div
-        className={classNames(
+        className={cn(
           'rounded-full bg-devonz-elements-background-depth-3 dark:bg-devonz-elements-background-depth-4 flex items-center justify-center',
           styles.icon.container,
         )}
       >
         <span
-          className={classNames(
+          className={cn(
             icon,
             styles.icon.size,
             'text-devonz-elements-textTertiary dark:text-devonz-elements-textTertiary-dark',
@@ -110,12 +109,12 @@ export function EmptyState({
       </div>
 
       {/* Title */}
-      <p className={classNames('font-medium', styles.title)}>{title}</p>
+      <p className={cn('font-medium', styles.title)}>{title}</p>
 
       {/* Description */}
       {description && (
         <p
-          className={classNames(
+          className={cn(
             'text-devonz-elements-textTertiary dark:text-devonz-elements-textTertiary-dark text-center max-w-xs',
             styles.description,
           )}
@@ -126,7 +125,7 @@ export function EmptyState({
 
       {/* Action buttons */}
       {(actionLabel || secondaryActionLabel) && (
-        <div className={classNames('flex items-center gap-2', styles.actions)}>
+        <div className={cn('flex items-center gap-2', styles.actions)}>
           {actionLabel && onAction && (
             <motion.div {...buttonAnimation}>
               <Button

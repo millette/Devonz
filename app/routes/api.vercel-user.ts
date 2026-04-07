@@ -1,25 +1,32 @@
 import { type LoaderFunctionArgs, type ActionFunctionArgs } from 'react-router';
-import { ApiError, resolveToken, unauthorizedResponse, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { resolveToken, externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('VercelUser');
 
 const VERCEL_TOKEN_KEYS = ['VITE_VERCEL_ACCESS_TOKEN'];
 
 async function vercelUserLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('VercelUser', async () => {
-    const token = resolveToken(request, context, ...VERCEL_TOKEN_KEYS);
+  const token = resolveToken(request, context, ...VERCEL_TOKEN_KEYS);
 
-    if (!token) {
-      return unauthorizedResponse('Vercel');
-    }
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
+  }
 
+  try {
     const response = await externalFetch({ url: 'https://api.vercel.com/v2/user', token });
 
     if (!response.ok) {
       if (response.status === 401) {
-        return Response.json({ error: 'Invalid Vercel token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid Vercel token'));
       }
 
-      throw new ApiError(`Vercel API error: ${response.status}`, response.status);
+      const errorText = await response.text();
+      throw new AppError(AppErrorType.NETWORK, `Vercel API error: ${errorText}`, response.status);
     }
 
     const userData = (await response.json()) as {
@@ -32,29 +39,34 @@ async function vercelUserLoader({ request, context }: LoaderFunctionArgs) {
       };
     };
 
-    return Response.json({
+    return successResponse({
       id: userData.user.id,
       name: userData.user.name,
       email: userData.user.email,
       avatar: userData.user.avatar,
       username: userData.user.username,
     });
-  });
-}
-
-export const loader = withSecurity(vercelUserLoader, {
-  rateLimit: true,
-  allowedMethods: ['GET'],
-});
-
-async function vercelUserAction({ request, context }: ActionFunctionArgs) {
-  return handleApiError('VercelUser', async () => {
-    const token = resolveToken(request, context, ...VERCEL_TOKEN_KEYS);
-
-    if (!token) {
-      return unauthorizedResponse('Vercel');
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
 
+    logger.error('Vercel user loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
+}
+
+export const loader = withSecurity(vercelUserLoader, { auth: AUTH_PRESETS.authenticated });
+
+async function vercelUserAction({ request, context }: ActionFunctionArgs) {
+  const token = resolveToken(request, context, ...VERCEL_TOKEN_KEYS);
+
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
+  }
+
+  try {
     const formData = await request.formData();
     const action = formData.get('action');
 
@@ -62,7 +74,8 @@ async function vercelUserAction({ request, context }: ActionFunctionArgs) {
       const response = await externalFetch({ url: 'https://api.vercel.com/v13/projects', token });
 
       if (!response.ok) {
-        throw new ApiError(`Vercel API error: ${response.status}`, response.status);
+        const errorText = await response.text();
+        throw new AppError(AppErrorType.NETWORK, `Vercel API error: ${errorText}`, response.status);
       }
 
       const data = (await response.json()) as {
@@ -76,7 +89,7 @@ async function vercelUserAction({ request, context }: ActionFunctionArgs) {
         }>;
       };
 
-      return Response.json({
+      return successResponse({
         projects: data.projects.map((project) => ({
           id: project.id,
           name: project.name,
@@ -89,11 +102,16 @@ async function vercelUserAction({ request, context }: ActionFunctionArgs) {
       });
     }
 
-    return Response.json({ error: 'Invalid action' }, { status: 400 });
-  });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid action'));
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel user action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(vercelUserAction, {
-  rateLimit: true,
-  allowedMethods: ['POST'],
-});
+export const action = withSecurity(vercelUserAction, { auth: AUTH_PRESETS.authenticated });

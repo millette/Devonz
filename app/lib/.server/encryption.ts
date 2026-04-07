@@ -10,15 +10,25 @@ const AUTH_TAG_LENGTH = 16;
 /**
  * Resolve the 32-byte encryption key from the DEVONZ_ENCRYPTION_KEY env var.
  * Accepts hex-encoded (64 chars), base64-encoded (44 chars), or raw 32-byte values.
+ *
+ * If the env var is not set, auto-generates a random key suitable for local-only use.
+ * Auto-generated keys do NOT persist across restarts — previously encrypted values
+ * will become undecryptable (the cookie layer handles this gracefully via fallback).
  */
 function resolveEncryptionKey(): Buffer {
   const raw = process.env.DEVONZ_ENCRYPTION_KEY;
 
   if (!raw) {
-    throw new Error(
-      'DEVONZ_ENCRYPTION_KEY environment variable is not set. ' +
-        "Generate a 32-byte key with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+    const generated = randomBytes(32);
+
+    logger.warn(
+      'DEVONZ_ENCRYPTION_KEY is not set — auto-generated a random key. ' +
+        'Encrypted values will NOT persist across restarts. ' +
+        'Set DEVONZ_ENCRYPTION_KEY in your environment for persistent encryption. ' +
+        "Generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
     );
+
+    return generated;
   }
 
   let key: Buffer;
@@ -41,17 +51,31 @@ function resolveEncryptionKey(): Buffer {
   return key;
 }
 
-const encryptionKey = resolveEncryptionKey();
+/**
+ * Lazily resolved encryption key — initialized on first use of encrypt() or
+ * decrypt(), NOT at module-import time.  This prevents the module from
+ * throwing during import when the env var is absent (e.g. in Docker
+ * containers that haven't set DEVONZ_ENCRYPTION_KEY).
+ */
+let _cachedKey: Buffer | null = null;
 
-logger.info('Encryption module initialized');
+function getEncryptionKey(): Buffer {
+  if (_cachedKey === null) {
+    _cachedKey = resolveEncryptionKey();
+    logger.info('Encryption module initialized');
+  }
+
+  return _cachedKey;
+}
 
 /**
  * Encrypt a plaintext string using AES-256-GCM.
  * Returns a base64-encoded string containing: IV (12 bytes) + auth tag (16 bytes) + ciphertext.
  */
 export function encrypt(plaintext: string): string {
+  const key = getEncryptionKey();
   const iv = randomBytes(IV_LENGTH);
-  const cipher = createCipheriv(ALGORITHM, encryptionKey, iv);
+  const cipher = createCipheriv(ALGORITHM, key, iv);
 
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf-8'), cipher.final()]);
   const authTag = cipher.getAuthTag();
@@ -66,6 +90,8 @@ export function encrypt(plaintext: string): string {
  * Expects format: base64(IV[12] + authTag[16] + ciphertext).
  */
 export function decrypt(ciphertext: string): string {
+  const key = getEncryptionKey();
+
   let combined: Buffer;
 
   try {
@@ -84,7 +110,7 @@ export function decrypt(ciphertext: string): string {
   const authTag = combined.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
   const encryptedData = combined.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
 
-  const decipher = createDecipheriv(ALGORITHM, encryptionKey, iv);
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
   decipher.setAuthTag(authTag);
 
   try {

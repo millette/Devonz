@@ -6,8 +6,11 @@ import type {
   VercelApiError,
   VercelDeploymentConfig,
 } from '~/types/vercel';
-import { externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('VercelDeploy');
@@ -20,64 +23,13 @@ const detectFramework = (files: Record<string, string>): string => {
       const pkg = JSON.parse(packageJson);
       const dependencies = { ...pkg.dependencies, ...pkg.devDependencies };
 
+      // Most specific frameworks first
       if (dependencies.next) {
         return 'nextjs';
       }
 
-      if (dependencies.react && dependencies['react-router']) {
-        return 'remix';
-      }
-
-      if (dependencies.react && dependencies.vite) {
-        return 'vite';
-      }
-
-      if (dependencies.react && dependencies['@vitejs/plugin-react']) {
-        return 'vite';
-      }
-
-      if (dependencies.react && dependencies['@nuxt/react']) {
+      if (dependencies.nuxt || dependencies['@nuxt/core']) {
         return 'nuxt';
-      }
-
-      if (dependencies.react && dependencies['@qwik-city/qwik']) {
-        return 'qwik';
-      }
-
-      if (dependencies.react && dependencies['@sveltejs/kit']) {
-        return 'sveltekit';
-      }
-
-      if (dependencies.react && dependencies.astro) {
-        return 'astro';
-      }
-
-      if (dependencies.react && dependencies['@angular/core']) {
-        return 'angular';
-      }
-
-      if (dependencies.react && dependencies.vue) {
-        return 'vue';
-      }
-
-      if (dependencies.react && dependencies['@expo/react-native']) {
-        return 'expo';
-      }
-
-      if (dependencies.react && dependencies['react-native']) {
-        return 'react-native';
-      }
-
-      if (dependencies.react) {
-        return 'react';
-      }
-
-      if (dependencies['@angular/core']) {
-        return 'angular';
-      }
-
-      if (dependencies.vue) {
-        return 'vue';
       }
 
       if (dependencies['@sveltejs/kit']) {
@@ -88,20 +40,48 @@ const detectFramework = (files: Record<string, string>): string => {
         return 'astro';
       }
 
-      if (dependencies['@nuxt/core']) {
-        return 'nuxt';
-      }
-
       if (dependencies['@qwik-city/qwik']) {
         return 'qwik';
       }
 
+      // Remix requires React + react-router
+      if (dependencies.react && dependencies['react-router']) {
+        return 'remix';
+      }
+
+      // React Native variants
       if (dependencies['@expo/react-native']) {
         return 'expo';
       }
 
       if (dependencies['react-native']) {
         return 'react-native';
+      }
+
+      // Generic frameworks (no React requirement)
+      if (dependencies['@angular/core']) {
+        return 'angular';
+      }
+
+      if (dependencies.vue) {
+        return 'vue';
+      }
+
+      if (dependencies.svelte) {
+        return 'svelte';
+      }
+
+      // React as fallback
+      if (dependencies.react && dependencies['@vitejs/plugin-react']) {
+        return 'vite';
+      }
+
+      if (dependencies.react && dependencies.vite) {
+        return 'vite';
+      }
+
+      if (dependencies.react) {
+        return 'react';
       }
 
       if (dependencies.vite) {
@@ -179,17 +159,17 @@ async function vercelDeployLoader({ request }: LoaderFunctionArgs) {
   const token = url.searchParams.get('token');
 
   if (!projectId || !token) {
-    return Response.json({ error: 'Missing projectId or token' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Missing projectId or token'));
   }
 
-  return handleApiError('VercelDeploy.loader', async () => {
+  try {
     const projectResponse = await externalFetch({
       url: `https://api.vercel.com/v9/projects/${projectId}`,
       token,
     });
 
     if (!projectResponse.ok) {
-      return Response.json({ error: 'Failed to fetch project' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.NETWORK, 'Failed to fetch project', projectResponse.status));
     }
 
     const projectData = (await projectResponse.json()) as VercelProject;
@@ -200,14 +180,16 @@ async function vercelDeployLoader({ request }: LoaderFunctionArgs) {
     });
 
     if (!deploymentsResponse.ok) {
-      return Response.json({ error: 'Failed to fetch deployments' }, { status: 400 });
+      return errorResponse(
+        new AppError(AppErrorType.NETWORK, 'Failed to fetch deployments', deploymentsResponse.status),
+      );
     }
 
     const deploymentsData = (await deploymentsResponse.json()) as { deployments?: VercelDeployment[] };
 
     const latestDeployment = deploymentsData.deployments?.[0];
 
-    return Response.json({
+    return successResponse({
       project: {
         id: projectData.id,
         name: projectData.name,
@@ -221,7 +203,15 @@ async function vercelDeployLoader({ request }: LoaderFunctionArgs) {
           }
         : null,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel deploy loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 interface DeployRequestBody {
@@ -233,13 +223,13 @@ interface DeployRequestBody {
 }
 
 async function vercelDeployAction({ request }: ActionFunctionArgs) {
-  return handleApiError('VercelDeploy.action', async () => {
+  try {
     const { projectId, files, sourceFiles, token, chatId, framework } = (await request.json()) as DeployRequestBody & {
       token: string;
     };
 
     if (!token) {
-      return Response.json({ error: 'Not connected to Vercel' }, { status: 401 });
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Not connected to Vercel'));
     }
 
     let targetProjectId = projectId;
@@ -266,9 +256,13 @@ async function vercelDeployAction({ request }: ActionFunctionArgs) {
 
       if (!createProjectResponse.ok) {
         const errorData = (await createProjectResponse.json()) as VercelApiError;
-        return Response.json(
-          { error: `Failed to create project: ${errorData.error?.message || 'Unknown error'}` },
-          { status: 400 },
+
+        return errorResponse(
+          new AppError(
+            AppErrorType.NETWORK,
+            `Failed to create project: ${errorData.error?.message || 'Unknown error'}`,
+            createProjectResponse.status,
+          ),
         );
       }
 
@@ -308,9 +302,13 @@ async function vercelDeployAction({ request }: ActionFunctionArgs) {
 
         if (!createProjectResponse.ok) {
           const errorData = (await createProjectResponse.json()) as VercelApiError;
-          return Response.json(
-            { error: `Failed to create project: ${errorData.error?.message || 'Unknown error'}` },
-            { status: 400 },
+
+          return errorResponse(
+            new AppError(
+              AppErrorType.NETWORK,
+              `Failed to create project: ${errorData.error?.message || 'Unknown error'}`,
+              createProjectResponse.status,
+            ),
           );
         }
 
@@ -393,9 +391,13 @@ async function vercelDeployAction({ request }: ActionFunctionArgs) {
 
     if (!deployResponse.ok) {
       const errorData = (await deployResponse.json()) as VercelApiError;
-      return Response.json(
-        { error: `Failed to create deployment: ${errorData.error?.message || 'Unknown error'}` },
-        { status: 400 },
+
+      return errorResponse(
+        new AppError(
+          AppErrorType.NETWORK,
+          `Failed to create deployment: ${errorData.error?.message || 'Unknown error'}`,
+          deployResponse.status,
+        ),
       );
     }
 
@@ -427,15 +429,14 @@ async function vercelDeployAction({ request }: ActionFunctionArgs) {
     }
 
     if (deploymentState === 'ERROR') {
-      return Response.json({ error: 'Deployment failed' }, { status: 500 });
+      return errorResponse(new AppError(AppErrorType.NETWORK, 'Deployment failed', 500));
     }
 
     if (retryCount >= maxRetries) {
-      return Response.json({ error: 'Deployment timed out' }, { status: 500 });
+      return errorResponse(new AppError(AppErrorType.TIMEOUT, 'Deployment timed out'));
     }
 
-    return Response.json({
-      success: true,
+    return successResponse({
       deploy: {
         id: deployData.id,
         state: deploymentState,
@@ -443,15 +444,17 @@ async function vercelDeployAction({ request }: ActionFunctionArgs) {
       },
       project: projectInfo,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel deploy action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const loader = withSecurity(vercelDeployLoader, {
-  allowedMethods: ['GET'],
-  rateLimit: false,
-});
+export const loader = withSecurity(vercelDeployLoader, { auth: AUTH_PRESETS.authenticated });
 
-export const action = withSecurity(vercelDeployAction, {
-  allowedMethods: ['POST'],
-  rateLimit: false,
-});
+export const action = withSecurity(vercelDeployAction, { auth: AUTH_PRESETS.authenticated });

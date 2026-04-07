@@ -447,10 +447,6 @@ export class MCPService {
     return this._mcpToolsPerServer;
   }
 
-  private async _closeClients(): Promise<void> {
-    await this._withClientMutex(() => this._closeClientsUnsafe());
-  }
-
   private async _closeClientsUnsafe(): Promise<void> {
     const closePromises = Object.entries(this._mcpToolsPerServer).map(async ([serverName, server]) => {
       if (!server.client) {

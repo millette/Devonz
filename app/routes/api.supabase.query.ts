@@ -1,70 +1,85 @@
 import { type ActionFunctionArgs } from 'react-router';
-import { handleApiError } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+import { z } from 'zod';
+
+const logger = createScopedLogger('SupabaseQuery');
+
+const supabaseQueryRequestSchema = z.object({
+  projectId: z.string(),
+  query: z.string(),
+});
 
 async function supabaseQueryAction({ request }: ActionFunctionArgs) {
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
-  }
-
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader) {
-    return new Response('No authorization token provided', { status: 401 });
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'No authorization token provided'));
   }
 
-  return handleApiError(
-    'api.supabase.query',
-    async () => {
-      const { projectId, query } = (await request.json()) as { projectId: string; query: string };
+  let rawBody: unknown;
 
-      const response = await fetch(`https://api.supabase.com/v1/projects/${projectId}/database/query`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(30_000),
-        headers: {
-          Authorization: authHeader,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
-      });
+  try {
+    rawBody = await request.json();
+  } catch {
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body', 400));
+  }
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorData;
+  const parsed = supabaseQueryRequestSchema.safeParse(rawBody);
 
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: errorText };
-        }
+  if (!parsed.success) {
+    logger.warn('Validation failed:', parsed.error.flatten());
 
-        return new Response(
-          JSON.stringify({
-            error: {
-              status: response.status,
-              statusText: response.statusText,
-              message: errorData.message || errorData.error || errorText,
-              details: errorData,
-            },
-          }),
-          {
-            status: response.status,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        );
+    return errorResponse(
+      new AppError(AppErrorType.VALIDATION, 'Invalid request body', 400, {
+        details: parsed.error.flatten().fieldErrors,
+      }),
+    );
+  }
+
+  const { projectId, query } = parsed.data;
+
+  try {
+    const response = await fetch(`https://api.supabase.com/v1/projects/${projectId}/database/query`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(30_000),
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData;
+
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText };
       }
 
-      const result = await response.json();
+      const message = errorData.message || errorData.error || errorText;
 
-      return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json' },
-      });
-    },
-    'Query execution failed',
-  );
+      return errorResponse(new AppError(AppErrorType.NETWORK, message, response.status), response.status);
+    }
+
+    const result = await response.json();
+
+    return successResponse(result);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Query execution failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(supabaseQueryAction, {
-  allowedMethods: ['POST'],
-  rateLimit: false,
-});
+export const action = withSecurity(supabaseQueryAction, { auth: AUTH_PRESETS.authenticated });

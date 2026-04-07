@@ -3,7 +3,7 @@ import { useStore } from '@nanostores/react';
 import { chatStore } from '~/lib/stores/chat';
 import { sidebarStore } from '~/lib/stores/sidebar';
 import { planStore } from '~/lib/stores/plan';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { PanelErrorBoundary } from '~/components/ui/PanelErrorBoundary';
 import { clientLazy } from '~/utils/react';
 
@@ -21,7 +21,7 @@ export function Header() {
 
   return (
     <header
-      className={classNames('flex items-center px-5 border-b h-[var(--header-height)] flex-shrink-0 bg-transparent', {
+      className={cn('flex items-center px-5 border-b h-[var(--header-height)] flex-shrink-0 bg-transparent', {
         'border-transparent': !chat.started,
         'border-devonz-elements-borderColor': chat.started,
       })}
@@ -54,7 +54,7 @@ export function Header() {
             </span>
             <Suspense fallback={null}>
               <div className="">
-                <HeaderActionButtons chatStarted={chat.started} />
+                <HeaderActionButtons />
               </div>
             </Suspense>
           </>

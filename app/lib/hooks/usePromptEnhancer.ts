@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ProviderInfo } from '~/types/model';
+import { csrfFetch } from '~/lib/api/csrf-client';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('usePromptEnhancement');
@@ -36,7 +37,7 @@ export function usePromptEnhancer() {
     let response: Response;
 
     try {
-      response = await fetch('/api/enhancer', {
+      response = await csrfFetch('/api/enhancer', {
         method: 'POST',
         body: JSON.stringify(requestBody),
       });

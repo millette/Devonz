@@ -1,6 +1,12 @@
 import { type LoaderFunctionArgs, type ActionFunctionArgs } from 'react-router';
-import { ApiError, resolveToken, unauthorizedResponse, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { resolveToken, externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('SupabaseUser');
 
 const SUPABASE_TOKEN_KEYS = ['VITE_SUPABASE_ACCESS_TOKEN'];
 
@@ -14,21 +20,22 @@ interface SupabaseProject {
 }
 
 async function supabaseUserLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('SupabaseUser', async () => {
-    const token = resolveToken(request, context, ...SUPABASE_TOKEN_KEYS);
+  const token = resolveToken(request, context, ...SUPABASE_TOKEN_KEYS);
 
-    if (!token) {
-      return unauthorizedResponse('Supabase');
-    }
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Supabase token not found'));
+  }
 
+  try {
     const response = await externalFetch({ url: 'https://api.supabase.com/v1/projects', token });
 
     if (!response.ok) {
       if (response.status === 401) {
-        return Response.json({ error: 'Invalid Supabase token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid Supabase token'));
       }
 
-      throw new ApiError(`Supabase API error: ${response.status}`, response.status);
+      const errorText = await response.text();
+      throw new AppError(AppErrorType.NETWORK, `Supabase API error: ${errorText}`, response.status);
     }
 
     const projects = (await response.json()) as SupabaseProject[];
@@ -42,7 +49,7 @@ async function supabaseUserLoader({ request, context }: LoaderFunctionArgs) {
           }
         : null;
 
-    return Response.json({
+    return successResponse({
       user,
       projects: projects.map((p) => ({
         id: p.id,
@@ -53,22 +60,27 @@ async function supabaseUserLoader({ request, context }: LoaderFunctionArgs) {
         created_at: p.created_at,
       })),
     });
-  });
-}
-
-export const loader = withSecurity(supabaseUserLoader, {
-  rateLimit: true,
-  allowedMethods: ['GET'],
-});
-
-async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
-  return handleApiError('SupabaseUser', async () => {
-    const token = resolveToken(request, context, ...SUPABASE_TOKEN_KEYS);
-
-    if (!token) {
-      return unauthorizedResponse('Supabase');
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
     }
 
+    logger.error('Supabase user loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
+}
+
+export const loader = withSecurity(supabaseUserLoader, { auth: AUTH_PRESETS.authenticated });
+
+async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
+  const token = resolveToken(request, context, ...SUPABASE_TOKEN_KEYS);
+
+  if (!token) {
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Supabase token not found'));
+  }
+
+  try {
     const formData = await request.formData();
     const action = formData.get('action');
 
@@ -76,7 +88,8 @@ async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
       const response = await externalFetch({ url: 'https://api.supabase.com/v1/projects', token });
 
       if (!response.ok) {
-        throw new ApiError(`Supabase API error: ${response.status}`, response.status);
+        const errorText = await response.text();
+        throw new AppError(AppErrorType.NETWORK, `Supabase API error: ${errorText}`, response.status);
       }
 
       const projects = (await response.json()) as SupabaseProject[];
@@ -90,7 +103,7 @@ async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
             }
           : null;
 
-      return Response.json({
+      return successResponse({
         user,
         stats: {
           projects: projects.map((p) => ({
@@ -110,7 +123,7 @@ async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
       const projectId = formData.get('projectId');
 
       if (!projectId) {
-        return Response.json({ error: 'Project ID is required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Project ID is required'));
       }
 
       const response = await externalFetch({
@@ -119,21 +132,27 @@ async function supabaseUserAction({ request, context }: ActionFunctionArgs) {
       });
 
       if (!response.ok) {
-        throw new ApiError(`Supabase API error: ${response.status}`, response.status);
+        const errorText = await response.text();
+        throw new AppError(AppErrorType.NETWORK, `Supabase API error: ${errorText}`, response.status);
       }
 
       const apiKeys = (await response.json()) as Array<{ name: string; api_key: string }>;
 
-      return Response.json({
+      return successResponse({
         apiKeys: apiKeys.map((key) => ({ name: key.name, api_key: key.api_key })),
       });
     }
 
-    return Response.json({ error: 'Invalid action' }, { status: 400 });
-  });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid action'));
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Supabase user action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(supabaseUserAction, {
-  rateLimit: true,
-  allowedMethods: ['POST'],
-});
+export const action = withSecurity(supabaseUserAction, { auth: AUTH_PRESETS.authenticated });

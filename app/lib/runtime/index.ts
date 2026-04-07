@@ -163,6 +163,39 @@ export function getRuntimeInstance(): RuntimeClient | null {
 }
 
 /**
+ * Tear down the current runtime and reset module-level state.
+ *
+ * Call this when leaving a chat (e.g. navigating to the homepage)
+ * so that the old WebContainer / dev-server process is stopped and
+ * ports are freed.  `bootRuntime()` already calls teardown internally
+ * when *switching* projects, but this function covers the case where
+ * no new project is booted immediately after.
+ */
+export async function teardownCurrentRuntime(): Promise<void> {
+  if (!runtimeInstance) {
+    return;
+  }
+
+  const projectId = runtimeContext.projectId;
+
+  logger.info(`Tearing down runtime for project "${projectId}"`);
+
+  try {
+    await runtimeInstance.teardown();
+  } catch (error) {
+    logger.error(`Runtime teardown failed for "${projectId}":`, error);
+  }
+
+  runtimeInstance = null;
+  runtimeContext.loaded = false;
+  runtimeContext.projectId = null;
+
+  if (import.meta.hot) {
+    import.meta.hot.data.runtimeInstance = null;
+  }
+}
+
+/**
  * Get the current project ID.
  */
 export function getCurrentProjectId(): string | null {

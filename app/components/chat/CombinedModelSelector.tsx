@@ -3,7 +3,7 @@ import type { ModelInfo } from '~/lib/modules/llm/types';
 import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useStore } from '@nanostores/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import {
   envKeyStatusStore,
   updateProviderSettings,
@@ -452,11 +452,11 @@ export const CombinedModelSelector = ({
   const selectedModel = modelList.find((m) => m.name === model);
 
   return (
-    <div className={classNames('relative', hideTrigger ? '' : 'mb-2')} onKeyDown={handleKeyDown} ref={dropdownRef}>
+    <div className={cn('relative', hideTrigger ? '' : 'mb-2')} onKeyDown={handleKeyDown} ref={dropdownRef}>
       {/* Combined Pill Selector - Hidden when hideTrigger is true */}
       {!hideTrigger && (
         <div
-          className={classNames(
+          className={cn(
             'flex items-stretch rounded-full overflow-hidden cursor-pointer',
             'border border-white/8',
             'bg-[#1a2332]',
@@ -479,7 +479,7 @@ export const CombinedModelSelector = ({
         >
           {/* Provider Section */}
           <div
-            className={classNames('flex items-center gap-2 px-4 py-2.5', 'bg-[#0b0d13]', 'border-r border-white/12')}
+            className={cn('flex items-center gap-2 px-4 py-2.5', 'bg-[#0b0d13]', 'border-r border-white/12')}
             onClick={(e) => {
               e.stopPropagation();
               setIsDropdownOpen(true);
@@ -492,7 +492,7 @@ export const CombinedModelSelector = ({
 
           {/* Model Section */}
           <div
-            className={classNames('flex-1 flex items-center justify-between gap-2 px-4 py-2.5', 'min-w-0')}
+            className={cn('flex-1 flex items-center justify-between gap-2 px-4 py-2.5', 'min-w-0')}
             onClick={(e) => {
               e.stopPropagation();
               setIsDropdownOpen(true);
@@ -506,7 +506,7 @@ export const CombinedModelSelector = ({
             <div className="flex items-center gap-1.5 flex-shrink-0">
               {modelLoading && <div className="i-svg-spinners:90-ring-with-bg text-[#6b8bb8] text-sm animate-spin" />}
               <span
-                className={classNames(
+                className={cn(
                   'i-ph:caret-down text-[#8b949e] transition-transform duration-200',
                   isDropdownOpen ? 'rotate-180' : '',
                 )}
@@ -519,7 +519,7 @@ export const CombinedModelSelector = ({
       {/* Dropdown Panel */}
       {isDropdownOpen && (
         <div
-          className={classNames(
+          className={cn(
             'z-50 w-full rounded-xl overflow-hidden',
             'border border-white/8',
             'bg-[#0b0d13]',
@@ -531,7 +531,7 @@ export const CombinedModelSelector = ({
           <div className="flex border-b border-white/8 bg-[#0b0d13]">
             <button
               type="button"
-              className={classNames(
+              className={cn(
                 'flex-1 px-4 py-2.5 text-sm font-medium transition-all',
                 'flex items-center justify-center gap-2',
                 activeSection === 'provider'
@@ -549,7 +549,7 @@ export const CombinedModelSelector = ({
             </button>
             <button
               type="button"
-              className={classNames(
+              className={cn(
                 'flex-1 px-4 py-2.5 text-sm font-medium transition-all',
                 'flex items-center justify-center gap-2',
                 activeSection === 'model'
@@ -592,7 +592,7 @@ export const CombinedModelSelector = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search ${activeSection === 'provider' ? 'providers' : 'models'}... (⌘K to clear)`}
-                className={classNames(
+                className={cn(
                   'w-full pl-9 pr-9 py-2 rounded-lg text-sm',
                   'bg-[#1a2332] border border-white/8',
                   'text-[#e6edf3] placeholder:text-[#6e7681]',
@@ -630,7 +630,7 @@ export const CombinedModelSelector = ({
                     e.stopPropagation();
                     setShowFreeModelsOnly(!showFreeModelsOnly);
                   }}
-                  className={classNames(
+                  className={cn(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
                     showFreeModelsOnly
                       ? 'bg-[#1e3a5f]/30 text-[#8badd4] border border-[#4d6a8f]/30'
@@ -659,7 +659,7 @@ export const CombinedModelSelector = ({
 
           {/* Options List */}
           <div
-            className={classNames(
+            className={cn(
               'flex-1 overflow-y-auto',
               '[&::-webkit-scrollbar]:w-1.5',
               '[&::-webkit-scrollbar-thumb]:bg-white/10',
@@ -687,7 +687,7 @@ export const CombinedModelSelector = ({
                     key={p.name}
                     role="option"
                     aria-selected={provider?.name === p.name}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-3 cursor-pointer transition-all',
                       'flex items-center gap-3',
                       provider?.name === p.name
@@ -759,7 +759,7 @@ export const CombinedModelSelector = ({
                   key={m.name}
                   role="option"
                   aria-selected={model === m.name}
-                  className={classNames(
+                  className={cn(
                     'px-4 py-3 cursor-pointer transition-all',
                     model === m.name ? 'bg-[#1e3a5f]/20 text-[#8badd4]' : 'text-[#e6edf3] hover:bg-[#1a2332]',
                     focusedIndex === index ? 'ring-1 ring-inset ring-[#4d6a8f]/50 bg-[#1a2332]' : '',

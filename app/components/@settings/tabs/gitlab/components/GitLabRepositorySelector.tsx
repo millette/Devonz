@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '~/components/ui/Button';
 import { BranchSelector } from '~/components/ui/BranchSelector';
 import { RepositoryCard } from './RepositoryCard';
 import type { GitLabProjectInfo } from '~/types/GitLab';
 import { useGitLabConnection } from '~/lib/hooks';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('GitLabRepoSelector');
 
@@ -44,7 +45,7 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
     setError(null);
 
     try {
-      const response = await fetch('/api/gitlab-projects', {
+      const response = await csrfFetch('/api/gitlab-projects', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,14 +57,14 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
       });
 
       if (!response.ok) {
-        const errorData: { error?: string } = await response
+        const errorData: { message?: string } = await response
           .json()
-          .catch(() => ({ error: 'Failed to fetch repositories' }));
-        throw new Error(errorData.error || 'Failed to fetch repositories');
+          .catch(() => ({ message: 'Failed to fetch repositories' }));
+        throw new Error(errorData.message || 'Failed to fetch repositories');
       }
 
-      const data: { projects?: GitLabProjectInfo[] } = await response.json();
-      setRepositories(data.projects || []);
+      const envelope: { data: { projects?: GitLabProjectInfo[] } } = await response.json();
+      setRepositories(envelope.data.projects || []);
     } catch (err) {
       logger.error('Failed to fetch GitLab repositories:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch repositories');
@@ -187,7 +188,7 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
           <p className="text-sm text-devonz-elements-textSecondary mt-1">{error}</p>
         </div>
         <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-          <div className={classNames('i-ph:arrows-clockwise w-4 h-4 mr-2', { 'animate-spin': isRefreshing })} />
+          <div className={cn('i-ph:arrows-clockwise w-4 h-4 mr-2', { 'animate-spin': isRefreshing })} />
           Try Again
         </Button>
       </div>
@@ -209,7 +210,7 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
         <div className="i-ph:git-branch w-12 h-12 text-devonz-elements-textTertiary mx-auto mb-4" />
         <p className="text-devonz-elements-textSecondary mb-4">No repositories found</p>
         <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-          <div className={classNames('i-ph:arrows-clockwise w-4 h-4 mr-2', { 'animate-spin': isRefreshing })} />
+          <div className={cn('i-ph:arrows-clockwise w-4 h-4 mr-2', { 'animate-spin': isRefreshing })} />
           Refresh
         </Button>
       </div>
@@ -218,7 +219,7 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
 
   return (
     <motion.div
-      className={classNames('space-y-6', className)}
+      className={cn('space-y-6', className)}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -238,7 +239,7 @@ export function GitLabRepositorySelector({ onClone, className }: GitLabRepositor
           size="sm"
           className="flex items-center gap-2"
         >
-          <div className={classNames('i-ph:arrows-clockwise w-4 h-4', { 'animate-spin': isRefreshing })} />
+          <div className={cn('i-ph:arrows-clockwise w-4 h-4', { 'animate-spin': isRefreshing })} />
           Refresh
         </Button>
       </div>

@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState } from 'react';
 import { useStore } from '@nanostores/react';
 import type { ProgressAnnotation } from '~/types/context';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { cubicEasingFn } from '~/utils/easings';
 import { latestPlanPhaseChange, latestReviewCycle } from '~/lib/stores/stream-event-router';
 
@@ -55,7 +55,7 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
   return (
     <AnimatePresence>
       <div
-        className={classNames(
+        className={cn(
           'bg-devonz-elements-background-depth-2',
           'border border-devonz-elements-borderColor',
           'shadow-lg rounded-lg  relative w-full max-w-chat mx-auto z-prompt',
@@ -63,7 +63,7 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
         )}
       >
         <div
-          className={classNames(
+          className={cn(
             'bg-devonz-elements-item-backgroundAccent',
             'p-1 rounded-lg text-devonz-elements-item-contentAccent',
             'flex ',
@@ -72,11 +72,16 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
           <div className="flex-1">
             <AnimatePresence>
               {planPhaseChange && (
-                <PlanPhaseBadge fromPhase={planPhaseChange.fromPhase} toPhase={planPhaseChange.toPhase} />
+                <PlanPhaseBadge
+                  key="plan-phase-badge"
+                  fromPhase={planPhaseChange.fromPhase}
+                  toPhase={planPhaseChange.toPhase}
+                />
               )}
-              {reviewCycle && <ReviewCycleIndicator cycle={reviewCycle} />}
+              {reviewCycle && <ReviewCycleIndicator key="review-cycle" cycle={reviewCycle} />}
               {expanded ? (
                 <motion.div
+                  key="progress-expanded"
                   className="actions"
                   initial={{ height: 0 }}
                   animate={{ height: 'auto' }}
@@ -84,7 +89,7 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
                   transition={{ duration: 0.15 }}
                 >
                   {progressList.map((x, i) => {
-                    return <ProgressItem key={i} progress={x} />;
+                    return <ProgressItem key={`progress-${x.label}-${i}`} progress={x} />;
                   })}
                 </motion.div>
               ) : progressList.length > 0 ? (
@@ -111,7 +116,7 @@ export default function ProgressCompilation({ data }: { data?: ProgressAnnotatio
 const ProgressItem = ({ progress }: { progress: ProgressAnnotation }) => {
   return (
     <motion.div
-      className={classNames('flex text-sm gap-3')}
+      className={cn('flex text-sm gap-3')}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -138,7 +143,7 @@ const PlanPhaseBadge = ({ fromPhase, toPhase }: { fromPhase: string; toPhase: st
 
   return (
     <motion.div
-      className={classNames('flex text-xs items-center gap-1.5 py-0.5')}
+      className={cn('flex text-xs items-center gap-1.5 py-0.5')}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -147,7 +152,7 @@ const PlanPhaseBadge = ({ fromPhase, toPhase }: { fromPhase: string; toPhase: st
       <div className="i-ph:arrows-clockwise text-devonz-elements-item-contentDefault" />
       <span className="text-devonz-elements-item-contentDefault">{PHASE_LABELS[fromPhase] ?? fromPhase}</span>
       <div className="i-ph:arrow-right text-devonz-elements-item-contentDefault" />
-      <span className={classNames('px-1.5 py-0.5 rounded-md text-xs font-medium', colorClass)}>{label}</span>
+      <span className={cn('px-1.5 py-0.5 rounded-md text-xs font-medium', colorClass)}>{label}</span>
     </motion.div>
   );
 };
@@ -161,7 +166,7 @@ const ReviewCycleIndicator = ({
 
   return (
     <motion.div
-      className={classNames('flex text-xs items-center gap-1.5 py-0.5')}
+      className={cn('flex text-xs items-center gap-1.5 py-0.5')}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}

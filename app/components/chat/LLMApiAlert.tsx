@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { LlmErrorAlertType } from '~/types/actions';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface Props {
   alert: LlmErrorAlertType;
@@ -89,7 +89,7 @@ export default function LlmErrorAlert({ alert, clearAlert }: Props) {
               <div className="flex gap-2">
                 <button
                   onClick={clearAlert}
-                  className={classNames(
+                  className={cn(
                     'px-2 py-1.5 rounded-md text-sm font-medium',
                     'bg-devonz-elements-button-secondary-background',
                     'hover:bg-devonz-elements-button-secondary-backgroundHover',

@@ -1,16 +1,11 @@
 import type { Message } from 'ai';
 import { clearProjectPlanMode } from './projectPlanMode';
 import { createScopedLogger } from '~/utils/logger';
-import type { ChatHistoryItem } from './useChatHistory';
-import type { Snapshot } from './types'; // Import Snapshot type
+import type { ChatHistoryItem, IChatMetadata, Snapshot } from './types';
 import type { ProjectVersion } from '~/lib/stores/versions';
 import type { AgentCheckpoint, BranchMetadata } from '~/lib/agent/types';
 
-export interface IChatMetadata {
-  gitUrl: string;
-  gitBranch?: string;
-  netlifySiteId?: string;
-}
+export type { IChatMetadata };
 
 /** Shared function type for importing a chat into the persistence layer. */
 export type ImportChatFn = (

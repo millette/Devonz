@@ -10,7 +10,7 @@ import {
   modifyPlan,
   type PlanTask,
 } from '~/lib/stores/plan';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/Collapsible';
 import { Button } from '~/components/ui/Button';
 import { Progress } from '~/components/ui/Progress';
@@ -113,7 +113,7 @@ const ReviewBadge = memo(({ reviewStatus }: { reviewStatus: NonNullable<PlanTask
 
   return (
     <span
-      className={classNames('inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full border', colors)}
+      className={cn('inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-full border', colors)}
       title={label}
     >
       <div className={icon} />
@@ -135,15 +135,15 @@ const DependencyChips = memo(({ dependsOn, allTasks }: { dependsOn: string[]; al
   return (
     <div className="flex flex-wrap items-center gap-1 mt-1">
       <div className="i-ph:arrow-bend-down-right text-xs text-devonz-elements-textSecondary" />
-      {dependsOn.map((depId) => {
+      {dependsOn.map((depId, i) => {
         const depTask = allTasks.find((t) => t.id === depId);
         const isDone = depTask?.status === 'completed';
 
         return (
           <span
-            key={depId}
+            key={`${depId}-${i}`}
             title={depTask ? `Depends on: ${depTask.title}` : `Depends on: ${depId}`}
-            className={classNames(
+            className={cn(
               'text-xs px-1.5 py-0.5 rounded-full border font-mono',
               isDone
                 ? 'bg-green-500/10 text-green-500/80 border-green-500/20 line-through'
@@ -171,11 +171,11 @@ const SubTaskItem = memo(({ subTask }: { subTask: SubTask }) => {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -4 }}
-      className={classNames('flex items-center gap-2 py-1.5 px-2 rounded transition-colors', depthPadding)}
+      className={cn('flex items-center gap-2 py-1.5 px-2 rounded transition-colors', depthPadding)}
     >
       <SubTaskStatusIcon status={subTask.status} />
       <span
-        className={classNames(
+        className={cn(
           'text-xs',
           subTask.status === 'done' ? 'line-through opacity-60' : '',
           subTaskStatusColors[subTask.status],
@@ -223,7 +223,7 @@ const TaskItem = memo(({ task, index, allTasks }: TaskItemProps) => {
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={classNames(
+      className={cn(
         'rounded-lg transition-colors',
         task.status === 'in-progress'
           ? 'bg-blue-500/10 border border-blue-500/30'
@@ -240,7 +240,7 @@ const TaskItem = memo(({ task, index, allTasks }: TaskItemProps) => {
             aria-label={subTasksOpen ? 'Collapse sub-tasks' : 'Expand sub-tasks'}
           >
             <div
-              className={classNames(
+              className={cn(
                 'i-ph:caret-right text-sm text-devonz-elements-textSecondary transition-transform',
                 subTasksOpen ? 'rotate-90' : '',
               )}
@@ -255,7 +255,7 @@ const TaskItem = memo(({ task, index, allTasks }: TaskItemProps) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span
-              className={classNames(
+              className={cn(
                 'font-medium text-sm',
                 task.status === 'completed' ? 'line-through opacity-60' : '',
                 taskStatusColors[task.status],
@@ -282,9 +282,9 @@ const TaskItem = memo(({ task, index, allTasks }: TaskItemProps) => {
 
           {task.fileActions && task.fileActions.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
-              {task.fileActions.map((file) => (
+              {task.fileActions.map((file, i) => (
                 <span
-                  key={file}
+                  key={`${file}-${i}`}
                   className="text-xs px-1.5 py-0.5 rounded bg-devonz-elements-background-depth-3 text-devonz-elements-textSecondary font-mono"
                 >
                   {file}
@@ -312,8 +312,8 @@ const TaskItem = memo(({ task, index, allTasks }: TaskItemProps) => {
               exit={{ opacity: 0, height: 0 }}
               className="border-t border-devonz-elements-borderColor/50 pb-2"
             >
-              {task.subTasks!.map((sub) => (
-                <SubTaskItem key={sub.id} subTask={sub} />
+              {task.subTasks!.map((sub, i) => (
+                <SubTaskItem key={`${task.id}-${sub.id}-${i}`} subTask={sub} />
               ))}
             </motion.div>
           )}
@@ -416,11 +416,11 @@ export const Plan = memo(({ className }: PlanProps) => {
   const totalCount = state.tasks.length;
 
   return (
-    <div className={classNames('border-b border-devonz-elements-borderColor', className)}>
+    <div className={cn('border-b border-devonz-elements-borderColor', className)}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <button
-            className={classNames(
+            className={cn(
               'w-full flex items-center justify-between p-4',
               'bg-devonz-elements-background-depth-1 hover:bg-devonz-elements-background-depth-2',
               'transition-colors cursor-pointer',
@@ -449,7 +449,7 @@ export const Plan = memo(({ className }: PlanProps) => {
 
               {/* Chevron */}
               <div
-                className={classNames(
+                className={cn(
                   'i-ph:caret-down text-devonz-elements-textSecondary transition-transform',
                   isOpen ? 'rotate-180' : '',
                 )}
@@ -486,5 +486,3 @@ export const Plan = memo(({ className }: PlanProps) => {
 });
 
 Plan.displayName = 'Plan';
-
-export default Plan;

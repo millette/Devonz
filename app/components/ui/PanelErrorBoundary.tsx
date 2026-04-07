@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import { Component } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { Button } from '~/components/ui/Button';
 import { createScopedLogger } from '~/utils/logger';
@@ -45,55 +45,53 @@ export class PanelErrorBoundary extends Component<PanelErrorBoundaryProps, Panel
         return this.props.fallback;
       }
 
+      const { error } = this.state;
+
       return (
-        <div className="flex flex-col items-center justify-center p-8 text-center space-y-4 bg-devonz-elements-background-depth-1 border border-devonz-elements-borderColor rounded-lg w-full h-full">
-          <div className="w-12 h-12 rounded-full bg-red-900/20 flex items-center justify-center">
-            <div className="i-ph:warning w-6 h-6 text-red-500" />
+        <div className="flex flex-col items-center justify-center p-8 text-center bg-devonz-elements-background-depth-1 border border-devonz-elements-borderColor rounded-lg w-full h-full min-h-[200px]">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-5">
+            <div className="i-ph:warning-circle-duotone text-2xl text-red-400" />
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-devonz-elements-textPrimary mb-2">{this.props.panelName} Error</h3>
-            <p className="text-sm text-devonz-elements-textSecondary mb-4 max-w-md">
-              Something went wrong in the {this.props.panelName} panel. You can try again or reload the page.
-            </p>
+          <h3 className="text-lg font-semibold text-devonz-elements-textPrimary mb-1.5">
+            {this.props.panelName} Error
+          </h3>
+          <p className="text-sm text-devonz-elements-textSecondary mb-5 max-w-sm">
+            Something went wrong in the {this.props.panelName} panel. You can try again or reload the page.
+          </p>
 
-            {this.state.error && (
-              <details className="text-xs text-devonz-elements-textTertiary mb-4">
-                <summary className="cursor-pointer hover:text-devonz-elements-textSecondary">
-                  Show error details
-                </summary>
-                <pre className="mt-2 p-2 bg-devonz-elements-background-depth-2 rounded text-left overflow-auto max-h-40">
-                  {this.state.error.message}
-                </pre>
-              </details>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={this.handleRetry}>
+          <div className="flex gap-2.5 mb-5">
+            <Button variant="default" size="sm" onClick={this.handleRetry}>
+              <span className="i-ph:arrow-counter-clockwise mr-1.5 text-xs" />
               Try Again
             </Button>
             <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+              <span className="i-ph:arrow-clockwise mr-1.5 text-xs" />
               Reload Page
             </Button>
           </div>
+
+          {!import.meta.env.PROD && error && (
+            <details className="w-full max-w-md text-left">
+              <summary className="cursor-pointer text-xs text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary transition-colors">
+                Error Details
+              </summary>
+              <div className="mt-2 p-3 bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor rounded-lg overflow-auto max-h-48">
+                <p className="text-xs text-red-400 font-mono font-semibold mb-1.5">
+                  {error.name}: {error.message}
+                </p>
+                {error.stack && (
+                  <pre className="text-xs text-devonz-elements-textTertiary font-mono whitespace-pre-wrap break-words">
+                    {error.stack}
+                  </pre>
+                )}
+              </div>
+            </details>
+          )}
         </div>
       );
     }
 
     return this.props.children;
   }
-}
-
-/** Higher-order component for wrapping any panel with PanelErrorBoundary */
-export function withPanelErrorBoundary<P extends object>(component: React.ComponentType<P>, panelName: string) {
-  function WithPanelErrorBoundaryWrapper(props: P) {
-    return <PanelErrorBoundary panelName={panelName}>{React.createElement(component, props)}</PanelErrorBoundary>;
-  }
-
-  WithPanelErrorBoundaryWrapper.displayName = `withPanelErrorBoundary(${
-    component.displayName || component.name || 'Component'
-  })`;
-
-  return WithPanelErrorBoundaryWrapper;
 }

@@ -5,8 +5,8 @@ import { useSettings } from '~/lib/hooks/useSettings';
 import type { IProviderConfig } from '~/types/model';
 import { logStore } from '~/lib/stores/logs';
 import { motion } from 'framer-motion';
-import { classNames } from '~/utils/classNames';
-import { toast } from 'react-toastify';
+import { cn } from '~/utils/cn';
+import { toast } from 'sonner';
 import { getApiKeysFromCookies } from '~/components/chat/APIKeyManager';
 import { envKeyStatusStore, checkCloudProviderEnvKeys } from '~/lib/stores/settings';
 import { CloudProviderCard } from './CloudProviderCard';
@@ -83,11 +83,22 @@ const CloudProvidersTab = () => {
   const settings = useSettings();
   const [filteredProviders, setFilteredProviders] = useState<IProviderConfig[]>([]);
   const [categoryEnabled, setCategoryEnabled] = useState<boolean>(false);
+  const [isCheckingEnvKeys, setIsCheckingEnvKeys] = useState(true);
   const envKeyStatus = useStore(envKeyStatusStore);
 
   // Refresh env key status when tab mounts (force refresh to get latest)
   useEffect(() => {
-    checkCloudProviderEnvKeys(true);
+    let cancelled = false;
+
+    checkCloudProviderEnvKeys(true).finally(() => {
+      if (!cancelled) {
+        setIsCheckingEnvKeys(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Load and filter providers
@@ -164,6 +175,18 @@ const CloudProvidersTab = () => {
     [settings],
   );
 
+  if (isCheckingEnvKeys) {
+    return (
+      <div className={cn('flex flex-col items-center justify-center py-12 gap-3')}>
+        <div
+          className="i-svg-spinners:90-ring-with-bg text-devonz-elements-loader-progress"
+          style={{ fontSize: '2rem' }}
+        />
+        <p className="text-sm text-devonz-elements-textSecondary">Loading provider status…</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <motion.div
@@ -175,7 +198,7 @@ const CloudProvidersTab = () => {
         <div className="flex items-center justify-between gap-4 mt-8 mb-4">
           <div className="flex items-center gap-2">
             <div
-              className={classNames(
+              className={cn(
                 'w-8 h-8 flex items-center justify-center rounded-lg',
                 'bg-devonz-elements-background-depth-3',
                 'text-devonz-elements-item-contentAccent',

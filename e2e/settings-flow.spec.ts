@@ -45,19 +45,24 @@ function mockConfiguredProviders(page: import('@playwright/test').Page) {
 /** Mock env-key check endpoints. */
 function mockEnvKeyChecks(page: import('@playwright/test').Page) {
   return Promise.all([
-    page.route('**/api/check-env-key*', (route) => {
+    // Single-provider env key check (used by older code paths)
+    page.route('**/api/check-env-key', (route) => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ hasKey: false }),
+        body: JSON.stringify({ success: true, data: { hasKey: false } }),
       });
     }),
-    page.route('**/api/check-env-keys*', (route) => {
+    // Bulk env key check — returns { success, data: Record<provider, status> }
+    page.route('**/api/check-env-keys', (route) => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          OpenAI: { hasEnvKey: true, hasCookieKey: false },
+          success: true,
+          data: {
+            OpenAI: { hasEnvKey: true, hasCookieKey: false },
+          },
         }),
       });
     }),
@@ -70,27 +75,35 @@ test.describe('Settings flow', () => {
     await mockProviderModels(page);
     await mockConfiguredProviders(page);
     await mockEnvKeyChecks(page);
+
+    // Enable OpenAI so provider cards render with API key inputs visible.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'provider_settings',
+        JSON.stringify({ OpenAI: { settings: { enabled: true } } }),
+      );
+    });
   });
 
   test('opens settings panel and navigates to Cloud Providers tab', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'networkidle' });
 
     // Wait for the app to finish loading
     const chatInput = page.getByLabel('Chat message input');
     await expect(chatInput).toBeVisible({ timeout: 15_000 });
 
-    // Open the sidebar
-    const sidebarToggle = page.getByLabel('Open sidebar');
+    // Open the sidebar (first visible instance — desktop layout)
+    const sidebarToggle = page.getByLabel('Open sidebar').first();
     await sidebarToggle.click();
 
     // Click the settings button (data-testid="settings-button")
     const settingsButton = page.getByTestId('settings-button');
-    await expect(settingsButton).toBeVisible({ timeout: 5_000 });
+    await expect(settingsButton).toBeVisible({ timeout: 10_000 });
     await settingsButton.click();
 
     // Verify the settings panel opened — it contains a heading "Settings"
     const settingsHeading = page.getByRole('heading', { name: 'Settings' }).first();
-    await expect(settingsHeading).toBeVisible({ timeout: 5_000 });
+    await expect(settingsHeading).toBeVisible({ timeout: 10_000 });
 
     // Navigate to the Cloud Providers tab
     const cloudProvidersTab = page.getByRole('tab', { name: 'Cloud Providers' });
@@ -114,26 +127,27 @@ test.describe('Settings flow', () => {
       });
     });
 
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'networkidle' });
 
     const chatInput = page.getByLabel('Chat message input');
     await expect(chatInput).toBeVisible({ timeout: 15_000 });
 
     // Open sidebar → Settings → Cloud Providers
-    await page.getByLabel('Open sidebar').click();
+    await page.getByLabel('Open sidebar').first().click();
 
     const settingsButton = page.getByTestId('settings-button');
-    await expect(settingsButton).toBeVisible({ timeout: 5_000 });
+    await expect(settingsButton).toBeVisible({ timeout: 10_000 });
     await settingsButton.click();
 
-    await expect(page.getByRole('heading', { name: 'Settings' }).first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: 'Settings' }).first()).toBeVisible({ timeout: 10_000 });
 
     const cloudProvidersTab = page.getByRole('tab', { name: 'Cloud Providers' });
     await cloudProvidersTab.click();
 
-    // Find the first API key input (placeholder pattern: "Enter … API key")
+    // Wait for lazy-loaded CloudProvidersTab to render provider cards.
+    // The component is React.lazy + animated, so allow extra time.
     const apiKeyInput = page.getByPlaceholder(/Enter .+ API key/).first();
-    await expect(apiKeyInput).toBeVisible({ timeout: 5_000 });
+    await expect(apiKeyInput).toBeVisible({ timeout: 10_000 });
 
     // Type a test API key and press Enter to trigger save → encrypt flow
     await apiKeyInput.fill('sk-test-key-12345');

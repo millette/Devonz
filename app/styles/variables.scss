@@ -144,7 +144,7 @@
 
   --devonz-elements-item-contentDefault: rgba(255, 255, 255, 0.5);
   --devonz-elements-item-contentActive: #e6edf3;
-  --devonz-elements-item-contentAccent: #06B6D4;
+  --devonz-elements-item-contentAccent: #06b6d4;
   --devonz-elements-item-contentDanger: #f87171;
   --devonz-elements-item-backgroundDefault: rgba(255, 255, 255, 0);
   --devonz-elements-item-backgroundActive: rgba(255, 255, 255, 0.08);
@@ -237,10 +237,6 @@
   --workbench-width: min(calc(100% - var(--chat-min-width)), 2536px);
   --workbench-inner-width: var(--workbench-width);
   --workbench-left: calc(100% - var(--workbench-width));
-
-  /* Toasts */
-  --toastify-color-progress-success: var(--devonz-elements-icon-success);
-  --toastify-color-progress-error: var(--devonz-elements-icon-error);
 
   /* Terminal */
   --devonz-elements-terminal-backgroundColor: var(--devonz-terminal-background);

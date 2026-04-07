@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useVersionCheck } from '~/lib/hooks/useVersionCheck';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 /**
  * Non-intrusive banner that appears when a newer commit exists on main.
@@ -35,7 +36,7 @@ export function UpdateBanner() {
     setUpdateMessage('');
 
     try {
-      const res = await fetch('/api/update', { method: 'POST' });
+      const res = await csrfFetch('/api/update', { method: 'POST' });
       const data = await res.json();
 
       if (data.success) {

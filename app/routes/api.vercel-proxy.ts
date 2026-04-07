@@ -16,8 +16,14 @@
  */
 
 import { type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
-import { externalFetch, handleApiError, resolveToken, unauthorizedResponse } from '~/lib/api/apiUtils';
+import { externalFetch, resolveToken } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('VercelProxy');
 
 const VERCEL_API_BASE = 'https://api.vercel.com';
 
@@ -42,10 +48,10 @@ async function vercelProxyLoader({ request, context }: LoaderFunctionArgs) {
   const vercelToken = resolveToken(request, context, 'VITE_VERCEL_ACCESS_TOKEN');
 
   if (!vercelToken) {
-    return unauthorizedResponse('Vercel');
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
   }
 
-  return handleApiError('VercelProxy.loader', async () => {
+  try {
     const response = await externalFetch({
       url: `${VERCEL_API_BASE}/v2/user`,
       token: vercelToken,
@@ -53,20 +59,21 @@ async function vercelProxyLoader({ request, context }: LoaderFunctionArgs) {
 
     if (!response.ok) {
       const errorText = await response.text();
-
-      return Response.json(
-        {
-          error: `Vercel API error: ${response.status}`,
-          details: errorText,
-        },
-        { status: response.status },
-      );
+      throw new AppError(AppErrorType.NETWORK, `Vercel API error: ${errorText}`, response.status);
     }
 
     const data = await response.json();
 
-    return Response.json(data);
-  });
+    return successResponse(data);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel proxy loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 /**
@@ -76,15 +83,15 @@ async function vercelProxyAction({ request, context }: ActionFunctionArgs) {
   const vercelToken = resolveToken(request, context, 'VITE_VERCEL_ACCESS_TOKEN');
 
   if (!vercelToken) {
-    return unauthorizedResponse('Vercel');
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
   }
 
-  return handleApiError('VercelProxy.action', async () => {
+  try {
     const proxyRequest: ProxyRequest = await request.json();
     const { endpoint, method = 'GET', body, params } = proxyRequest;
 
     if (!endpoint) {
-      return Response.json({ error: 'Missing endpoint in request body' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Missing endpoint in request body'));
     }
 
     let url = `${VERCEL_API_BASE}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
@@ -120,25 +127,23 @@ async function vercelProxyAction({ request, context }: ActionFunctionArgs) {
     }
 
     if (!response.ok) {
-      return Response.json(
-        {
-          error: `Vercel API error: ${response.status}`,
-          details: responseData,
-        },
-        { status: response.status },
-      );
+      throw new AppError(AppErrorType.NETWORK, `Vercel API error: ${response.status}`, response.status, {
+        details: responseData,
+      });
     }
 
-    return Response.json(responseData);
-  });
+    return successResponse(responseData);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel proxy action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const loader = withSecurity(vercelProxyLoader, {
-  rateLimit: true,
-  allowedMethods: ['GET'],
-});
+export const loader = withSecurity(vercelProxyLoader, { auth: AUTH_PRESETS.authenticated });
 
-export const action = withSecurity(vercelProxyAction, {
-  rateLimit: true,
-  allowedMethods: ['POST'],
-});
+export const action = withSecurity(vercelProxyAction, { auth: AUTH_PRESETS.authenticated });

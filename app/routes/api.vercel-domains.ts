@@ -8,8 +8,14 @@
  */
 
 import { type ActionFunctionArgs, type LoaderFunctionArgs } from 'react-router';
-import { externalFetch, handleApiError, resolveToken, unauthorizedResponse } from '~/lib/api/apiUtils';
+import { externalFetch, resolveToken } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('VercelDomains');
 
 const VERCEL_API_BASE = 'https://api.vercel.com';
 
@@ -31,17 +37,17 @@ async function vercelDomainsLoader({ request, context }: LoaderFunctionArgs) {
   const vercelToken = resolveToken(request, context, 'VITE_VERCEL_ACCESS_TOKEN');
 
   if (!vercelToken) {
-    return unauthorizedResponse('Vercel');
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
   }
 
   const url = new URL(request.url);
   const projectId = url.searchParams.get('projectId');
 
   if (!projectId) {
-    return Response.json({ error: 'Project ID is required' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Project ID is required'));
   }
 
-  return handleApiError('VercelDomains.loader', async () => {
+  try {
     const response = await externalFetch({
       url: `${VERCEL_API_BASE}/v9/projects/${projectId}/domains`,
       token: vercelToken,
@@ -49,20 +55,23 @@ async function vercelDomainsLoader({ request, context }: LoaderFunctionArgs) {
 
     if (!response.ok) {
       const errorData = await response.json();
-
-      return Response.json(
-        {
-          error: `Failed to fetch domains: ${response.status}`,
-          details: errorData,
-        },
-        { status: response.status },
-      );
+      throw new AppError(AppErrorType.NETWORK, `Failed to fetch domains: ${response.status}`, response.status, {
+        details: errorData,
+      });
     }
 
     const data = await response.json();
 
-    return Response.json(data);
-  });
+    return successResponse(data);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel domains loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 /**
@@ -72,20 +81,20 @@ async function vercelDomainsAction({ request, context }: ActionFunctionArgs) {
   const vercelToken = resolveToken(request, context, 'VITE_VERCEL_ACCESS_TOKEN');
 
   if (!vercelToken) {
-    return unauthorizedResponse('Vercel');
+    return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Vercel token not found'));
   }
 
-  return handleApiError('VercelDomains.action', async () => {
+  try {
     const body: DomainRequest = await request.json();
     const { projectId, action, domain } = body;
 
     if (!projectId) {
-      return Response.json({ error: 'Project ID is required' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Project ID is required'));
     }
 
     if (action === 'add') {
       if (!domain) {
-        return Response.json({ error: 'Domain name is required for add action' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Domain name is required for add action'));
       }
 
       const response = await externalFetch({
@@ -99,43 +108,27 @@ async function vercelDomainsAction({ request, context }: ActionFunctionArgs) {
 
       if (!response.ok) {
         if (response.status === 409) {
-          return Response.json(
-            {
-              error: 'Domain already exists',
-              details: data,
-            },
-            { status: 409 },
-          );
+          return errorResponse(new AppError(AppErrorType.VALIDATION, 'Domain already exists', 409, { details: data }));
         }
 
         if (response.status === 400) {
           const errorMessage =
             data?.error?.message || data?.message || 'Invalid domain name or domain already registered on another team';
 
-          return Response.json(
-            {
-              error: errorMessage,
-              details: data,
-            },
-            { status: 400 },
-          );
+          return errorResponse(new AppError(AppErrorType.VALIDATION, errorMessage, 400, { details: data }));
         }
 
-        return Response.json(
-          {
-            error: `Failed to add domain: ${response.status}`,
-            details: data,
-          },
-          { status: response.status },
-        );
+        throw new AppError(AppErrorType.NETWORK, `Failed to add domain: ${response.status}`, response.status, {
+          details: data,
+        });
       }
 
-      return Response.json({ success: true, domain: data });
+      return successResponse({ domain: data });
     }
 
     if (action === 'remove') {
       if (!domain) {
-        return Response.json({ error: 'Domain name is required for remove action' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Domain name is required for remove action'));
       }
 
       const response = await externalFetch({
@@ -146,17 +139,12 @@ async function vercelDomainsAction({ request, context }: ActionFunctionArgs) {
 
       if (!response.ok) {
         const data = await response.json();
-
-        return Response.json(
-          {
-            error: `Failed to remove domain: ${response.status}`,
-            details: data,
-          },
-          { status: response.status },
-        );
+        throw new AppError(AppErrorType.NETWORK, `Failed to remove domain: ${response.status}`, response.status, {
+          details: data,
+        });
       }
 
-      return Response.json({ success: true, removed: domain });
+      return successResponse({ removed: domain });
     }
 
     if (action === 'list') {
@@ -167,31 +155,28 @@ async function vercelDomainsAction({ request, context }: ActionFunctionArgs) {
 
       if (!response.ok) {
         const errorData = await response.json();
-
-        return Response.json(
-          {
-            error: `Failed to fetch domains: ${response.status}`,
-            details: errorData,
-          },
-          { status: response.status },
-        );
+        throw new AppError(AppErrorType.NETWORK, `Failed to fetch domains: ${response.status}`, response.status, {
+          details: errorData,
+        });
       }
 
       const data = await response.json();
 
-      return Response.json(data);
+      return successResponse(data);
     }
 
-    return Response.json({ error: 'Invalid action. Use: list, add, or remove' }, { status: 400 });
-  });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid action. Use: list, add, or remove'));
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Vercel domains action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const loader = withSecurity(vercelDomainsLoader, {
-  rateLimit: true,
-  allowedMethods: ['GET'],
-});
+export const loader = withSecurity(vercelDomainsLoader, { auth: AUTH_PRESETS.authenticated });
 
-export const action = withSecurity(vercelDomainsAction, {
-  rateLimit: true,
-  allowedMethods: ['POST'],
-});
+export const action = withSecurity(vercelDomainsAction, { auth: AUTH_PRESETS.authenticated });

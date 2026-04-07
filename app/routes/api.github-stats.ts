@@ -1,6 +1,9 @@
 import { type LoaderFunctionArgs } from 'react-router';
-import { ApiError, externalFetch, handleApiError, resolveToken, unauthorizedResponse } from '~/lib/api/apiUtils';
+import { externalFetch, resolveToken } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import type { GitHubUserResponse, GitHubStats } from '~/types/GitHub';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -31,11 +34,11 @@ interface GitHubRepoApiResponse {
 const GH_HEADERS = { Accept: 'application/vnd.github.v3+json' };
 
 async function githubStatsLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('GitHubStats', async () => {
+  try {
     const githubToken = resolveToken(request, context, 'GITHUB_API_KEY', 'VITE_GITHUB_ACCESS_TOKEN', 'GITHUB_TOKEN');
 
     if (!githubToken) {
-      return unauthorizedResponse('GitHub');
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'GitHub token not found', 401));
     }
 
     const userResponse = await externalFetch({
@@ -46,10 +49,10 @@ async function githubStatsLoader({ request, context }: LoaderFunctionArgs) {
 
     if (!userResponse.ok) {
       if (userResponse.status === 401) {
-        return Response.json({ error: 'Invalid GitHub token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid GitHub token', 401));
       }
 
-      throw new ApiError(`GitHub API error: ${userResponse.status}`, userResponse.status);
+      throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${userResponse.status}`, userResponse.status);
     }
 
     const user = (await userResponse.json()) as GitHubUserResponse;
@@ -67,7 +70,7 @@ async function githubStatsLoader({ request, context }: LoaderFunctionArgs) {
       });
 
       if (!repoResponse.ok) {
-        throw new ApiError(`GitHub API error: ${repoResponse.status}`, repoResponse.status);
+        throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${repoResponse.status}`, repoResponse.status);
       }
 
       const repos = (await repoResponse.json()) as GitHubRepoApiResponse[];
@@ -177,11 +180,20 @@ async function githubStatsLoader({ request, context }: LoaderFunctionArgs) {
       lastUpdated: now.toISOString(),
     };
 
-    return Response.json(stats);
-  });
+    return successResponse(stats);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitHub stats fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const loader = withSecurity(githubStatsLoader, {
   rateLimit: true,
   allowedMethods: ['GET'],
+  auth: AUTH_PRESETS.authenticated,
 });

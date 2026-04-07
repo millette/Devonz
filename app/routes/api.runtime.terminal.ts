@@ -18,7 +18,10 @@ import { existsSync } from 'node:fs';
 import { RuntimeManager } from '~/lib/runtime/local-runtime';
 import { validateCommand, auditCommand } from '~/lib/runtime/command-safety';
 import { withSecurity } from '~/lib/security';
-import { terminalRequestSchema, parseOrError } from '~/lib/api/schemas';
+import { terminalRequestSchema, validateInput } from '~/lib/api/schemas';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 /**
@@ -64,7 +67,7 @@ async function terminalLoader({ request }: LoaderFunctionArgs) {
       const sessionId = url.searchParams.get('sessionId');
 
       if (!sessionId) {
-        return Response.json({ error: 'Missing sessionId' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Missing sessionId'));
       }
 
       // Find the session across all runtimes
@@ -154,7 +157,7 @@ async function terminalLoader({ request }: LoaderFunctionArgs) {
     }
 
     default: {
-      return Response.json({ error: `Unknown GET operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown GET operation: ${op}`));
     }
   }
 }
@@ -166,21 +169,13 @@ async function terminalLoader({ request }: LoaderFunctionArgs) {
  */
 
 async function terminalAction({ request }: ActionFunctionArgs) {
-  let rawBody: unknown;
+  const validation = await validateInput(request, terminalRequestSchema);
 
-  try {
-    rawBody = await request.json();
-  } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+  if (!validation.success) {
+    return errorResponse(validation.error);
   }
 
-  const parsed = parseOrError(terminalRequestSchema, rawBody, 'RuntimeTerminal');
-
-  if (!parsed.success) {
-    return parsed.response;
-  }
-
-  const body = parsed.data;
+  const body = validation.data;
   const { op } = body;
 
   switch (op) {
@@ -224,7 +219,7 @@ async function terminalAction({ request }: ActionFunctionArgs) {
 
         if (!validation.allowed) {
           logger.warn(`Blocked terminal command for project "${projectId}": ${command}`);
-          return Response.json({ error: `Command blocked: ${validation.reason}` }, { status: 403 });
+          return errorResponse(new AppError(AppErrorType.FORBIDDEN, `Command blocked: ${validation.reason}`));
         }
       }
 
@@ -240,15 +235,14 @@ async function terminalAction({ request }: ActionFunctionArgs) {
           cwd,
         });
 
-        return Response.json({
+        return successResponse({
           sessionId: spawnedProcess.id,
           pid: spawnedProcess.pid,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Spawn failed';
         logger.error('Terminal spawn failed:', error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Spawn failed');
       }
     }
 
@@ -264,18 +258,17 @@ async function terminalAction({ request }: ActionFunctionArgs) {
 
           try {
             runtime.writeToSession(sessionId, data);
-            return Response.json({ success: true });
+            return successResponse(null);
           } catch {
             // Session not in this runtime, try next
           }
         }
 
-        return Response.json({ error: 'Session not found' }, { status: 404 });
+        return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Session not found'));
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Write failed';
         logger.error('Terminal write failed:', error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Write failed');
       }
     }
 
@@ -285,7 +278,7 @@ async function terminalAction({ request }: ActionFunctionArgs) {
       // Resize is a no-op for basic child_process (Phase 2: node-pty)
       logger.debug(`Resize request for ${sessionId}: ${cols}x${rows} (no-op in Phase 1)`);
 
-      return Response.json({ success: true });
+      return successResponse(null);
     }
 
     case 'kill': {
@@ -299,18 +292,17 @@ async function terminalAction({ request }: ActionFunctionArgs) {
 
           try {
             runtime.killSession(sessionId, signal ?? 'SIGTERM');
-            return Response.json({ success: true });
+            return successResponse(null);
           } catch {
             // Session not in this runtime, try next
           }
         }
 
-        return Response.json({ error: 'Session not found' }, { status: 404 });
+        return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Session not found'));
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Kill failed';
         logger.error('Terminal kill failed:', error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Kill failed');
       }
     }
 
@@ -322,17 +314,16 @@ async function terminalAction({ request }: ActionFunctionArgs) {
         const runtime = await manager.getRuntime(projectId);
         const sessions = runtime.listSessions();
 
-        return Response.json({ sessions });
+        return successResponse({ sessions });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'List failed';
         logger.error('Terminal list failed:', error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'List failed');
       }
     }
 
     default: {
-      return Response.json({ error: `Unknown operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown operation: ${op}`));
     }
   }
 }
@@ -343,5 +334,5 @@ async function terminalAction({ request }: ActionFunctionArgs) {
  * ---------------------------------------------------------------------------
  */
 
-export const loader = withSecurity(terminalLoader, { rateLimit: false });
-export const action = withSecurity(terminalAction, { rateLimit: false });
+export const loader = withSecurity(terminalLoader, { auth: AUTH_PRESETS.authenticated, rateLimit: false });
+export const action = withSecurity(terminalAction, { auth: AUTH_PRESETS.authenticated, rateLimit: false });

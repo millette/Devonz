@@ -1,15 +1,21 @@
 import { type LoaderFunctionArgs, type ActionFunctionArgs } from 'react-router';
-import { ApiError, resolveToken, unauthorizedResponse, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { resolveToken, externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
 
-const GITHUB_TOKEN_KEYS = ['GITHUB_API_KEY', 'VITE_GITHUB_ACCESS_TOKEN', 'GITHUB_TOKEN'];
+const logger = createScopedLogger('GitHubUser');
+
+const GITHUB_TOKEN_KEYS = ['GITHUB_API_KEY', 'VITE_GITHUB_ACCESS_TOKEN', 'GITHUB_TOKEN'] as const;
 
 async function githubUserLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('GitHubUser', async () => {
+  try {
     const token = resolveToken(request, context, ...GITHUB_TOKEN_KEYS);
 
     if (!token) {
-      return unauthorizedResponse('GitHub');
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'GitHub token not found', 401));
     }
 
     const response = await externalFetch({
@@ -20,10 +26,10 @@ async function githubUserLoader({ request, context }: LoaderFunctionArgs) {
 
     if (!response.ok) {
       if (response.status === 401) {
-        return Response.json({ error: 'Invalid GitHub token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid GitHub token', 401));
       }
 
-      throw new ApiError(`GitHub API error: ${response.status}`, response.status);
+      throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${response.status}`, response.status);
     }
 
     const userData = (await response.json()) as {
@@ -34,27 +40,36 @@ async function githubUserLoader({ request, context }: LoaderFunctionArgs) {
       type: string;
     };
 
-    return Response.json({
+    return successResponse({
       login: userData.login,
       name: userData.name,
       avatar_url: userData.avatar_url,
       html_url: userData.html_url,
       type: userData.type,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitHub user loader failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const loader = withSecurity(githubUserLoader, {
   rateLimit: true,
   allowedMethods: ['GET'],
+  auth: AUTH_PRESETS.authenticated,
 });
 
 async function githubUserAction({ request, context }: ActionFunctionArgs) {
-  return handleApiError('GitHubUser', async () => {
+  try {
     const token = resolveToken(request, context, ...GITHUB_TOKEN_KEYS);
 
     if (!token) {
-      return unauthorizedResponse('GitHub');
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'GitHub token not found', 401));
     }
 
     let action: string | null = null;
@@ -88,7 +103,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
       });
 
       if (!response.ok) {
-        throw new ApiError(`GitHub API error: ${response.status}`, response.status);
+        throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${response.status}`, response.status);
       }
 
       const repos = (await response.json()) as Array<{
@@ -105,7 +120,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
         topics: string[];
       }>;
 
-      return Response.json({
+      return successResponse({
         repos: repos.map((repo) => ({
           id: repo.id,
           name: repo.name,
@@ -124,7 +139,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
 
     if (action === 'get_branches') {
       if (!repoFullName) {
-        return Response.json({ error: 'Repository name is required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Repository name is required', 400));
       }
 
       const response = await externalFetch({
@@ -134,7 +149,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
       });
 
       if (!response.ok) {
-        throw new ApiError(`GitHub API error: ${response.status}`, response.status);
+        throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${response.status}`, response.status);
       }
 
       const branches = (await response.json()) as Array<{
@@ -143,7 +158,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
         protected: boolean;
       }>;
 
-      return Response.json({
+      return successResponse({
         branches: branches.map((branch) => ({
           name: branch.name,
           commit: { sha: branch.commit.sha, url: branch.commit.url },
@@ -153,12 +168,12 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
     }
 
     if (action === 'get_token') {
-      return Response.json({ token });
+      return successResponse({ token });
     }
 
     if (action === 'search_repos') {
       if (!searchQuery) {
-        return Response.json({ error: 'Search query is required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Search query is required', 400));
       }
 
       const response = await externalFetch({
@@ -168,7 +183,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
       });
 
       if (!response.ok) {
-        throw new ApiError(`GitHub API error: ${response.status}`, response.status);
+        throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${response.status}`, response.status);
       }
 
       const searchData = (await response.json()) as {
@@ -190,7 +205,7 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
         }>;
       };
 
-      return Response.json({
+      return successResponse({
         repos: searchData.items.map((repo) => ({
           id: repo.id,
           name: repo.name,
@@ -210,11 +225,20 @@ async function githubUserAction({ request, context }: ActionFunctionArgs) {
       });
     }
 
-    return Response.json({ error: 'Invalid action' }, { status: 400 });
-  });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid action', 400));
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitHub user action failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const action = withSecurity(githubUserAction, {
   rateLimit: true,
   allowedMethods: ['POST'],
+  auth: AUTH_PRESETS.authenticated,
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Switch } from '~/components/ui/Switch';
 import { Card, CardContent, CardHeader } from '~/components/ui/Card';
 import { Button } from '~/components/ui/Button';
@@ -81,17 +81,26 @@ export default function LocalProvidersTab() {
 
   // Start/stop health monitoring for enabled providers
   useEffect(() => {
+    const monitoredProviders: Array<{ name: 'Ollama' | 'LMStudio' | 'OpenAILike'; baseUrl: string }> = [];
+
     filteredProviders.forEach((provider) => {
       const baseUrl = provider.settings.baseUrl;
 
       if (provider.settings.enabled && baseUrl) {
         logger.debug(`Starting monitoring for ${provider.name} at ${baseUrl}`);
         startMonitoring(provider.name as 'Ollama' | 'LMStudio' | 'OpenAILike', baseUrl);
+        monitoredProviders.push({ name: provider.name as 'Ollama' | 'LMStudio' | 'OpenAILike', baseUrl });
       } else if (!provider.settings.enabled && baseUrl) {
         logger.debug(`Stopping monitoring for ${provider.name} at ${baseUrl}`);
         stopMonitoring(provider.name as 'Ollama' | 'LMStudio' | 'OpenAILike', baseUrl);
       }
     });
+
+    return () => {
+      monitoredProviders.forEach(({ name, baseUrl }) => {
+        stopMonitoring(name, baseUrl);
+      });
+    };
   }, [filteredProviders, startMonitoring, stopMonitoring]);
 
   // Fetch Ollama models when enabled

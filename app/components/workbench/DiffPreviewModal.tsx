@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { diffLines } from 'diff';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import { IconButton } from '~/components/ui/IconButton';
 import { dialogBackdropVariants } from '~/components/ui/Dialog';
@@ -201,7 +201,7 @@ const DiffLineRow = memo(({ line }: DiffLineRowProps) => {
   }, [line.type]);
 
   return (
-    <div className={classNames('flex text-sm font-mono', bgColor)}>
+    <div className={cn('flex text-sm font-mono', bgColor)}>
       {/* Line numbers */}
       <div
         className="w-12 flex-shrink-0 text-right pr-2 select-none border-r border-devonz-elements-borderColor"
@@ -223,10 +223,10 @@ const DiffLineRow = memo(({ line }: DiffLineRowProps) => {
       </div>
 
       {/* Prefix */}
-      <div className={classNames('w-6 flex-shrink-0 text-center select-none', lineColor)}>{prefix}</div>
+      <div className={cn('w-6 flex-shrink-0 text-center select-none', lineColor)}>{prefix}</div>
 
       {/* Content */}
-      <div className={classNames('flex-1 px-2 whitespace-pre', lineColor)}>{line.content || ' '}</div>
+      <div className={cn('flex-1 px-2 whitespace-pre', lineColor)}>{line.content || ' '}</div>
     </div>
   );
 });
@@ -471,7 +471,7 @@ export const DiffPreviewModal = memo(() => {
                   >
                     <div className="flex items-center gap-3">
                       {/* File icon and path */}
-                      <div className={classNames('w-5 h-5', getFileIcon(change.filePath))} />
+                      <div className={cn('w-5 h-5', getFileIcon(change.filePath))} />
                       <div className="flex flex-col">
                         <span className="text-sm font-medium" style={{ color: 'var(--devonz-elements-textPrimary)' }}>
                           {fileName}
@@ -483,7 +483,7 @@ export const DiffPreviewModal = memo(() => {
 
                       {/* Change type badge */}
                       <span
-                        className={classNames(
+                        className={cn(
                           'px-2 py-0.5 text-xs font-medium rounded border',
                           getChangeTypeColor(change.type),
                         )}

@@ -14,6 +14,48 @@ import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('Preview');
 
+/**
+ * Colors used by the fallback screenshot canvas when the preview iframe
+ * is unavailable. Extracted here so they can be tuned in one place.
+ */
+const SCREENSHOT_FALLBACK_COLORS = {
+  bgGradientStart: '#1a1f2e',
+  bgGradientEnd: '#0f1219',
+  browserChrome: '#252a38',
+  trafficLightClose: '#ff5f57',
+  trafficLightMinimize: '#febc2e',
+  trafficLightMaximize: '#28c840',
+  contentBar: '#2d3548',
+  accentBlue: '#3b82f6',
+  contentTextPlaceholder: 'rgba(255,255,255,0.15)',
+  contentSubtitlePlaceholder: 'rgba(255,255,255,0.08)',
+  border: 'rgba(255,255,255,0.08)',
+} as const;
+
+const GripIcon = () => (
+  <div
+    style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100%',
+      pointerEvents: 'none',
+    }}
+  >
+    <div
+      style={{
+        color: 'var(--devonz-elements-textSecondary, rgba(0,0,0,0.5))',
+        fontSize: '10px',
+        lineHeight: '5px',
+        userSelect: 'none',
+        marginLeft: '1px',
+      }}
+    >
+      ••• •••
+    </div>
+  </div>
+);
+
 type ResizeSide = 'left' | 'right' | null;
 
 interface PreviewProps {
@@ -70,17 +112,34 @@ let globalIframeRef: HTMLIFrameElement | null = null;
  * @param options - Optional width and height for the thumbnail
  * @param timeout - Timeout in milliseconds (default 5000)
  */
+// Maximum number of pending screenshot callbacks to prevent memory buildup
+const MAX_PENDING_CALLBACKS = 10;
+
 export function requestPreviewScreenshot(
   options: { width?: number; height?: number } = {},
   timeout: number = 8000,
 ): Promise<string> {
+  const width = options.width || 960;
+  const height = options.height || 600;
+
+  // If no iframe is loaded, reject immediately with fallback — don't create pending callbacks
+  if (!globalIframeRef?.contentWindow) {
+    return Promise.resolve(generateFallbackScreenshot(width, height));
+  }
+
+  // If too many pending callbacks, clean up stale ones and return fallback
+  if (screenshotCallbacks.size >= MAX_PENDING_CALLBACKS) {
+    logger.warn(`Too many pending screenshot callbacks (${screenshotCallbacks.size}), returning fallback`);
+    return Promise.resolve(generateFallbackScreenshot(width, height));
+  }
+
   return new Promise((resolve) => {
     const requestId = `screenshot-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
     // Set up timeout fallback
     const timeoutId = setTimeout(() => {
       screenshotCallbacks.delete(requestId);
-      resolve(generateFallbackScreenshot(options.width || 960, options.height || 600));
+      resolve(generateFallbackScreenshot(width, height));
     }, timeout);
 
     // Set up callback
@@ -89,24 +148,28 @@ export function requestPreviewScreenshot(
       resolve(dataUrl);
     });
 
-    // Send request to iframe
-    if (globalIframeRef?.contentWindow) {
-      globalIframeRef.contentWindow.postMessage(
-        {
-          type: 'CAPTURE_SCREENSHOT_REQUEST',
-          requestId,
-          options: {
-            width: options.width || 960,
-            height: options.height || 600,
-          },
-        },
-        '*',
-      );
-    } else {
-      clearTimeout(timeoutId);
-      screenshotCallbacks.delete(requestId);
-      resolve(generateFallbackScreenshot(options.width || 960, options.height || 600));
+    // Derive target origin from iframe src for security (avoid wildcard '*')
+    const iframeSrc = globalIframeRef!.src;
+    let targetOrigin: string;
+
+    try {
+      targetOrigin = new URL(iframeSrc).origin;
+    } catch {
+      targetOrigin = window.location.origin;
     }
+
+    // Send request to iframe (already verified contentWindow exists above)
+    globalIframeRef!.contentWindow!.postMessage(
+      {
+        type: 'CAPTURE_SCREENSHOT_REQUEST',
+        requestId,
+        options: {
+          width,
+          height,
+        },
+      },
+      targetOrigin,
+    );
   });
 }
 
@@ -126,48 +189,48 @@ function generateFallbackScreenshot(width: number, height: number): string {
 
   // Dark background with gradient
   const bgGradient = ctx.createLinearGradient(0, 0, 0, height);
-  bgGradient.addColorStop(0, '#1a1f2e');
-  bgGradient.addColorStop(1, '#0f1219');
+  bgGradient.addColorStop(0, SCREENSHOT_FALLBACK_COLORS.bgGradientStart);
+  bgGradient.addColorStop(1, SCREENSHOT_FALLBACK_COLORS.bgGradientEnd);
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, width, height);
 
   // Browser chrome mockup
-  ctx.fillStyle = '#252a38';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.browserChrome;
   ctx.fillRect(0, 0, width, 28);
 
   // Traffic lights
-  ctx.fillStyle = '#ff5f57';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.trafficLightClose;
   ctx.beginPath();
   ctx.arc(12, 14, 5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#febc2e';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.trafficLightMinimize;
   ctx.beginPath();
   ctx.arc(28, 14, 5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#28c840';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.trafficLightMaximize;
   ctx.beginPath();
   ctx.arc(44, 14, 5, 0, Math.PI * 2);
   ctx.fill();
 
   // Content mockup
   const contentY = 38;
-  ctx.fillStyle = '#2d3548';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.contentBar;
   ctx.fillRect(0, contentY, width, 32);
 
-  ctx.fillStyle = '#3b82f6';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.accentBlue;
   ctx.beginPath();
   ctx.roundRect(10, contentY + 8, 60, 16, 3);
   ctx.fill();
 
-  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.contentTextPlaceholder;
   ctx.fillRect(20, contentY + 50, width * 0.6, 20);
-  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillStyle = SCREENSHOT_FALLBACK_COLORS.contentSubtitlePlaceholder;
   ctx.fillRect(20, contentY + 78, width * 0.45, 12);
 
   // Border
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.strokeStyle = SCREENSHOT_FALLBACK_COLORS.border;
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
 
@@ -211,14 +274,14 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     return () => {
       inspectorApiAtom.set(null);
     };
-  });
+  }, [inspector]);
 
   const resizingState = useRef({
     isResizing: false,
     side: null as ResizeSide,
     startX: 0,
     startWidthPercent: 37.5,
-    windowWidth: window.innerWidth,
+    windowWidth: typeof window !== 'undefined' ? window.innerWidth : 1024,
     pointerId: null as number | null,
   });
 
@@ -230,6 +293,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
   const [isLandscape, setIsLandscape] = useState(false);
   const [showDeviceFrame, setShowDeviceFrame] = useState(true);
   const [showDeviceFrameInPreview, setShowDeviceFrameInPreview] = useState(false);
+  const [, setColorSchemeVersion] = useState(0);
   const expoUrl = useStore(expoUrlAtom);
   const [isExpoQrModalOpen, setIsExpoQrModalOpen] = useState(false);
 
@@ -308,11 +372,11 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     }
   }, [previews, findMinPortIndex]);
 
-  const reloadPreview = () => {
+  const reloadPreview = useCallback(() => {
     if (iframeRef.current) {
       iframeRef.current.src = iframeRef.current.src;
     }
-  };
+  }, []);
 
   // Hard reload with cache-busting for config file changes
   const hardReloadPreview = useCallback(() => {
@@ -604,30 +668,6 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     }
   }, [isDeviceModeOn]);
 
-  const GripIcon = () => (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100%',
-        pointerEvents: 'none',
-      }}
-    >
-      <div
-        style={{
-          color: 'var(--devonz-elements-textSecondary, rgba(0,0,0,0.5))',
-          fontSize: '10px',
-          lineHeight: '5px',
-          userSelect: 'none',
-          marginLeft: '1px',
-        }}
-      >
-        ••• •••
-      </div>
-    </div>
-  );
-
   const openInNewWindow = (size: WindowSize) => {
     if (activePreview?.baseUrl) {
       let port: string | null = null;
@@ -827,24 +867,6 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     return isMobile ? '40px 20px' : '50px 30px';
   }, [isLandscape, selectedWindowSize]);
 
-  // Function to get the scale factor for the device frame
-  const getDeviceScale = useCallback(() => {
-    // Always return 1 to ensure the device frame is shown at its exact size
-    return 1;
-  }, [isLandscape, selectedWindowSize, widthPercent]);
-
-  // Update the device scale when needed
-  useEffect(() => {
-    /*
-     * Intentionally disabled - we want to maintain scale of 1
-     * No dynamic scaling to ensure device frame matches external window exactly
-     */
-    // Intentionally empty cleanup function - no cleanup needed
-    return () => {
-      // No cleanup needed
-    };
-  }, [isDeviceModeOn, showDeviceFrameInPreview, getDeviceScale, isLandscape, selectedWindowSize]);
-
   // Function to get the frame color based on dark mode
   const getFrameColor = useCallback(() => {
     // Check if the document has a dark class or data-theme="dark"
@@ -857,15 +879,15 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     return isDarkMode ? '#555' : '#111';
   }, []);
 
-  // Effect to handle color scheme changes
+  /*
+   * Effect to handle color scheme changes — increment counter to force re-render
+   * so that getFrameColor() picks up the updated scheme from the DOM.
+   */
   useEffect(() => {
     const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const handleColorSchemeChange = () => {
-      // Force a re-render when color scheme changes
-      if (showDeviceFrameInPreview) {
-        setShowDeviceFrameInPreview(true);
-      }
+      setColorSchemeVersion((v) => v + 1);
     };
 
     darkModeMediaQuery.addEventListener('change', handleColorSchemeChange);
@@ -873,7 +895,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     return () => {
       darkModeMediaQuery.removeEventListener('change', handleColorSchemeChange);
     };
-  }, [showDeviceFrameInPreview]);
+  }, []);
 
   /*
    * Screenshot response listener — kept separate from the inspector hook
@@ -882,6 +904,21 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
    */
   useEffect(() => {
     const handleScreenshotResponse = (event: MessageEvent) => {
+      // Validate message origin for security
+      const allowedOrigins = new Set<string>([window.location.origin]);
+
+      if (activePreview?.baseUrl) {
+        try {
+          allowedOrigins.add(new URL(activePreview.baseUrl).origin);
+        } catch {
+          // Invalid URL — only allow same-origin messages
+        }
+      }
+
+      if (!allowedOrigins.has(event.origin)) {
+        return;
+      }
+
       if (event.data.type === 'PREVIEW_SCREENSHOT_RESPONSE') {
         const callback = screenshotCallbacks.get(event.data.requestId);
 
@@ -895,12 +932,24 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     window.addEventListener('message', handleScreenshotResponse);
 
     return () => window.removeEventListener('message', handleScreenshotResponse);
-  }, []);
+  }, [activePreview]);
 
   return (
     <div ref={containerRef} className={`w-full h-full flex flex-col relative`}>
       {isPortDropdownOpen && (
-        <div className="z-iframe-overlay w-full h-full absolute" onClick={() => setIsPortDropdownOpen(false)} />
+        <div
+          className="z-iframe-overlay w-full h-full absolute"
+          role="button"
+          aria-label="Dismiss port dropdown"
+          tabIndex={0}
+          onClick={() => setIsPortDropdownOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsPortDropdownOpen(false);
+            }
+          }}
+        />
       )}
       <div className="bg-devonz-elements-background-depth-2 p-2 flex items-center gap-2">
         <div className="flex items-center gap-2">
@@ -923,6 +972,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
           <input
             title="Full URL"
             ref={inputRef}
+            aria-label="Preview URL"
             className="w-full bg-transparent outline-none text-xs font-mono truncate"
             type="text"
             inputMode="url"
@@ -981,6 +1031,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
               onClick={openInNewTab}
               className="flex-shrink-0 p-1 bg-transparent text-devonz-elements-preview-addressBar-text hover:text-devonz-elements-preview-addressBar-textActive rounded transition-colors"
               title="Open in new tab"
+              aria-label="Open in new tab"
             >
               <div className="i-ph:arrow-square-out w-4 h-4" />
             </button>
@@ -992,9 +1043,17 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
             icon="i-ph:devices"
             onClick={toggleDeviceMode}
             title={isDeviceModeOn ? 'Switch to Responsive Mode' : 'Switch to Device Mode'}
+            aria-label={isDeviceModeOn ? 'Switch to Responsive Mode' : 'Switch to Device Mode'}
           />
 
-          {expoUrl && <IconButton icon="i-ph:qr-code" onClick={() => setIsExpoQrModalOpen(true)} title="Show QR" />}
+          {expoUrl && (
+            <IconButton
+              icon="i-ph:qr-code"
+              onClick={() => setIsExpoQrModalOpen(true)}
+              title="Show QR"
+              aria-label="Show QR code"
+            />
+          )}
 
           <ExpoQrModal open={isExpoQrModalOpen} onClose={() => setIsExpoQrModalOpen(false)} />
 
@@ -1004,11 +1063,13 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                 icon="i-ph:device-rotate"
                 onClick={() => setIsLandscape(!isLandscape)}
                 title={isLandscape ? 'Switch to Portrait' : 'Switch to Landscape'}
+                aria-label={isLandscape ? 'Switch to Portrait' : 'Switch to Landscape'}
               />
               <IconButton
                 icon={showDeviceFrameInPreview ? 'i-ph:device-mobile' : 'i-ph:device-mobile-slash'}
                 onClick={() => setShowDeviceFrameInPreview(!showDeviceFrameInPreview)}
                 title={showDeviceFrameInPreview ? 'Hide Device Frame' : 'Show Device Frame'}
+                aria-label={showDeviceFrameInPreview ? 'Hide Device Frame' : 'Show Device Frame'}
               />
             </>
           )}
@@ -1021,11 +1082,13 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                 : ''
             }
             title={inspector.mode !== 'off' ? 'Disable Element Inspector' : 'Enable Element Inspector'}
+            aria-label={inspector.mode !== 'off' ? 'Disable Element Inspector' : 'Enable Element Inspector'}
           />
           <IconButton
             icon={isFullscreen ? 'i-ph:arrows-in' : 'i-ph:arrows-out'}
             onClick={toggleFullscreen}
             title={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
+            aria-label={isFullscreen ? 'Exit Full Screen' : 'Full Screen'}
           />
 
           <div className="flex items-center relative">
@@ -1033,11 +1096,24 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
               icon="i-ph:list"
               onClick={() => setIsWindowSizeDropdownOpen(!isWindowSizeDropdownOpen)}
               title="New Window Options"
+              aria-label="New window options"
             />
 
             {isWindowSizeDropdownOpen && (
               <>
-                <div className="fixed inset-0 z-50" onClick={() => setIsWindowSizeDropdownOpen(false)} />
+                <div
+                  className="fixed inset-0 z-50"
+                  role="button"
+                  aria-label="Dismiss window options"
+                  tabIndex={0}
+                  onClick={() => setIsWindowSizeDropdownOpen(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsWindowSizeDropdownOpen(false);
+                    }
+                  }}
+                />
                 <div className="absolute right-0 top-full mt-2 z-50 min-w-[240px] max-h-[400px] overflow-y-auto bg-devonz-elements-bg-depth-1 rounded-xl shadow-2xl border border-devonz-elements-borderColor overflow-hidden">
                   <div className="p-3 border-b border-devonz-elements-borderColor">
                     <div className="flex items-center justify-between mb-2">
@@ -1091,8 +1167,11 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                         <span className="text-xs text-devonz-elements-textTertiary">Show Device Frame</span>
                         <button
                           className={`w-10 h-5 rounded-full transition-colors duration-200 ${
-                            showDeviceFrame ? 'bg-[#6D28D9]' : 'bg-gray-300 dark:bg-gray-700'
+                            showDeviceFrame ? 'bg-purple-700' : 'bg-gray-300 dark:bg-gray-700'
                           } relative`}
+                          aria-label={showDeviceFrame ? 'Hide device frame' : 'Show device frame'}
+                          role="switch"
+                          aria-checked={showDeviceFrame}
                           onClick={(e) => {
                             e.stopPropagation();
                             setShowDeviceFrame(!showDeviceFrame);
@@ -1109,8 +1188,11 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                         <span className="text-xs text-devonz-elements-textTertiary">Landscape Mode</span>
                         <button
                           className={`w-10 h-5 rounded-full transition-colors duration-200 ${
-                            isLandscape ? 'bg-[#6D28D9]' : 'bg-gray-300 dark:bg-gray-700'
+                            isLandscape ? 'bg-purple-700' : 'bg-gray-300 dark:bg-gray-700'
                           } relative`}
+                          aria-label={isLandscape ? 'Disable landscape mode' : 'Enable landscape mode'}
+                          role="switch"
+                          aria-checked={isLandscape}
                           onClick={(e) => {
                             e.stopPropagation();
                             setIsLandscape(!isLandscape);
@@ -1136,13 +1218,13 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                       }}
                     >
                       <div
-                        className={`${size.icon} w-5 h-5 text-devonz-elements-textTertiary group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200`}
+                        className={`${size.icon} w-5 h-5 text-devonz-elements-textTertiary group-hover:text-purple-700 dark:group-hover:text-purple-700 transition-colors duration-200`}
                       />
                       <div className="flex-grow flex flex-col">
-                        <span className="font-medium group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200">
+                        <span className="font-medium group-hover:text-purple-700 dark:group-hover:text-purple-700 transition-colors duration-200">
                           {size.name}
                         </span>
-                        <span className="text-xs text-devonz-elements-textTertiary group-hover:text-[#6D28D9] dark:group-hover:text-[#6D28D9] transition-colors duration-200">
+                        <span className="text-xs text-devonz-elements-textTertiary group-hover:text-purple-700 dark:group-hover:text-purple-700 transition-colors duration-200">
                           {isLandscape && (size.frameType === 'mobile' || size.frameType === 'tablet')
                             ? `${size.height} × ${size.width}`
                             : `${size.width} × ${size.height}`}
@@ -1150,7 +1232,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
                         </span>
                       </div>
                       {selectedWindowSize.name === size.name && (
-                        <div className="text-[#6D28D9] dark:text-[#6D28D9]">
+                        <div className="text-purple-700 dark:text-purple-700">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"

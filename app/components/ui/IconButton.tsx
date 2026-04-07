@@ -1,5 +1,5 @@
-import { memo, forwardRef, type ForwardedRef, type ComponentPropsWithoutRef } from 'react';
-import { classNames } from '~/utils/classNames';
+import { memo, type ComponentPropsWithoutRef } from 'react';
+import { cn } from '~/utils/cn';
 
 type IconSize = 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
@@ -11,6 +11,7 @@ interface BaseIconButtonProps {
   title?: string;
   disabled?: boolean;
   onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  ref?: React.Ref<HTMLButtonElement>;
 }
 
 type IconButtonWithoutChildrenProps = {
@@ -27,50 +28,46 @@ type IconButtonWithChildrenProps = {
 
 type IconButtonProps = IconButtonWithoutChildrenProps | IconButtonWithChildrenProps;
 
-// Componente IconButton com suporte a refs
 export const IconButton = memo(
-  forwardRef(
-    (
-      {
-        icon,
-        size = 'xl',
-        className,
-        iconClassName,
-        disabledClassName,
-        disabled = false,
-        title,
-        onClick,
-        children,
-        ...rest
-      }: IconButtonProps,
-      ref: ForwardedRef<HTMLButtonElement>,
-    ) => {
-      return (
-        <button
-          ref={ref}
-          {...rest}
-          className={classNames(
-            'flex items-center text-devonz-elements-item-contentDefault bg-transparent enabled:hover:text-devonz-elements-item-contentActive rounded-md p-1 enabled:hover:bg-devonz-elements-item-backgroundActive disabled:cursor-not-allowed focus:outline-none',
-            {
-              [classNames('opacity-30', disabledClassName)]: disabled,
-            },
-            className,
-          )}
-          title={title}
-          disabled={disabled}
-          onClick={(event) => {
-            if (disabled) {
-              return;
-            }
+  ({
+    icon,
+    size = 'xl',
+    className,
+    iconClassName,
+    disabledClassName,
+    disabled = false,
+    title,
+    onClick,
+    children,
+    ref,
+    ...rest
+  }: IconButtonProps) => {
+    return (
+      <button
+        ref={ref}
+        {...rest}
+        className={cn(
+          'flex items-center text-devonz-elements-item-contentDefault bg-transparent enabled:hover:text-devonz-elements-item-contentActive rounded-md p-1 enabled:hover:bg-devonz-elements-item-backgroundActive disabled:cursor-not-allowed',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-focus',
+          {
+            [cn('opacity-30', disabledClassName)]: disabled,
+          },
+          className,
+        )}
+        title={title}
+        disabled={disabled}
+        onClick={(event) => {
+          if (disabled) {
+            return;
+          }
 
-            onClick?.(event);
-          }}
-        >
-          {children ? children : <div className={classNames(icon, getIconSize(size), iconClassName)}></div>}
-        </button>
-      );
-    },
-  ),
+          onClick?.(event);
+        }}
+      >
+        {children ? children : <div className={cn(icon, getIconSize(size), iconClassName)}></div>}
+      </button>
+    );
+  },
 );
 
 function getIconSize(size: IconSize) {

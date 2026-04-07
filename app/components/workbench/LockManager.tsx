@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, memo } from 'react';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Checkbox } from '~/components/ui/Checkbox';
 import { toast } from '~/components/ui/use-toast';
 
@@ -208,7 +208,7 @@ export const LockManager = memo(() => {
             {filteredAndSortedItems.map((item) => (
               <li
                 key={item.path}
-                className={classNames(
+                className={cn(
                   'text-devonz-elements-textTertiary flex items-center gap-2 px-2 py-1 rounded hover:bg-devonz-elements-background-depth-2 transition-colors group',
                   selectedItems.has(item.path) ? 'bg-devonz-elements-background-depth-2' : '',
                 )}
@@ -220,7 +220,7 @@ export const LockManager = memo(() => {
                   aria-labelledby={`item-label-${item.path}`} // For accessibility
                 />
                 <span
-                  className={classNames(
+                  className={cn(
                     'shrink-0 text-devonz-elements-textTertiary text-xs',
                     item.type === 'file' ? 'i-ph:file-text-duotone' : 'i-ph:folder-duotone',
                   )}
@@ -230,10 +230,7 @@ export const LockManager = memo(() => {
                 </span>
                 {/* ... rest of the item details and buttons ... */}
                 <span
-                  className={classNames(
-                    'inline-flex items-center px-1 rounded-sm text-xs',
-                    'bg-red-500/10 text-red-500',
-                  )}
+                  className={cn('inline-flex items-center px-1 rounded-sm text-xs', 'bg-red-500/10 text-red-500')}
                 ></span>
                 <button
                   className="flex items-center px-1 py-0.5 text-xs rounded bg-transparent hover:bg-devonz-elements-background-depth-3"

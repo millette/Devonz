@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useStore } from '@nanostores/react';
 import { logStore } from '~/lib/stores/logs';
 import { vercelApi } from '~/lib/api/vercel-client';
 import type { VercelUserResponse } from '~/types/vercel';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import { ServiceHeader, ConnectionTestIndicator } from '~/components/@settings/shared/service-integration';
 import { useConnectionTest } from '~/lib/hooks';
@@ -253,7 +253,7 @@ export default function VercelTab() {
               </span>
             </div>
             <div
-              className={classNames(
+              className={cn(
                 'i-ph:caret-down w-4 h-4 transform transition-transform duration-200 text-devonz-elements-textSecondary',
                 isProjectsExpanded ? 'rotate-180' : '',
               )}
@@ -382,7 +382,7 @@ export default function VercelTab() {
                       <div className="flex items-center gap-2">
                         {project.latestDeployments && project.latestDeployments.length > 0 && (
                           <div
-                            className={classNames(
+                            className={cn(
                               'flex items-center gap-1 px-2 py-1 rounded-full text-xs',
                               project.latestDeployments[0].state === 'READY'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
@@ -392,7 +392,7 @@ export default function VercelTab() {
                             )}
                           >
                             <div
-                              className={classNames(
+                              className={cn(
                                 'w-2 h-2 rounded-full',
                                 project.latestDeployments[0].state === 'READY'
                                   ? 'bg-green-500'
@@ -508,7 +508,7 @@ export default function VercelTab() {
                   onChange={(e) => updateVercelConnection({ ...connection, token: e.target.value })}
                   disabled={connecting}
                   placeholder="Enter your Vercel personal access token"
-                  className={classNames(
+                  className={cn(
                     'w-full px-3 py-2 rounded-lg text-sm',
                     'bg-devonz-elements-background-depth-1',
                     'border border-devonz-elements-borderColor',
@@ -533,7 +533,7 @@ export default function VercelTab() {
               <button
                 onClick={handleConnect}
                 disabled={connecting || !connection.token}
-                className={classNames(
+                className={cn(
                   'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                   'bg-devonz-elements-bg-depth-3 text-devonz-elements-textPrimary',
                   'hover:bg-[#5E41D0] hover:text-white',
@@ -560,7 +560,7 @@ export default function VercelTab() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleDisconnect}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                       'bg-red-500 text-white',
                       'hover:bg-red-600',

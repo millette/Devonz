@@ -1,6 +1,9 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { createScopedLogger } from '~/utils/logger';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { errorResponse } from '~/lib/api/responses';
 import { withSecurity } from '~/lib/security';
+import { AUTH_PRESETS } from '~/lib/security-config';
 
 const logger = createScopedLogger('GitProxy');
 
@@ -54,18 +57,18 @@ const EXPOSE_HEADERS = [
 // Handle all HTTP methods
 export const action = withSecurity(
   async ({ request, params }: ActionFunctionArgs) => handleProxyRequest(request, params['*']),
-  { rateLimit: false },
+  { auth: AUTH_PRESETS.public, csrfExempt: true, rateLimit: false },
 );
 
 export const loader = withSecurity(
   async ({ request, params }: LoaderFunctionArgs) => handleProxyRequest(request, params['*']),
-  { rateLimit: false },
+  { auth: AUTH_PRESETS.public, csrfExempt: true, rateLimit: false },
 );
 
 async function handleProxyRequest(request: Request, path: string | undefined) {
   try {
     if (!path) {
-      return Response.json({ error: 'Invalid proxy URL format' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid proxy URL format'), 400);
     }
 
     // Handle CORS preflight request
@@ -86,7 +89,7 @@ async function handleProxyRequest(request: Request, path: string | undefined) {
     const parts = path.match(/([^\/]+)\/?(.*)/);
 
     if (!parts) {
-      return Response.json({ error: 'Invalid path format' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid path format'), 400);
     }
 
     const domain = parts[1];
@@ -95,7 +98,7 @@ async function handleProxyRequest(request: Request, path: string | undefined) {
     // Validate domain against allowlist to prevent SSRF
     if (!ALLOWED_DOMAINS.has(domain.toLowerCase())) {
       logger.warn(`Blocked proxy request to disallowed domain: ${domain}`);
-      return Response.json({ error: 'Domain not allowed' }, { status: 403 });
+      return errorResponse(new AppError(AppErrorType.FORBIDDEN, 'Domain not allowed'), 403);
     }
 
     // Reconstruct the target URL with query parameters
@@ -176,12 +179,7 @@ async function handleProxyRequest(request: Request, path: string | undefined) {
     });
   } catch (error) {
     logger.error('Proxy error:', error);
-    return Response.json(
-      {
-        error: 'Proxy error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 },
-    );
+
+    return errorResponse(error instanceof Error ? error : String(error));
   }
 }

@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Button } from '~/components/ui/Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('GitHubCache');
@@ -28,7 +28,6 @@ interface GitHubCacheManagerProps {
 
 // Cache management utilities
 class CacheManagerService {
-  private static readonly _cachePrefix = 'github_';
   private static readonly _cacheKeys = [
     'github_connection',
     'github_stats_cache',
@@ -225,7 +224,7 @@ export function GitHubCacheManager({ className = '', showStats = true }: GitHubC
 
   return (
     <div
-      className={classNames(
+      className={cn(
         'space-y-4 p-4 bg-devonz-elements-background-depth-1 border border-devonz-elements-borderColor rounded-lg',
         className,
       )}
@@ -238,7 +237,7 @@ export function GitHubCacheManager({ className = '', showStats = true }: GitHubC
 
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={refreshCacheData} disabled={isLoading}>
-            <div className={classNames('i-ph:arrows-clockwise w-3 h-3', isLoading ? 'animate-spin' : '')} />
+            <div className={cn('i-ph:arrows-clockwise w-3 h-3', isLoading ? 'animate-spin' : '')} />
           </Button>
         </div>
       </div>

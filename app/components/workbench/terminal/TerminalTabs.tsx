@@ -5,11 +5,11 @@ import { IconButton } from '~/components/ui/IconButton';
 import { shortcutEventEmitter } from '~/lib/hooks';
 import { themeStore } from '~/lib/stores/theme';
 import { workbenchStore } from '~/lib/stores/workbench';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Terminal, type TerminalRef } from './Terminal';
 import { TerminalManager } from './TerminalManager';
 import { createScopedLogger } from '~/utils/logger';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 const logger = createScopedLogger('Terminal');
 
@@ -198,7 +198,7 @@ export const TerminalTabs = memo(() => {
                   {index === 0 ? (
                     <button
                       key={index}
-                      className={classNames(
+                      className={cn(
                         'flex items-center text-sm cursor-pointer gap-1.5 px-3 py-2 h-full whitespace-nowrap rounded-full',
                         {
                           'bg-devonz-elements-terminals-buttonBackground hover:text-devonz-elements-textPrimary':
@@ -217,7 +217,7 @@ export const TerminalTabs = memo(() => {
                     <React.Fragment>
                       <button
                         key={index}
-                        className={classNames(
+                        className={cn(
                           'flex items-center text-sm cursor-pointer gap-1.5 px-3 py-2 h-full whitespace-nowrap rounded-full',
                           {
                             'bg-devonz-elements-terminals-buttonBackground': isActive,
@@ -272,7 +272,7 @@ export const TerminalTabs = memo(() => {
               title="Reinstall dependencies and restart dev server"
               disabled={isRestarting}
               onClick={handleReinstallAndRestart}
-              className={classNames(
+              className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all',
                 isRestarting
                   ? 'opacity-50 cursor-not-allowed'
@@ -280,7 +280,7 @@ export const TerminalTabs = memo(() => {
               )}
               style={{ color: '#22D3EE' }}
             >
-              <div className={classNames('i-ph:rocket-launch text-sm', isRestarting && 'animate-pulse')} />
+              <div className={cn('i-ph:rocket-launch text-sm', isRestarting && 'animate-pulse')} />
               {isRestarting ? 'Restarting...' : 'Reinstall & Run'}
             </button>
             <IconButton
@@ -302,7 +302,7 @@ export const TerminalTabs = memo(() => {
                   <Terminal
                     key={`terminal-${index}`}
                     id={`terminal_${index}`}
-                    className={classNames('h-full overflow-hidden modern-scrollbar-invert', {
+                    className={cn('h-full overflow-hidden modern-scrollbar-invert', {
                       hidden: !isActive,
                     })}
                     ref={(ref) => {
@@ -326,7 +326,7 @@ export const TerminalTabs = memo(() => {
                   <Terminal
                     key={`terminal-${index}`}
                     id={`terminal_${index}`}
-                    className={classNames('modern-scrollbar h-full overflow-hidden', {
+                    className={cn('modern-scrollbar h-full overflow-hidden', {
                       hidden: !isActive,
                     })}
                     ref={(ref) => {

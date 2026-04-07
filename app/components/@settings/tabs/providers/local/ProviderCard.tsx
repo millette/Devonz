@@ -1,7 +1,6 @@
-import React from 'react';
 import { Switch } from '~/components/ui/Switch';
 import { Card, CardContent } from '~/components/ui/Card';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { IProviderConfig } from '~/types/model';
 import { PROVIDER_DESCRIPTIONS } from './types';
 
@@ -59,7 +58,7 @@ function ProviderCard({
               }}
             >
               <div
-                className={classNames(iconClass, 'w-5 h-5 transition-all duration-300')}
+                className={cn(iconClass, 'w-5 h-5 transition-all duration-300')}
                 style={{ color: provider.settings.enabled ? '#a855f7' : '#6b7280' }}
               />
             </div>

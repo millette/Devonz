@@ -1,6 +1,7 @@
 import { atom } from 'nanostores';
 import type { SupabaseUser, SupabaseStats, SupabaseApiKey, SupabaseCredentials } from '~/types/supabase';
 import { createScopedLogger } from '~/utils/logger';
+import { csrfFetch } from '~/lib/api/csrf-client';
 
 const logger = createScopedLogger('SupabaseStore');
 
@@ -184,7 +185,7 @@ export async function fetchSupabaseStats(token: string) {
 
   try {
     // Use the internal API route instead of direct Supabase API call
-    const response = await fetch('/api/supabase', {
+    const response = await csrfFetch('/api/supabase', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -198,11 +199,12 @@ export async function fetchSupabaseStats(token: string) {
       throw new Error('Failed to fetch projects');
     }
 
-    const data = (await response.json()) as { user?: SupabaseUser; stats?: SupabaseStats };
+    const envelope = (await response.json()) as { data?: { user?: SupabaseUser; stats?: SupabaseStats } };
+    const data = envelope.data;
 
     updateSupabaseConnection({
-      user: data.user,
-      stats: data.stats,
+      user: data?.user,
+      stats: data?.stats,
     });
   } catch (error) {
     logger.error('Failed to fetch Supabase stats:', error);
@@ -216,7 +218,7 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
   isFetchingApiKeys.set(true);
 
   try {
-    const response = await fetch('/api/supabase/variables', {
+    const response = await csrfFetch('/api/supabase/variables', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -231,8 +233,8 @@ export async function fetchProjectApiKeys(projectId: string, token: string) {
       throw new Error('Failed to fetch API keys');
     }
 
-    const data = (await response.json()) as { apiKeys: SupabaseApiKey[] };
-    const apiKeys = data.apiKeys;
+    const envelope = (await response.json()) as { data?: { apiKeys: SupabaseApiKey[] } };
+    const apiKeys = envelope.data?.apiKeys ?? [];
 
     const anonKey = apiKeys.find((key: SupabaseApiKey) => key.name === 'anon' || key.name === 'public');
 

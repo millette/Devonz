@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useGitLabConnection } from '~/lib/hooks';
 import GitLabConnection from './components/GitLabConnection';

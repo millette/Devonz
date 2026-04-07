@@ -1,12 +1,17 @@
 import { execSync } from 'child_process';
 import { existsSync } from 'fs';
-import { handleApiError } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('GitInfo');
 
 async function gitInfoLoader() {
-  return handleApiError('GitInfo', async () => {
+  try {
     if (!existsSync('.git')) {
-      return Response.json({
+      return successResponse({
         branch: 'unknown',
         commit: 'unknown',
         isDirty: false,
@@ -41,17 +46,25 @@ async function gitInfoLoader() {
       // Could not get commit info
     }
 
-    return Response.json({
+    return successResponse({
       branch,
       commit,
       isDirty,
       remoteUrl,
       lastCommit,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitInfo failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const loader = withSecurity(gitInfoLoader, {
   allowedMethods: ['GET'],
-  rateLimit: false,
+  auth: AUTH_PRESETS.authenticated,
 });

@@ -2,10 +2,10 @@ import { useLoaderData, useNavigate, useSearchParams } from 'react-router';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { atom } from 'nanostores';
 import { type JSONValue, type Message } from 'ai';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { versionsStore } from '~/lib/stores/versions';
-import { logStore } from '~/lib/stores/logs'; // Import logStore
+import { logStore } from '~/lib/stores/logs';
 import {
   getMessages,
   getNextId,
@@ -16,10 +16,9 @@ import {
   createChatFromMessages,
   getSnapshot,
   setSnapshot,
-  type IChatMetadata,
 } from './db';
 import type { FileMap } from '~/lib/stores/files';
-import type { Snapshot } from './types';
+import type { IChatMetadata, Snapshot } from './types';
 import { runtime } from '~/lib/runtime';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -34,14 +33,7 @@ const logger = createScopedLogger('ChatHistory');
  */
 let autoRebuildScheduled = false;
 
-export interface ChatHistoryItem {
-  id: string;
-  urlId?: string;
-  description?: string;
-  messages: Message[];
-  timestamp: string;
-  metadata?: IChatMetadata;
-}
+export type { ChatHistoryItem } from './types';
 
 const persistenceEnabled = !import.meta.env.VITE_DISABLE_PERSISTENCE;
 
@@ -235,7 +227,7 @@ export function useChatHistory() {
     };
   }, [db, takeSnapshot]);
 
-  const restoreSnapshot = useCallback(async (id: string, snapshot?: Snapshot) => {
+  const restoreSnapshot = useCallback(async (_id: string, snapshot?: Snapshot) => {
     const container = await runtime;
 
     const validSnapshot = snapshot || { chatIndex: '', files: {} };

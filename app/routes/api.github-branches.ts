@@ -1,6 +1,12 @@
 import { type LoaderFunctionArgs } from 'react-router';
-import { ApiError, externalFetch, handleApiError, resolveToken, unauthorizedResponse } from '~/lib/api/apiUtils';
+import { externalFetch, resolveToken } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('GitHubBranches');
 
 interface GitHubBranch {
   name: string;
@@ -21,7 +27,7 @@ interface BranchInfo {
 const GH_HEADERS = { Accept: 'application/vnd.github.v3+json' };
 
 async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
-  return handleApiError('GitHubBranches', async () => {
+  try {
     let owner: string;
     let repo: string;
     let githubToken: string;
@@ -33,11 +39,11 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
       githubToken = body.token;
 
       if (!owner || !repo) {
-        return Response.json({ error: 'Owner and repo parameters are required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Owner and repo parameters are required', 400));
       }
 
       if (!githubToken) {
-        return Response.json({ error: 'GitHub token is required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'GitHub token is required', 400));
       }
     } else {
       const url = new URL(request.url);
@@ -45,7 +51,7 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
       repo = url.searchParams.get('repo') || '';
 
       if (!owner || !repo) {
-        return Response.json({ error: 'Owner and repo parameters are required' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Owner and repo parameters are required', 400));
       }
 
       const token = resolveToken(request, context, 'GITHUB_API_KEY', 'VITE_GITHUB_ACCESS_TOKEN', 'GITHUB_TOKEN');
@@ -53,7 +59,7 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
     }
 
     if (!githubToken) {
-      return unauthorizedResponse('GitHub');
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'GitHub token not found', 401));
     }
 
     const repoResponse = await externalFetch({
@@ -64,14 +70,14 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
 
     if (!repoResponse.ok) {
       if (repoResponse.status === 404) {
-        return Response.json({ error: 'Repository not found' }, { status: 404 });
+        return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Repository not found', 404));
       }
 
       if (repoResponse.status === 401) {
-        return Response.json({ error: 'Invalid GitHub token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid GitHub token', 401));
       }
 
-      throw new ApiError(`GitHub API error: ${repoResponse.status}`, repoResponse.status);
+      throw new AppError(AppErrorType.NETWORK, `GitHub API error: ${repoResponse.status}`, repoResponse.status);
     }
 
     const repoInfo = (await repoResponse.json()) as { default_branch: string };
@@ -84,7 +90,11 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
     });
 
     if (!branchesResponse.ok) {
-      throw new ApiError(`Failed to fetch branches: ${branchesResponse.status}`, branchesResponse.status);
+      throw new AppError(
+        AppErrorType.NETWORK,
+        `Failed to fetch branches: ${branchesResponse.status}`,
+        branchesResponse.status,
+      );
     }
 
     const branches: GitHubBranch[] = await branchesResponse.json();
@@ -108,13 +118,21 @@ async function githubBranchesLoader({ request, context }: LoaderFunctionArgs) {
       return a.name.localeCompare(b.name);
     });
 
-    return Response.json({
+    return successResponse({
       branches: transformedBranches,
       defaultBranch,
       total: transformedBranches.length,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitHub branches fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const loader = withSecurity(githubBranchesLoader);
-export const action = withSecurity(githubBranchesLoader);
+export const loader = withSecurity(githubBranchesLoader, { auth: AUTH_PRESETS.authenticated });
+export const action = withSecurity(githubBranchesLoader, { auth: AUTH_PRESETS.authenticated });

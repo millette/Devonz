@@ -11,11 +11,7 @@ import { HeaderAvatar } from './HeaderAvatar.client';
 import { AutoFixStatus } from './AutoFixStatus.client';
 import { chatId } from '~/lib/persistence/useChatHistory';
 
-interface HeaderActionButtonsProps {
-  chatStarted: boolean;
-}
-
-export function HeaderActionButtons({ chatStarted: _chatStarted }: HeaderActionButtonsProps) {
+export function HeaderActionButtons() {
   const [activePreviewIndex] = useState(0);
   const [isVercelModalOpen, setIsVercelModalOpen] = useState(false);
   const previews = useStore(workbenchStore.previews);

@@ -1,16 +1,43 @@
 import { type ActionFunctionArgs } from 'react-router';
-import { handleApiError, externalFetch, ApiError } from '~/lib/api/apiUtils';
+import { externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+import { z } from 'zod';
+
+const logger = createScopedLogger('SupabaseVars');
+
+const supabaseVariablesRequestSchema = z.object({
+  projectId: z.string(),
+  token: z.string(),
+});
 
 async function supabaseVariablesAction({ request }: ActionFunctionArgs) {
-  return handleApiError('SupabaseVars', async () => {
-    const body = (await request.json()) as { projectId?: string; token?: string };
-    const { projectId, token } = body;
+  let rawBody: unknown;
 
-    if (!projectId || !token) {
-      return Response.json({ error: 'Project ID and token are required' }, { status: 400 });
-    }
+  try {
+    rawBody = await request.json();
+  } catch {
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body', 400));
+  }
 
+  const parsed = supabaseVariablesRequestSchema.safeParse(rawBody);
+
+  if (!parsed.success) {
+    logger.warn('Validation failed:', parsed.error.flatten());
+
+    return errorResponse(
+      new AppError(AppErrorType.VALIDATION, 'Invalid request body', 400, {
+        details: parsed.error.flatten().fieldErrors,
+      }),
+    );
+  }
+
+  const { projectId, token } = parsed.data;
+
+  try {
     const response = await externalFetch({
       url: `https://api.supabase.com/v1/projects/${projectId}/api-keys`,
       token,
@@ -18,16 +45,22 @@ async function supabaseVariablesAction({ request }: ActionFunctionArgs) {
     });
 
     if (!response.ok) {
-      throw new ApiError(`Failed to fetch API keys: ${response.statusText}`, response.status);
+      const errorText = await response.text();
+      throw new AppError(AppErrorType.NETWORK, `Failed to fetch API keys: ${errorText}`, response.status);
     }
 
     const apiKeys = await response.json();
 
-    return Response.json({ apiKeys });
-  });
+    return successResponse({ apiKeys });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Supabase variables fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(supabaseVariablesAction, {
-  allowedMethods: ['POST'],
-  rateLimit: false,
-});
+export const action = withSecurity(supabaseVariablesAction, { auth: AUTH_PRESETS.authenticated });

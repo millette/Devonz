@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { DeployAlert } from '~/types/actions';
 import { VercelDomainModal } from './VercelDomainModal';
 
@@ -39,7 +39,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
               transition={{ delay: 0.2 }}
             >
               <div
-                className={classNames(
+                className={cn(
                   'text-xl',
                   type === 'success'
                     ? 'i-ph:check-circle-duotone text-devonz-elements-icon-success'
@@ -74,7 +74,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
                       {/* Build Step */}
                       <div className="flex items-center">
                         <div
-                          className={classNames(
+                          className={cn(
                             'w-6 h-6 rounded-full flex items-center justify-center',
                             buildStatus === 'running'
                               ? 'bg-devonz-elements-loader-progress'
@@ -100,7 +100,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
 
                       {/* Connector Line */}
                       <div
-                        className={classNames(
+                        className={cn(
                           'h-0.5 w-8',
                           buildStatus === 'complete'
                             ? 'bg-devonz-elements-icon-success'
@@ -111,7 +111,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
                       {/* Deploy Step */}
                       <div className="flex items-center">
                         <div
-                          className={classNames(
+                          className={cn(
                             'w-6 h-6 rounded-full flex items-center justify-center',
                             deployStatus === 'running'
                               ? 'bg-devonz-elements-loader-progress'
@@ -157,7 +157,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
                     {isVercelSuccess && (
                       <button
                         onClick={() => setIsDomainModalOpen(true)}
-                        className={classNames(
+                        className={cn(
                           'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md',
                           'bg-devonz-elements-background-depth-3 border border-devonz-elements-borderColor',
                           'text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary',
@@ -180,13 +180,13 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <div className={classNames('flex gap-2')}>
+                <div className={cn('flex gap-2')}>
                   {type === 'error' && (
                     <button
                       onClick={() =>
                         postMessage(`*Fix this deployment error*\n\`\`\`\n${content || description}\n\`\`\`\n`)
                       }
-                      className={classNames(
+                      className={cn(
                         `px-2 py-1.5 rounded-md text-sm font-medium`,
                         'bg-devonz-elements-button-primary-background',
                         'hover:bg-devonz-elements-button-primary-backgroundHover',
@@ -201,7 +201,7 @@ export default function DeployChatAlert({ alert, clearAlert, postMessage }: Depl
                   )}
                   <button
                     onClick={clearAlert}
-                    className={classNames(
+                    className={cn(
                       `px-2 py-1.5 rounded-md text-sm font-medium`,
                       'bg-devonz-elements-button-secondary-background',
                       'hover:bg-devonz-elements-button-secondary-backgroundHover',

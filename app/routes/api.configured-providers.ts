@@ -3,6 +3,9 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
 import { createScopedLogger } from '~/utils/logger';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import type { ConfiguredProvider } from '~/types/api-types';
 
 const logger = createScopedLogger('ConfiguredProviders');
@@ -31,7 +34,7 @@ async function configuredProvidersLoader({ context }: LoaderFunctionArgs) {
          */
         if (config.baseUrlKey) {
           const baseUrlEnvVar = config.baseUrlKey;
-          const cloudflareEnv = (context?.cloudflare?.env as Record<string, any>)?.[baseUrlEnvVar];
+          const cloudflareEnv = context?.cloudflare?.env?.[baseUrlEnvVar];
           const processEnv = process.env[baseUrlEnvVar];
           const managerEnv = llmManager.env[baseUrlEnvVar];
 
@@ -59,9 +62,7 @@ async function configuredProvidersLoader({ context }: LoaderFunctionArgs) {
         if (config.apiTokenKey && !isConfigured) {
           const apiTokenEnvVar = config.apiTokenKey;
           const envApiToken =
-            (context?.cloudflare?.env as Record<string, any>)?.[apiTokenEnvVar] ||
-            process.env[apiTokenEnvVar] ||
-            llmManager.env[apiTokenEnvVar];
+            context?.cloudflare?.env?.[apiTokenEnvVar] || process.env[apiTokenEnvVar] || llmManager.env[apiTokenEnvVar];
 
           // Only consider configured if API key is set and not a placeholder
           const isValidApiToken =
@@ -86,14 +87,18 @@ async function configuredProvidersLoader({ context }: LoaderFunctionArgs) {
       });
     }
 
-    return Response.json({
+    return successResponse({
       providers: configuredProviders,
     });
   } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
     logger.error('Error detecting configured providers:', error);
 
     // Return default state on error
-    return Response.json({
+    return successResponse({
       providers: LOCAL_PROVIDERS.map((name) => ({
         name,
         isConfigured: false,
@@ -104,6 +109,7 @@ async function configuredProvidersLoader({ context }: LoaderFunctionArgs) {
 }
 
 export const loader = withSecurity(configuredProvidersLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

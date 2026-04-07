@@ -1,6 +1,6 @@
 import { motion, type Variants } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
 import { SettingsButton } from '~/components/ui/SettingsButton';
@@ -15,7 +15,7 @@ import { cubicEasingFn } from '~/utils/easings';
 import { HistoryItem } from './HistoryItem';
 import { binDates } from './date-binning';
 import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
 import { useStore } from '@nanostores/react';
 import { sidebarStore } from '~/lib/stores/sidebar';
@@ -127,8 +127,7 @@ export const Menu = () => {
       deleteChat(item.id)
         .then(() => {
           toast.success('Chat deleted successfully', {
-            position: 'bottom-right',
-            autoClose: 3000,
+            duration: 3000,
           });
 
           // Always refresh the list
@@ -143,8 +142,7 @@ export const Menu = () => {
         .catch((error) => {
           logger.error('Failed to delete chat:', error);
           toast.error('Failed to delete conversation', {
-            position: 'bottom-right',
-            autoClose: 3000,
+            duration: 3000,
           });
 
           // Still try to reload entries in case data has changed
@@ -188,7 +186,7 @@ export const Menu = () => {
         toast.success(`${deletedCount} chat${deletedCount === 1 ? '' : 's'} deleted successfully`);
       } else {
         toast.warning(`Deleted ${deletedCount} of ${itemsToDeleteIds.length} chats. ${errors.length} failed.`, {
-          autoClose: 5000,
+          duration: 5000,
         });
       }
 
@@ -338,7 +336,7 @@ export const Menu = () => {
         animate={open ? 'open' : 'closed'}
         variants={menuVariants}
         style={{ width: '340px' }}
-        className={classNames(
+        className={cn(
           'flex selection-accent flex-col side-menu fixed top-0 h-full rounded-r-2xl',
           'bg-devonz-elements-background-depth-1 border-r border-devonz-elements-borderColor',
           'shadow-xl backdrop-blur-sm text-sm',
@@ -366,7 +364,7 @@ export const Menu = () => {
                 </a>
                 <button
                   onClick={toggleSelectionMode}
-                  className={classNames(
+                  className={cn(
                     'flex gap-1 items-center rounded-lg px-3 py-2 transition-colors',
                     selectionMode
                       ? 'bg-accent-500 text-white border border-accent-600'

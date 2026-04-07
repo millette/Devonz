@@ -1,5 +1,8 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('DiskInfo');
@@ -269,56 +272,34 @@ const getDiskInfo = (): DiskInfo[] => {
 
 async function diskInfoLoader({ request: _request }: ActionFunctionArgs) {
   try {
-    return Response.json(getDiskInfo());
+    return successResponse(getDiskInfo());
   } catch (error) {
     logger.error('Failed to get disk info:', error);
-    return Response.json(
-      [
-        {
-          filesystem: 'Unknown',
-          size: 0,
-          used: 0,
-          available: 0,
-          percentage: 0,
-          mountpoint: '/',
-          timestamp: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-      ],
-      { status: 500 },
+    return errorResponse(
+      error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, 'Failed to get disk info'),
     );
   }
 }
 
 async function diskInfoAction({ request: _request }: ActionFunctionArgs) {
   try {
-    return Response.json(getDiskInfo());
+    return successResponse(getDiskInfo());
   } catch (error) {
     logger.error('Failed to get disk info:', error);
-    return Response.json(
-      [
-        {
-          filesystem: 'Unknown',
-          size: 0,
-          used: 0,
-          available: 0,
-          percentage: 0,
-          mountpoint: '/',
-          timestamp: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Unknown error',
-        },
-      ],
-      { status: 500 },
+    return errorResponse(
+      error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, 'Failed to get disk info'),
     );
   }
 }
 
 export const loader = withSecurity(diskInfoLoader, {
+  auth: AUTH_PRESETS.public,
   allowedMethods: ['GET'],
   rateLimit: false,
 });
 
 export const action = withSecurity(diskInfoAction, {
+  auth: AUTH_PRESETS.public,
   allowedMethods: ['POST'],
   rateLimit: false,
 });

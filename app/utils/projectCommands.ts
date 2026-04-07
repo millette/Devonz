@@ -183,7 +183,7 @@ export function escapeDevonzArtifactTags(input: string) {
   // Regular expression to match devonzArtifact tags and their content
   const regex = /(<devonzArtifact[^>]*>)([\s\S]*?)(<\/devonzArtifact>)/g;
 
-  return input.replace(regex, (match, openTag, content, closeTag) => {
+  return input.replace(regex, (_match, openTag, content, closeTag) => {
     // Escape the opening tag
     const escapedOpenTag = openTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -199,7 +199,7 @@ export function escapeDevonzAActionTags(input: string) {
   // Regular expression to match devonzArtifact tags and their content
   const regex = /(<devonzAction[^>]*>)([\s\S]*?)(<\/devonzAction>)/g;
 
-  return input.replace(regex, (match, openTag, content, closeTag) => {
+  return input.replace(regex, (_match, openTag, content, closeTag) => {
     // Escape the opening tag
     const escapedOpenTag = openTag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
 

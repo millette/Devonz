@@ -4,10 +4,10 @@ import type { Message } from 'ai';
 import { detectProjectCommands, createCommandsMessage, escapeDevonzTags } from '~/utils/projectCommands';
 import { generateId } from '~/utils/fileUtils';
 import { useState } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { LoadingOverlay } from '~/components/ui/LoadingOverlay';
 
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { Button } from '~/components/ui/Button';
 import type { ImportChatFn } from '~/lib/persistence/db';
 
@@ -173,7 +173,7 @@ ${escapeDevonzTags(file.content)}
         title="Clone a repo"
         variant="default"
         size="lg"
-        className={classNames(
+        className={cn(
           'flex gap-2',
           'text-gray-300 hover:text-white',
           'border border-devonz-elements-borderColor hover:border-purple-500/50',
@@ -204,6 +204,7 @@ ${escapeDevonzTags(file.content)}
                 <h3 className="text-lg font-semibold text-white">Choose Repository Provider</h3>
                 <button
                   onClick={() => setIsDialogOpen(false)}
+                  aria-label="Close dialog"
                   className="p-2 rounded-lg bg-transparent hover:bg-devonz-elements-bg-depth-3 text-gray-400 hover:text-white transition-all duration-200 hover:scale-105 active:scale-95"
                 >
                   <div className="i-ph:x size-5 transition-transform duration-200 hover:rotate-90" />
@@ -271,6 +272,7 @@ ${escapeDevonzTags(file.content)}
                   setIsDialogOpen(false);
                   setSelectedProvider(null);
                 }}
+                aria-label="Close dialog"
                 className="p-2 rounded-lg bg-transparent hover:bg-devonz-elements-background-depth-1 dark:hover:bg-devonz-elements-background-depth-1 text-devonz-elements-textSecondary dark:text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary dark:hover:text-devonz-elements-textPrimary transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <div className="i-ph:x size-5 transition-transform duration-200 hover:rotate-90" />
@@ -307,6 +309,7 @@ ${escapeDevonzTags(file.content)}
                   setIsDialogOpen(false);
                   setSelectedProvider(null);
                 }}
+                aria-label="Close dialog"
                 className="p-2 rounded-lg bg-transparent hover:bg-devonz-elements-background-depth-1 dark:hover:bg-devonz-elements-background-depth-1 text-devonz-elements-textSecondary dark:text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary dark:hover:text-devonz-elements-textPrimary transition-all duration-200 hover:scale-105 active:scale-95"
               >
                 <div className="i-ph:x size-5 transition-transform duration-200 hover:rotate-90" />

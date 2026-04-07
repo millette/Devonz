@@ -7,9 +7,8 @@ import { themeStore } from './lib/stores/theme';
 import { stripIndents } from './utils/stripIndent';
 import { lazy, Suspense, useEffect } from 'react';
 import { useSentryUser } from './hooks/useSentryUser';
-import { cssTransition, ToastContainer } from 'react-toastify';
+import { Toaster } from 'sonner';
 
-import reactToastifyStyles from 'react-toastify/dist/ReactToastify.css?url';
 import globalStyles from './styles/index.scss?url';
 import liquidMetalStyles from './styles/liquid-metal.css?url';
 import xtermStyles from '@xterm/xterm/css/xterm.css?url';
@@ -22,11 +21,6 @@ const DndWrapper = lazy(async () => {
   }
 
   return import('./components/DndWrapper.client');
-});
-
-const toastAnimation = cssTransition({
-  enter: 'animated fadeInRight',
-  exit: 'animated fadeOutRight',
 });
 
 export const links: LinksFunction = () => [
@@ -43,7 +37,6 @@ export const links: LinksFunction = () => [
     rel: 'manifest',
     href: '/manifest.json',
   },
-  { rel: 'stylesheet', href: reactToastifyStyles },
   { rel: 'stylesheet', href: tailwindReset },
   { rel: 'stylesheet', href: globalStyles },
   { rel: 'stylesheet', href: liquidMetalStyles },
@@ -126,31 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Suspense fallback={<>{children}</>}>
             <DndWrapper>{children}</DndWrapper>
           </Suspense>
-          <ToastContainer
-            closeButton={({ closeToast }) => {
-              return (
-                <button className="Toastify__close-button" aria-label="Close notification" onClick={closeToast}>
-                  <div className="i-ph:x text-lg" />
-                </button>
-              );
-            }}
-            icon={({ type }) => {
-              switch (type) {
-                case 'success': {
-                  return <div className="i-ph:check-bold text-devonz-elements-icon-success text-2xl" />;
-                }
-                case 'error': {
-                  return <div className="i-ph:warning-circle-bold text-devonz-elements-icon-error text-2xl" />;
-                }
-              }
-
-              return undefined;
-            }}
-            position="bottom-right"
-            pauseOnFocusLoss
-            transition={toastAnimation}
-            autoClose={3000}
-          />
+          <Toaster position="bottom-right" theme="dark" richColors closeButton duration={3000} />
         </div>
         <ScrollRestoration />
         <Scripts />
@@ -165,23 +134,110 @@ export function SentryErrorBoundary() {
   const error = useRouteError();
   Sentry.captureException(error);
 
+  useEffect(() => {
+    console.error('[Devonz:RouteError]', {
+      type: isRouteErrorResponse(error) ? 'route-response' : 'exception',
+      timestamp: new Date().toISOString(),
+      ...(isRouteErrorResponse(error)
+        ? { status: error.status, statusText: error.statusText, data: error.data }
+        : error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : { raw: String(error) }),
+    });
+  }, [error]);
+
   if (isRouteErrorResponse(error)) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-devonz-elements-background-depth-1 text-devonz-elements-textPrimary">
-        <h1 className="text-4xl font-bold mb-4">
-          {error.status} {error.statusText}
-        </h1>
-        <p className="text-devonz-elements-textSecondary">{error.data}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-devonz-elements-background-depth-1 text-devonz-elements-textPrimary px-6">
+        <div className="max-w-lg w-full text-center">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+            <div className="i-ph:warning-circle-duotone text-3xl text-red-400" />
+          </div>
+          <h1 className="text-5xl font-bold mb-2 text-red-400">{error.status}</h1>
+          <h2 className="text-xl font-semibold mb-3 text-devonz-elements-textPrimary">{error.statusText}</h2>
+          <p className="text-sm text-devonz-elements-textSecondary mb-8">{error.data}</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.history.back()}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium border border-devonz-elements-borderColor bg-transparent text-devonz-elements-textPrimary hover:bg-devonz-elements-background-depth-2 transition-colors duration-200"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-5 py-2.5 rounded-lg text-sm font-medium bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text hover:bg-devonz-elements-button-primary-backgroundHover transition-colors duration-200"
+            >
+              Reload Page
+            </button>
+          </div>
+          {!import.meta.env.PROD && (
+            <details className="mt-8 text-left w-full">
+              <summary className="cursor-pointer text-xs text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary transition-colors">
+                Response Details
+              </summary>
+              <div className="mt-3 p-4 bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor rounded-lg overflow-auto">
+                <pre className="text-xs text-devonz-elements-textSecondary font-mono whitespace-pre-wrap break-words">
+                  {JSON.stringify({ status: error.status, statusText: error.statusText, data: error.data }, null, 2)}
+                </pre>
+              </div>
+            </details>
+          )}
+        </div>
       </div>
     );
   }
 
+  const errorName = error instanceof Error ? error.name : 'Error';
+  const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+  const errorStack = error instanceof Error ? error.stack : undefined;
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-devonz-elements-background-depth-1 text-devonz-elements-textPrimary">
-      <h1 className="text-4xl font-bold mb-4">Unexpected Error</h1>
-      <p className="text-devonz-elements-textSecondary">
-        {error instanceof Error ? error.message : 'An unknown error occurred'}
-      </p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-devonz-elements-background-depth-1 text-devonz-elements-textPrimary px-6">
+      <div className="max-w-lg w-full text-center">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+          <div className="i-ph:warning-circle-duotone text-3xl text-red-400" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2">Unexpected Error</h1>
+        <p className="text-sm text-devonz-elements-textSecondary mb-2">
+          {import.meta.env.PROD ? 'An unexpected error occurred.' : errorMessage}
+        </p>
+        <p className="text-xs text-devonz-elements-textTertiary mb-8">
+          {import.meta.env.PROD
+            ? 'Please try again or reload the page.'
+            : 'Something went wrong while rendering this page. Check the details below for debugging info.'}
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => window.history.back()}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium border border-devonz-elements-borderColor bg-transparent text-devonz-elements-textPrimary hover:bg-devonz-elements-background-depth-2 transition-colors duration-200"
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 rounded-lg text-sm font-medium bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text hover:bg-devonz-elements-button-primary-backgroundHover transition-colors duration-200"
+          >
+            Reload Page
+          </button>
+        </div>
+        {!import.meta.env.PROD && (
+          <details className="mt-8 text-left w-full" open>
+            <summary className="cursor-pointer text-xs text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary transition-colors">
+              Error Details
+            </summary>
+            <div className="mt-3 p-4 bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor rounded-lg overflow-auto max-h-80">
+              <p className="text-xs text-red-400 font-mono font-semibold mb-2">
+                {errorName}: {errorMessage}
+              </p>
+              {errorStack && (
+                <pre className="text-xs text-devonz-elements-textTertiary font-mono whitespace-pre-wrap break-words">
+                  {errorStack}
+                </pre>
+              )}
+            </div>
+          </details>
+        )}
+      </div>
     </div>
   );
 }
@@ -194,7 +250,7 @@ function App() {
   useEffect(() => {
     logStore.logSystem('Application initialized', {
       theme,
-      platform: navigator.platform,
+      platform: typeof navigator !== 'undefined' ? navigator.platform : 'unknown',
       userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     });
@@ -228,36 +284,57 @@ function App() {
       </a>
       <Sentry.ErrorBoundary
         showDialog={false}
-        fallback={({ error, resetError }: { error: Error; resetError: () => void }) => (
-          <div className="flex flex-col items-center justify-center p-6 rounded-lg border border-devonz-elements-borderColor bg-devonz-elements-background-depth-2 text-center min-h-[200px]">
-            <div className="i-ph:warning-circle-duotone text-4xl text-devonz-elements-button-danger-text mb-4" />
-            <h3 className="text-lg font-medium text-devonz-elements-textPrimary mb-2">Application Error</h3>
-            <p className="text-sm text-devonz-elements-textSecondary mb-4 max-w-md">An unexpected error occurred.</p>
-            <div className="flex gap-2">
-              <button
-                onClick={resetError}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text hover:bg-devonz-elements-button-primary-backgroundHover transition-colors duration-200"
-              >
-                Try Again
-              </button>
+        onError={(error) => {
+          const err = error instanceof Error ? error : new Error(String(error));
+          console.error('[Devonz:AppError]', {
+            timestamp: new Date().toISOString(),
+            name: err.name,
+            message: err.message,
+            stack: err.stack,
+          });
+        }}
+        fallback={({ error, resetError }) => (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-devonz-elements-background-depth-1 text-center px-6">
+            <div className="max-w-lg w-full">
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-6">
+                <div className="i-ph:warning-circle-duotone text-3xl text-red-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-devonz-elements-textPrimary mb-2">Application Error</h3>
+              <p className="text-sm text-devonz-elements-textSecondary mb-6">
+                An unexpected error occurred in the application. You can try again or reload the page.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={resetError}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium bg-devonz-elements-button-primary-background text-devonz-elements-button-primary-text hover:bg-devonz-elements-button-primary-backgroundHover transition-colors duration-200"
+                >
+                  Try Again
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-5 py-2.5 rounded-lg text-sm font-medium border border-devonz-elements-borderColor bg-transparent text-devonz-elements-textPrimary hover:bg-devonz-elements-background-depth-2 transition-colors duration-200"
+                >
+                  Reload Page
+                </button>
+              </div>
+              {!import.meta.env.PROD && error instanceof Error && (
+                <details className="mt-8 w-full text-left" open>
+                  <summary className="cursor-pointer text-xs text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary transition-colors">
+                    Error Details
+                  </summary>
+                  <div className="mt-3 p-4 bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor rounded-lg overflow-auto max-h-80">
+                    <p className="text-xs text-red-400 font-mono font-semibold mb-2">
+                      {error.name}: {error.message}
+                    </p>
+                    {error.stack && (
+                      <pre className="text-xs text-devonz-elements-textTertiary font-mono whitespace-pre-wrap break-words">
+                        {error.stack}
+                      </pre>
+                    )}
+                  </div>
+                </details>
+              )}
             </div>
-            {process.env.NODE_ENV === 'development' && error instanceof Error && (
-              <details className="mt-4 w-full max-w-lg text-left">
-                <summary className="cursor-pointer text-sm text-devonz-elements-textTertiary hover:text-devonz-elements-textSecondary">
-                  Error Details
-                </summary>
-                <div className="mt-2 p-3 bg-devonz-elements-background-depth-3 rounded-lg overflow-auto">
-                  <p className="text-xs text-devonz-elements-textSecondary font-mono mb-2">
-                    {error.name}: {error.message}
-                  </p>
-                  {error.stack && (
-                    <pre className="text-xs text-devonz-elements-textTertiary whitespace-pre-wrap break-words">
-                      {error.stack}
-                    </pre>
-                  )}
-                </div>
-              </details>
-            )}
           </div>
         )}
       >

@@ -1,7 +1,11 @@
 import type { ActionFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
 import { isAllowedUrl } from '~/utils/url';
-import { ApiError, handleApiError } from '~/lib/api/apiUtils';
+import { z } from 'zod';
 
 const MAX_CONTENT_LENGTH = 8000;
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5 MB cap on raw response body
@@ -12,6 +16,12 @@ const FETCH_HEADERS = {
   Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.5',
 };
+
+const logger = createScopedLogger('WebSearch');
+
+const webSearchRequestSchema = z.object({
+  url: z.string().optional(),
+});
 
 function extractTitle(html: string): string {
   const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
@@ -51,84 +61,103 @@ function extractTextContent(html: string): string {
 
 async function webSearchAction({ request }: ActionFunctionArgs) {
   if (request.method !== 'POST') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return errorResponse(new AppError(AppErrorType.FORBIDDEN, 'Method not allowed'), 405);
   }
 
-  return handleApiError(
-    'WebSearch',
-    async () => {
-      const { url } = (await request.json()) as { url?: string };
+  let rawBody: unknown;
 
-      if (!url || typeof url !== 'string') {
-        return Response.json({ error: 'URL is required' }, { status: 400 });
-      }
+  try {
+    rawBody = await request.json();
+  } catch {
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'), 400);
+  }
 
-      if (!isAllowedUrl(url)) {
-        return Response.json(
-          { error: 'URL is not allowed. Only public HTTP/HTTPS URLs are accepted.' },
-          { status: 400 },
-        );
-      }
+  const parsed = webSearchRequestSchema.safeParse(rawBody);
 
-      let response: Response;
+  if (!parsed.success) {
+    logger.warn('Validation failed:', parsed.error.flatten());
 
-      try {
-        response = await fetch(url, {
-          headers: FETCH_HEADERS,
-          signal: AbortSignal.timeout(10_000),
-        });
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'TimeoutError') {
-          throw new ApiError('Request timed out after 10 seconds', 504);
-        }
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request body'), 400);
+  }
 
-        throw error;
-      }
+  try {
+    const { url } = parsed.data;
 
-      if (!response.ok) {
-        return Response.json(
-          { error: `Failed to fetch URL: ${response.status} ${response.statusText}` },
-          { status: 502 },
-        );
-      }
+    if (!url || typeof url !== 'string') {
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'URL is required'), 400);
+    }
 
-      const contentType = response.headers.get('content-type') || '';
+    if (!isAllowedUrl(url)) {
+      return errorResponse(
+        new AppError(AppErrorType.VALIDATION, 'URL is not allowed. Only public HTTP/HTTPS URLs are accepted.'),
+        400,
+      );
+    }
 
-      if (!contentType.includes('text/html') && !contentType.includes('text/plain')) {
-        return Response.json({ error: 'URL must point to an HTML or text page' }, { status: 400 });
-      }
+    let response: Response;
 
-      const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
-
-      if (contentLength > MAX_RESPONSE_SIZE) {
-        return Response.json(
-          { error: `Response too large (${contentLength} bytes). Maximum is ${MAX_RESPONSE_SIZE}.` },
-          { status: 413 },
-        );
-      }
-
-      const html = await response.text();
-
-      if (html.length > MAX_RESPONSE_SIZE) {
-        return Response.json({ error: 'Response body exceeds maximum allowed size.' }, { status: 413 });
-      }
-
-      const title = extractTitle(html);
-      const description = extractMetaDescription(html);
-      const content = extractTextContent(html);
-
-      return Response.json({
-        success: true,
-        data: {
-          title,
-          description,
-          content: content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) + '...' : content,
-          sourceUrl: url,
-        },
+    try {
+      response = await fetch(url, {
+        headers: FETCH_HEADERS,
+        signal: AbortSignal.timeout(10_000),
       });
-    },
-    'Failed to fetch URL',
-  );
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'TimeoutError') {
+        throw new AppError(AppErrorType.TIMEOUT, 'Request timed out after 10 seconds', 504);
+      }
+
+      throw error;
+    }
+
+    if (!response.ok) {
+      return errorResponse(
+        new AppError(AppErrorType.NETWORK, `Failed to fetch URL: ${response.status} ${response.statusText}`, 502),
+      );
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+
+    if (!contentType.includes('text/html') && !contentType.includes('text/plain')) {
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'URL must point to an HTML or text page'), 400);
+    }
+
+    const contentLength = parseInt(response.headers.get('content-length') || '0', 10);
+
+    if (contentLength > MAX_RESPONSE_SIZE) {
+      return errorResponse(
+        new AppError(
+          AppErrorType.VALIDATION,
+          `Response too large (${contentLength} bytes). Maximum is ${MAX_RESPONSE_SIZE}.`,
+        ),
+        413,
+      );
+    }
+
+    const html = await response.text();
+
+    if (html.length > MAX_RESPONSE_SIZE) {
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Response body exceeds maximum allowed size.'), 413);
+    }
+
+    const title = extractTitle(html);
+    const description = extractMetaDescription(html);
+    const content = extractTextContent(html);
+
+    return successResponse({
+      title,
+      description,
+      content: content.length > MAX_CONTENT_LENGTH ? content.slice(0, MAX_CONTENT_LENGTH) + '...' : content,
+      sourceUrl: url,
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('Web search failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(webSearchAction);
+export const action = withSecurity(webSearchAction, { auth: AUTH_PRESETS.authenticated });

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ActionAlert } from '~/types/actions';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { resetTerminalErrorDetector } from '~/utils/terminalErrorDetector';
 import { resetPreviewErrorHandler } from '~/utils/previewErrorHandler';
@@ -90,10 +90,10 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <div className={classNames(' flex gap-2')}>
+              <div className={cn(' flex gap-2')}>
                 <button
                   onClick={handleAskDevonz}
-                  className={classNames(
+                  className={cn(
                     `px-2 py-1.5 rounded-md text-sm font-medium`,
                     'bg-devonz-elements-button-primary-background',
                     'hover:bg-devonz-elements-button-primary-backgroundHover',
@@ -107,7 +107,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
                 </button>
                 <button
                   onClick={clearAlert}
-                  className={classNames(
+                  className={cn(
                     `px-2 py-1.5 rounded-md text-sm font-medium`,
                     'bg-devonz-elements-button-secondary-background',
                     'hover:bg-devonz-elements-button-secondary-backgroundHover',

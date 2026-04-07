@@ -12,7 +12,7 @@ import React, {
 } from 'react';
 import { clientLazy } from '~/utils/react';
 
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { PROVIDER_LIST } from '~/utils/constants';
 import { getApiKeysFromCookies } from './APIKeyManager';
 import { encryptApiKeyValue, isEncryptedValue } from '~/lib/api/encrypt-value';
@@ -39,7 +39,7 @@ import type { ElementInfo } from '~/components/workbench/inspector-types';
 import { ResizeHandle } from '~/components/ui/ResizeHandle';
 import { PanelErrorBoundary } from '~/components/ui/PanelErrorBoundary';
 import { createScopedLogger } from '~/utils/logger';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { receiveServerValidation } from '~/lib/services/autoFixService';
 
 const Workbench = clientLazy(() =>
@@ -106,6 +106,7 @@ interface BaseChatProps {
   setSelectedElement?: (element: ElementInfo | null) => void;
   addToolResult?: ({ toolCallId, result }: { toolCallId: string; result: unknown }) => void;
   onWebSearchResult?: (result: string) => void;
+  ref?: React.Ref<HTMLDivElement>;
 }
 
 /* ─── Isolated inspector slot (avoids re-rendering the entire chat) ── */
@@ -129,586 +130,594 @@ InspectorPanelSlot.displayName = 'InspectorPanelSlot';
 /* ─── Main component ──────────────────────────────────────────────── */
 
 export const BaseChat = React.memo(
-  React.forwardRef<HTMLDivElement, BaseChatProps>(
-    (
-      {
-        textareaRef,
-        showChat = true,
-        chatStarted = false,
-        isStreaming = false,
-        onStreamingChange,
-        model,
-        setModel,
-        provider,
-        setProvider,
-        providerList,
-        input = '',
-        enhancingPrompt,
-        handleInputChange,
+  ({
+    textareaRef,
+    showChat = true,
+    chatStarted = false,
+    isStreaming = false,
+    onStreamingChange,
+    model,
+    setModel,
+    provider,
+    setProvider,
+    providerList,
+    input = '',
+    enhancingPrompt,
+    handleInputChange,
 
-        // promptEnhanced,
-        enhancePrompt,
-        sendMessage,
-        handleStop,
-        importChat,
-        exportChat,
-        uploadedFiles = [],
-        setUploadedFiles,
-        imageDataList = [],
-        setImageDataList,
-        messages,
-        actionAlert,
-        clearAlert,
-        deployAlert,
-        clearDeployAlert,
-        supabaseAlert,
-        clearSupabaseAlert,
-        llmErrorAlert,
-        clearLlmErrorAlert,
-        data,
-        chatMode,
-        setChatMode,
-        planMode,
-        setPlanMode,
-        append,
-        designScheme,
-        setDesignScheme,
-        selectedElement,
-        setSelectedElement,
-        addToolResult = () => {
-          throw new Error('addToolResult not implemented');
-        },
-        onWebSearchResult,
+    // promptEnhanced,
+    enhancePrompt,
+    sendMessage,
+    handleStop,
+    importChat,
+    exportChat,
+    uploadedFiles = [],
+    setUploadedFiles,
+    imageDataList = [],
+    setImageDataList,
+    messages,
+    actionAlert,
+    clearAlert,
+    deployAlert,
+    clearDeployAlert,
+    supabaseAlert,
+    clearSupabaseAlert,
+    llmErrorAlert,
+    clearLlmErrorAlert,
+    data,
+    chatMode,
+    setChatMode,
+    planMode,
+    setPlanMode,
+    append,
+    designScheme,
+    setDesignScheme,
+    selectedElement,
+    setSelectedElement,
+    addToolResult = () => {
+      throw new Error('addToolResult not implemented');
+    },
+    onWebSearchResult,
+    ref,
+  }: BaseChatProps) => {
+    const TEXTAREA_MAX_HEIGHT = useMemo(() => (chatStarted ? 400 : 200), [chatStarted]);
+    const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
+    const [modelList, setModelList] = useState<ModelInfo[]>([]);
+    const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+    const [transcript, setTranscript] = useState('');
+    const [isModelLoading, setIsModelLoading] = useState<string | undefined>('all');
+    const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
+    const processedEventIdsRef = useRef(new Set<string>());
+    const expoUrl = useStore(expoUrlAtom);
+    const showWorkbench = useStore(workbenchStore.showWorkbench);
+    const workbenchWidth = useStore(workbenchStore.workbenchWidth);
+    const inspectorActive = useStore(inspectorModeAtom) !== 'off';
+    const [qrModalOpen, setQrModalOpen] = useState(false);
+    const [isResizing, setIsResizing] = useState(false);
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    const handleResize = useCallback(
+      (deltaX: number) => {
+        // Negative delta means dragging left (making workbench bigger)
+        const newWidth = workbenchWidth - deltaX;
+        workbenchStore.setWorkbenchWidth(newWidth);
       },
-      ref,
-    ) => {
-      const TEXTAREA_MAX_HEIGHT = useMemo(() => (chatStarted ? 400 : 200), [chatStarted]);
-      const [apiKeys, setApiKeys] = useState<Record<string, string>>(getApiKeysFromCookies());
-      const [modelList, setModelList] = useState<ModelInfo[]>([]);
-      const [isModelSettingsCollapsed, setIsModelSettingsCollapsed] = useState(false);
-      const [isListening, setIsListening] = useState(false);
-      const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
-      const [transcript, setTranscript] = useState('');
-      const [isModelLoading, setIsModelLoading] = useState<string | undefined>('all');
-      const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
-      const processedEventIdsRef = useRef(new Set<string>());
-      const expoUrl = useStore(expoUrlAtom);
-      const showWorkbench = useStore(workbenchStore.showWorkbench);
-      const workbenchWidth = useStore(workbenchStore.workbenchWidth);
-      const inspectorActive = useStore(inspectorModeAtom) !== 'off';
-      const [qrModalOpen, setQrModalOpen] = useState(false);
-      const [isResizing, setIsResizing] = useState(false);
-      const [isHydrated, setIsHydrated] = useState(false);
+      [workbenchWidth],
+    );
 
-      const handleResize = useCallback(
-        (deltaX: number) => {
-          // Negative delta means dragging left (making workbench bigger)
-          const newWidth = workbenchWidth - deltaX;
-          workbenchStore.setWorkbenchWidth(newWidth);
-        },
-        [workbenchWidth],
-      );
+    useEffect(() => {
+      setIsHydrated(true);
+    }, []);
 
-      useEffect(() => {
-        setIsHydrated(true);
-      }, []);
+    useEffect(() => {
+      if (expoUrl) {
+        setQrModalOpen(true);
+      }
+    }, [expoUrl]);
 
-      useEffect(() => {
-        if (expoUrl) {
-          setQrModalOpen(true);
-        }
-      }, [expoUrl]);
+    useEffect(() => {
+      if (data) {
+        const progressList = data.filter(
+          (x) =>
+            typeof x === 'object' && x !== null && 'type' in x && (x as Record<string, unknown>).type === 'progress',
+        ) as ProgressAnnotation[];
+        setProgressAnnotations(progressList);
 
-      useEffect(() => {
-        if (data) {
-          const progressList = data.filter(
-            (x) =>
-              typeof x === 'object' && x !== null && 'type' in x && (x as Record<string, unknown>).type === 'progress',
-          ) as ProgressAnnotation[];
-          setProgressAnnotations(progressList);
-
-          // Process devonz_event entries (blueprint errors + error_validation)
-          for (const item of data) {
-            if (typeof item !== 'object' || item === null || !('devonz_event' in item)) {
-              continue;
-            }
-
-            const evt = (item as Record<string, unknown>).devonz_event;
-
-            if (typeof evt !== 'object' || evt === null || !('type' in evt)) {
-              continue;
-            }
-
-            const event = evt as Record<string, unknown>;
-            const eventKey = `${event.type}-${event.timestamp ?? ''}-${event.code ?? ''}-${event.fingerprint ?? ''}`;
-
-            if (processedEventIdsRef.current.has(eventKey)) {
-              continue;
-            }
-
-            processedEventIdsRef.current.add(eventKey);
-
-            if (event.type === 'error' && typeof event.message === 'string') {
-              const recoverable = event.recoverable === true;
-              toast.warning(event.message, {
-                autoClose: recoverable ? 5000 : false,
-              });
-              logger.warn('Blueprint error event:', event.message);
-            }
-
-            if (
-              event.type === 'error_validation' &&
-              typeof event.category === 'string' &&
-              typeof event.fingerprint === 'string' &&
-              typeof event.suggestion === 'string' &&
-              typeof event.loopDetected === 'boolean'
-            ) {
-              receiveServerValidation({
-                category: event.category as 'import-resolution' | 'syntax' | 'type' | 'runtime' | 'build' | 'unknown',
-                fingerprint: event.fingerprint,
-                suggestion: event.suggestion,
-                loopDetected: event.loopDetected,
-              });
-              logger.debug('Processed error_validation event:', event.fingerprint);
-            }
+        // Process devonz_event entries (blueprint errors + error_validation)
+        for (const item of data) {
+          if (typeof item !== 'object' || item === null || !('devonz_event' in item)) {
+            continue;
           }
 
-          workbenchStore.processDataStreamItems(data);
-        } else {
-          setProgressAnnotations([]);
-          processedEventIdsRef.current.clear();
-        }
-      }, [data]);
-      useEffect(() => {
-        logger.debug(transcript);
-      }, [transcript]);
+          const evt = (item as Record<string, unknown>).devonz_event;
 
-      useEffect(() => {
-        onStreamingChange?.(isStreaming);
-      }, [isStreaming, onStreamingChange]);
-
-      useEffect(() => {
-        if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-
-          recognition.onresult = (event) => {
-            const transcript = Array.from(event.results)
-              .map((result) => result[0])
-              .map((result) => result.transcript)
-              .join('');
-
-            setTranscript(transcript);
-
-            if (handleInputChange) {
-              const syntheticEvent = {
-                target: { value: transcript },
-              } as React.ChangeEvent<HTMLTextAreaElement>;
-              handleInputChange(syntheticEvent);
-            }
-          };
-
-          recognition.onerror = (event) => {
-            logger.error('Speech recognition error:', event.error);
-            setIsListening(false);
-          };
-
-          setRecognition(recognition);
-        }
-      }, []);
-
-      useEffect(() => {
-        if (typeof window !== 'undefined') {
-          let parsedApiKeys: Record<string, string> | undefined = {};
-
-          try {
-            const rawKeys = getApiKeysFromCookies();
-
-            /*
-             * Encrypted values should not be surfaced in the UI state — the
-             * server reads them directly from the cookie.  Replace encrypted
-             * entries with empty strings so the UI knows a key is "set" only
-             * through the provider key-status check, not via the raw value.
-             */
-            parsedApiKeys = {};
-
-            for (const [k, v] of Object.entries(rawKeys)) {
-              parsedApiKeys[k] = isEncryptedValue(v) ? '' : v;
-            }
-
-            setApiKeys(parsedApiKeys);
-          } catch (error) {
-            logger.error('Error loading API keys from cookies:', error);
-            Cookies.remove('apiKeys');
+          if (typeof evt !== 'object' || evt === null || !('type' in evt)) {
+            continue;
           }
 
-          setIsModelLoading('all');
-          fetch('/api/models')
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error(`Model fetch failed: ${response.status}`);
-              }
+          const event = evt as Record<string, unknown>;
+          const eventKey = `${event.type}-${event.timestamp ?? ''}-${event.code ?? ''}-${event.fingerprint ?? ''}`;
 
-              return response.json();
-            })
-            .then((data) => {
-              const typedData = data as { modelList?: ModelInfo[] };
-              setModelList(Array.isArray(typedData.modelList) ? typedData.modelList : []);
-            })
-            .catch((error) => {
-              logger.error('Error fetching model list:', error);
-            })
-            .finally(() => {
-              setIsModelLoading(undefined);
+          if (processedEventIdsRef.current.has(eventKey)) {
+            continue;
+          }
+
+          processedEventIdsRef.current.add(eventKey);
+
+          // Cap the Set size to prevent unbounded memory growth during long sessions
+          if (processedEventIdsRef.current.size > 1000) {
+            const entries = Array.from(processedEventIdsRef.current);
+            processedEventIdsRef.current = new Set(entries.slice(-1000));
+          }
+
+          if (event.type === 'error' && typeof event.message === 'string') {
+            const recoverable = event.recoverable === true;
+            toast.warning(event.message, {
+              duration: recoverable ? 5000 : Infinity,
             });
-        }
-
-        // Fetch models once on mount — provider/key changes are handled by onApiKeysChange
-      }, []);
-
-      const onApiKeysChange = useCallback(
-        async (providerName: string, apiKey: string) => {
-          const newApiKeys = { ...apiKeys, [providerName]: apiKey };
-          setApiKeys(newApiKeys);
-
-          // Encrypt the key before storing in cookies
-          const encryptedKey = await encryptApiKeyValue(apiKey);
-          const cookieKeys = { ...apiKeys, [providerName]: encryptedKey };
-
-          Cookies.set('apiKeys', JSON.stringify(cookieKeys), {
-            secure: window.location.protocol === 'https:',
-            sameSite: 'strict',
-            expires: 30,
-          });
-
-          setIsModelLoading(providerName);
-
-          let providerModels: ModelInfo[] = [];
-
-          try {
-            const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`);
-
-            if (!response.ok) {
-              throw new Error(`Provider model fetch failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const parsed = (data as { modelList?: ModelInfo[] }).modelList;
-            providerModels = Array.isArray(parsed) ? parsed : [];
-          } catch (error) {
-            logger.error('Error loading dynamic models for:', providerName, error);
+            logger.warn('Blueprint error event:', event.message);
           }
 
-          // Only update models for the specific provider
-          setModelList((prevModels) => {
-            const otherModels = prevModels.filter((model) => model.provider !== providerName);
-            return [...otherModels, ...providerModels];
-          });
-          setIsModelLoading(undefined);
-        },
-        [apiKeys],
-      );
-
-      const startListening = useCallback(() => {
-        if (recognition) {
-          recognition.start();
-          setIsListening(true);
-        }
-      }, [recognition]);
-
-      const stopListening = useCallback(() => {
-        if (recognition) {
-          recognition.stop();
-          setIsListening(false);
-        }
-      }, [recognition]);
-
-      const handleSendMessage = useCallback(
-        (event?: React.UIEvent, messageInput?: string) => {
-          if (sendMessage) {
-            sendMessage(event, messageInput);
-            setSelectedElement?.(null);
-
-            if (recognition) {
-              recognition.abort(); // Stop current recognition
-              setTranscript(''); // Clear transcript
-              setIsListening(false);
-
-              // Clear the input by triggering handleInputChange with empty value
-              if (handleInputChange) {
-                const syntheticEvent = {
-                  target: { value: '' },
-                } as React.ChangeEvent<HTMLTextAreaElement>;
-                handleInputChange(syntheticEvent);
-              }
-            }
+          if (
+            event.type === 'error_validation' &&
+            typeof event.category === 'string' &&
+            typeof event.fingerprint === 'string' &&
+            typeof event.suggestion === 'string' &&
+            typeof event.loopDetected === 'boolean'
+          ) {
+            receiveServerValidation({
+              category: event.category as 'import-resolution' | 'syntax' | 'type' | 'runtime' | 'build' | 'unknown',
+              fingerprint: event.fingerprint,
+              suggestion: event.suggestion,
+              loopDetected: event.loopDetected,
+            });
+            logger.debug('Processed error_validation event:', event.fingerprint);
           }
-        },
-        [sendMessage, setSelectedElement, recognition, handleInputChange],
-      );
+        }
 
-      const handleFileUpload = useCallback(() => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
+        workbenchStore.processDataStreamItems(data);
+      } else {
+        setProgressAnnotations([]);
+        processedEventIdsRef.current.clear();
+      }
+    }, [data]);
+    useEffect(() => {
+      logger.debug(transcript);
+    }, [transcript]);
 
-        input.onchange = async (e) => {
-          const file = (e.target as HTMLInputElement).files?.[0];
+    useEffect(() => {
+      onStreamingChange?.(isStreaming);
+    }, [isStreaming, onStreamingChange]);
 
-          if (file) {
-            const reader = new FileReader();
+    const handleInputChangeRef = useRef(handleInputChange);
 
-            reader.onload = (e) => {
-              const base64Image = e.target?.result as string;
-              setUploadedFiles?.([...uploadedFiles, file]);
-              setImageDataList?.([...imageDataList, base64Image]);
-            };
-            reader.readAsDataURL(file);
+    useEffect(() => {
+      handleInputChangeRef.current = handleInputChange;
+    }, [handleInputChange]);
+
+    useEffect(() => {
+      if (typeof window !== 'undefined' && ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event) => {
+          const transcript = Array.from(event.results)
+            .map((result) => result[0])
+            .map((result) => result.transcript)
+            .join('');
+
+          setTranscript(transcript);
+
+          if (handleInputChangeRef.current) {
+            const syntheticEvent = {
+              target: { value: transcript },
+            } as React.ChangeEvent<HTMLTextAreaElement>;
+            handleInputChangeRef.current(syntheticEvent);
           }
         };
 
-        input.click();
-      }, [uploadedFiles, imageDataList, setUploadedFiles, setImageDataList]);
+        recognition.onerror = (event) => {
+          logger.error('Speech recognition error:', event.error);
+          setIsListening(false);
+        };
 
-      const handlePaste = useCallback(
-        async (e: React.ClipboardEvent) => {
-          const items = e.clipboardData?.items;
+        setRecognition(recognition);
+      }
+    }, []);
 
-          if (!items) {
-            return;
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        let parsedApiKeys: Record<string, string> | undefined = {};
+
+        try {
+          const rawKeys = getApiKeysFromCookies();
+
+          /*
+           * Encrypted values should not be surfaced in the UI state — the
+           * server reads them directly from the cookie.  Replace encrypted
+           * entries with empty strings so the UI knows a key is "set" only
+           * through the provider key-status check, not via the raw value.
+           */
+          parsedApiKeys = {};
+
+          for (const [k, v] of Object.entries(rawKeys)) {
+            parsedApiKeys[k] = isEncryptedValue(v) ? '' : v;
           }
 
-          for (const item of items) {
-            if (item.type.startsWith('image/')) {
-              e.preventDefault();
+          setApiKeys(parsedApiKeys);
+        } catch (error) {
+          logger.error('Error loading API keys from cookies:', error);
+          Cookies.remove('apiKeys');
+        }
 
-              const file = item.getAsFile();
+        setIsModelLoading('all');
+        fetch('/api/models')
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`Model fetch failed: ${response.status}`);
+            }
 
-              if (file) {
-                const reader = new FileReader();
+            return response.json();
+          })
+          .then((data) => {
+            const typedData = (data as { data?: { modelList?: ModelInfo[] } }).data;
+            setModelList(Array.isArray(typedData?.modelList) ? typedData.modelList : []);
+          })
+          .catch((error) => {
+            logger.error('Error fetching model list:', error);
+          })
+          .finally(() => {
+            setIsModelLoading(undefined);
+          });
+      }
 
-                reader.onload = (e) => {
-                  const base64Image = e.target?.result as string;
-                  setUploadedFiles?.([...uploadedFiles, file]);
-                  setImageDataList?.([...imageDataList, base64Image]);
-                };
-                reader.readAsDataURL(file);
-              }
+      // Fetch models once on mount — provider/key changes are handled by onApiKeysChange
+    }, []);
 
-              break;
+    const onApiKeysChange = useCallback(
+      async (providerName: string, apiKey: string) => {
+        const newApiKeys = { ...apiKeys, [providerName]: apiKey };
+        setApiKeys(newApiKeys);
+
+        // Encrypt the key before storing in cookies
+        const encryptedKey = await encryptApiKeyValue(apiKey);
+        const cookieKeys = { ...apiKeys, [providerName]: encryptedKey };
+
+        Cookies.set('apiKeys', JSON.stringify(cookieKeys), {
+          secure: window.location.protocol === 'https:',
+          sameSite: 'strict',
+          expires: 30,
+        });
+
+        setIsModelLoading(providerName);
+
+        let providerModels: ModelInfo[] = [];
+
+        try {
+          const response = await fetch(`/api/models/${encodeURIComponent(providerName)}`);
+
+          if (!response.ok) {
+            throw new Error(`Provider model fetch failed: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const parsed = (data as { data?: { modelList?: ModelInfo[] } }).data?.modelList;
+          providerModels = Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          logger.error('Error loading dynamic models for:', providerName, error);
+        }
+
+        // Only update models for the specific provider
+        setModelList((prevModels) => {
+          const otherModels = prevModels.filter((model) => model.provider !== providerName);
+          return [...otherModels, ...providerModels];
+        });
+        setIsModelLoading(undefined);
+      },
+      [apiKeys],
+    );
+
+    const startListening = useCallback(() => {
+      if (recognition) {
+        recognition.start();
+        setIsListening(true);
+      }
+    }, [recognition]);
+
+    const stopListening = useCallback(() => {
+      if (recognition) {
+        recognition.stop();
+        setIsListening(false);
+      }
+    }, [recognition]);
+
+    const handleSendMessage = useCallback(
+      (event?: React.UIEvent, messageInput?: string) => {
+        if (sendMessage) {
+          sendMessage(event, messageInput);
+          setSelectedElement?.(null);
+
+          if (recognition) {
+            recognition.abort(); // Stop current recognition
+            setTranscript(''); // Clear transcript
+            setIsListening(false);
+
+            // Clear the input by triggering handleInputChange with empty value
+            if (handleInputChange) {
+              const syntheticEvent = {
+                target: { value: '' },
+              } as React.ChangeEvent<HTMLTextAreaElement>;
+              handleInputChange(syntheticEvent);
             }
           }
-        },
-        [uploadedFiles, imageDataList, setUploadedFiles, setImageDataList],
-      );
+        }
+      },
+      [sendMessage, setSelectedElement, recognition, handleInputChange],
+    );
 
-      const baseChat = (
-        <div
-          ref={ref}
-          className={classNames(styles.BaseChat, 'relative flex flex-1 min-h-0 w-full overflow-hidden')}
-          data-chat-visible={isHydrated ? String(showChat) : undefined}
-          suppressHydrationWarning
-        >
-          <Suspense fallback={null}>
-            <Menu />
-          </Suspense>
-          <div className="flex flex-row w-full h-full min-w-0 overflow-hidden">
-            {/* Chat Panel - hidden when showChat is false and workbench is visible */}
-            {showChat && (
-              <div
-                className={classNames(styles.Chat, 'flex flex-col flex-grow min-w-[300px] min-h-0 h-full', {
-                  'select-none': isResizing,
-                  'overflow-hidden': chatStarted || inspectorActive,
-                  'overflow-y-auto': !chatStarted && !inspectorActive,
-                })}
-              >
-                {/* Inspector Panel replaces chat content when active */}
-                {inspectorActive ? (
-                  <InspectorPanelSlot />
-                ) : (
-                  <>
-                    {!chatStarted && (
-                      <div id="intro" className="mt-[8vh] max-w-2xl mx-auto text-center px-4 lg:px-0 relative">
-                        {/* Liquid Metal 3D Text */}
-                        <div className="liquid-metal-container">
-                          <h1 className="liquid-metal-text" aria-label="Devonz">
-                            Devonz
-                          </h1>
-                        </div>
+    const handleFileUpload = useCallback(() => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
 
-                        {/* Subtitle below the 3D text */}
-                        <p className="text-base lg:text-lg text-[#8badd4] animate-fade-in animation-delay-200">
-                          Build anything with AI. Just describe what you want.
-                        </p>
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+
+        if (file) {
+          const reader = new FileReader();
+
+          reader.onload = (e) => {
+            const base64Image = e.target?.result as string;
+            setUploadedFiles?.([...uploadedFiles, file]);
+            setImageDataList?.([...imageDataList, base64Image]);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+
+      input.click();
+    }, [uploadedFiles, imageDataList, setUploadedFiles, setImageDataList]);
+
+    const handlePaste = useCallback(
+      async (e: React.ClipboardEvent) => {
+        const items = e.clipboardData?.items;
+
+        if (!items) {
+          return;
+        }
+
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+
+            const file = item.getAsFile();
+
+            if (file) {
+              const reader = new FileReader();
+
+              reader.onload = (e) => {
+                const base64Image = e.target?.result as string;
+                setUploadedFiles?.([...uploadedFiles, file]);
+                setImageDataList?.([...imageDataList, base64Image]);
+              };
+              reader.readAsDataURL(file);
+            }
+
+            break;
+          }
+        }
+      },
+      [uploadedFiles, imageDataList, setUploadedFiles, setImageDataList],
+    );
+
+    const baseChat = (
+      <div
+        ref={ref}
+        className={cn(styles.BaseChat, 'relative flex flex-1 min-h-0 w-full overflow-hidden')}
+        data-chat-visible={isHydrated ? String(showChat) : undefined}
+        suppressHydrationWarning
+      >
+        <Suspense fallback={null}>
+          <Menu />
+        </Suspense>
+        <div className="flex flex-row w-full h-full min-w-0 overflow-hidden">
+          {/* Chat Panel - hidden when showChat is false and workbench is visible */}
+          {showChat && (
+            <div
+              className={cn(styles.Chat, 'flex flex-col flex-grow min-w-[300px] min-h-0 h-full', {
+                'select-none': isResizing,
+                'overflow-hidden': chatStarted || inspectorActive,
+                'overflow-y-auto': !chatStarted && !inspectorActive,
+              })}
+            >
+              {/* Inspector Panel replaces chat content when active */}
+              {inspectorActive ? (
+                <InspectorPanelSlot />
+              ) : (
+                <>
+                  {!chatStarted && (
+                    <div id="intro" className="mt-[8vh] max-w-2xl mx-auto text-center px-4 lg:px-0 relative">
+                      {/* Liquid Metal 3D Text */}
+                      <div className="liquid-metal-container">
+                        <h1 className="liquid-metal-text" aria-label="Devonz">
+                          Devonz
+                        </h1>
                       </div>
-                    )}
-                    <StickToBottom
-                      className={classNames('pt-6 px-2 sm:px-6 relative', {
-                        'h-full flex flex-col modern-scrollbar': chatStarted,
+
+                      {/* Subtitle below the 3D text */}
+                      <p className="text-base lg:text-lg text-[#8badd4] animate-fade-in animation-delay-200">
+                        Build anything with AI. Just describe what you want.
+                      </p>
+                    </div>
+                  )}
+                  <StickToBottom
+                    className={cn('pt-6 px-2 sm:px-6 relative', {
+                      'h-full flex flex-col modern-scrollbar': chatStarted,
+                    })}
+                    resize="smooth"
+                    initial="smooth"
+                  >
+                    <StickToBottom.Content className="flex flex-col gap-4 relative ">
+                      {chatStarted ? (
+                        <Suspense>
+                          <Messages
+                            key="messages-component"
+                            className="flex flex-col w-full flex-1 max-w-chat pb-4 mx-auto z-1"
+                            messages={messages}
+                            isStreaming={isStreaming}
+                            append={append}
+                            chatMode={chatMode}
+                            setChatMode={setChatMode}
+                            provider={provider}
+                            model={model}
+                            addToolResult={addToolResult}
+                          />
+                        </Suspense>
+                      ) : null}
+                      <ScrollToBottom />
+                    </StickToBottom.Content>
+                    <div
+                      className={cn('my-auto flex flex-col gap-2 w-full max-w-chat mx-auto z-prompt mb-6', {
+                        'sticky bottom-2': chatStarted,
                       })}
-                      resize="smooth"
-                      initial="smooth"
                     >
-                      <StickToBottom.Content className="flex flex-col gap-4 relative ">
-                        {chatStarted ? (
-                          <Suspense>
-                            <Messages
-                              key="messages-component"
-                              className="flex flex-col w-full flex-1 max-w-chat pb-4 mx-auto z-1"
-                              messages={messages}
-                              isStreaming={isStreaming}
-                              append={append}
-                              chatMode={chatMode}
-                              setChatMode={setChatMode}
-                              provider={provider}
-                              model={model}
-                              addToolResult={addToolResult}
+                      <div className="flex flex-col gap-2">
+                        <Suspense>
+                          {deployAlert && (
+                            <DeployChatAlert
+                              alert={deployAlert}
+                              clearAlert={() => clearDeployAlert?.()}
+                              postMessage={(message: string | undefined) => {
+                                sendMessage?.(undefined, message);
+                                clearSupabaseAlert?.();
+                              }}
                             />
-                          </Suspense>
-                        ) : null}
-                        <ScrollToBottom />
-                      </StickToBottom.Content>
-                      <div
-                        className={classNames('my-auto flex flex-col gap-2 w-full max-w-chat mx-auto z-prompt mb-6', {
-                          'sticky bottom-2': chatStarted,
-                        })}
-                      >
-                        <div className="flex flex-col gap-2">
-                          <Suspense>
-                            {deployAlert && (
-                              <DeployChatAlert
-                                alert={deployAlert}
-                                clearAlert={() => clearDeployAlert?.()}
-                                postMessage={(message: string | undefined) => {
-                                  sendMessage?.(undefined, message);
-                                  clearSupabaseAlert?.();
-                                }}
-                              />
-                            )}
-                            {supabaseAlert && (
-                              <SupabaseChatAlert
-                                alert={supabaseAlert}
-                                clearAlert={() => clearSupabaseAlert?.()}
-                                postMessage={(message) => {
-                                  sendMessage?.(undefined, message);
-                                  clearSupabaseAlert?.();
-                                }}
-                              />
-                            )}
-                            {actionAlert && (
-                              <ChatAlert
-                                alert={actionAlert}
-                                clearAlert={() => clearAlert?.()}
-                                postMessage={(message) => {
-                                  sendMessage?.(undefined, message);
-                                  clearAlert?.();
-                                }}
-                              />
-                            )}
-                            {llmErrorAlert && (
-                              <LlmErrorAlert alert={llmErrorAlert} clearAlert={() => clearLlmErrorAlert?.()} />
-                            )}
-                          </Suspense>
+                          )}
+                          {supabaseAlert && (
+                            <SupabaseChatAlert
+                              alert={supabaseAlert}
+                              clearAlert={() => clearSupabaseAlert?.()}
+                              postMessage={(message) => {
+                                sendMessage?.(undefined, message);
+                                clearSupabaseAlert?.();
+                              }}
+                            />
+                          )}
+                          {actionAlert && (
+                            <ChatAlert
+                              alert={actionAlert}
+                              clearAlert={() => clearAlert?.()}
+                              postMessage={(message) => {
+                                sendMessage?.(undefined, message);
+                                clearAlert?.();
+                              }}
+                            />
+                          )}
+                          {llmErrorAlert && (
+                            <LlmErrorAlert alert={llmErrorAlert} clearAlert={() => clearLlmErrorAlert?.()} />
+                          )}
+                        </Suspense>
+                      </div>
+                      {progressAnnotations && <ProgressCompilation data={progressAnnotations} />}
+
+                      {/* Action Buttons Row - Above ChatBox */}
+                      {!chatStarted && (
+                        <div className="flex justify-center gap-3 mb-4 max-w-chat mx-auto w-full">
+                          <LeftActionPanel importChat={importChat} />
                         </div>
-                        {progressAnnotations && <ProgressCompilation data={progressAnnotations} />}
+                      )}
 
-                        {/* Action Buttons Row - Above ChatBox */}
-                        {!chatStarted && (
-                          <div className="flex justify-center gap-3 mb-4 max-w-chat mx-auto w-full">
-                            <LeftActionPanel importChat={importChat} />
-                          </div>
-                        )}
-
-                        {/* 3-Column Layout Wrapper */}
-                        <div className="flex items-center justify-center gap-4 lg:gap-6 w-full">
-                          {/* Center Column - ChatBox */}
-                          <div className="w-full max-w-chat">
-                            <ChatBox
-                              isModelSettingsCollapsed={isModelSettingsCollapsed}
-                              setIsModelSettingsCollapsed={setIsModelSettingsCollapsed}
-                              provider={provider}
-                              setProvider={setProvider}
-                              providerList={providerList || (PROVIDER_LIST as ProviderInfo[])}
-                              model={model}
-                              setModel={setModel}
-                              modelList={modelList}
-                              apiKeys={apiKeys}
-                              isModelLoading={isModelLoading}
-                              onApiKeysChange={onApiKeysChange}
-                              uploadedFiles={uploadedFiles}
-                              setUploadedFiles={setUploadedFiles}
-                              imageDataList={imageDataList}
-                              setImageDataList={setImageDataList}
-                              textareaRef={textareaRef}
-                              input={input}
-                              handleInputChange={handleInputChange}
-                              handlePaste={handlePaste}
-                              TEXTAREA_MIN_HEIGHT={TEXTAREA_MIN_HEIGHT}
-                              TEXTAREA_MAX_HEIGHT={TEXTAREA_MAX_HEIGHT}
-                              isStreaming={isStreaming}
-                              handleStop={handleStop}
-                              handleSendMessage={handleSendMessage}
-                              enhancingPrompt={enhancingPrompt}
-                              enhancePrompt={enhancePrompt}
-                              isListening={isListening}
-                              startListening={startListening}
-                              stopListening={stopListening}
-                              chatStarted={chatStarted}
-                              exportChat={exportChat}
-                              qrModalOpen={qrModalOpen}
-                              setQrModalOpen={setQrModalOpen}
-                              handleFileUpload={handleFileUpload}
-                              chatMode={chatMode}
-                              setChatMode={setChatMode}
-                              planMode={planMode}
-                              setPlanMode={setPlanMode}
-                              designScheme={designScheme}
-                              setDesignScheme={setDesignScheme}
-                              selectedElement={selectedElement}
-                              setSelectedElement={setSelectedElement}
-                              onWebSearchResult={onWebSearchResult}
-                            />
-                          </div>
+                      {/* 3-Column Layout Wrapper */}
+                      <div className="flex items-center justify-center gap-4 lg:gap-6 w-full">
+                        {/* Center Column - ChatBox */}
+                        <div className="w-full max-w-chat">
+                          <ChatBox
+                            isModelSettingsCollapsed={isModelSettingsCollapsed}
+                            setIsModelSettingsCollapsed={setIsModelSettingsCollapsed}
+                            provider={provider}
+                            setProvider={setProvider}
+                            providerList={providerList || (PROVIDER_LIST as ProviderInfo[])}
+                            model={model}
+                            setModel={setModel}
+                            modelList={modelList}
+                            apiKeys={apiKeys}
+                            isModelLoading={isModelLoading}
+                            onApiKeysChange={onApiKeysChange}
+                            uploadedFiles={uploadedFiles}
+                            setUploadedFiles={setUploadedFiles}
+                            imageDataList={imageDataList}
+                            setImageDataList={setImageDataList}
+                            textareaRef={textareaRef}
+                            input={input}
+                            handleInputChange={handleInputChange}
+                            handlePaste={handlePaste}
+                            TEXTAREA_MIN_HEIGHT={TEXTAREA_MIN_HEIGHT}
+                            TEXTAREA_MAX_HEIGHT={TEXTAREA_MAX_HEIGHT}
+                            isStreaming={isStreaming}
+                            handleStop={handleStop}
+                            handleSendMessage={handleSendMessage}
+                            enhancingPrompt={enhancingPrompt}
+                            enhancePrompt={enhancePrompt}
+                            isListening={isListening}
+                            startListening={startListening}
+                            stopListening={stopListening}
+                            chatStarted={chatStarted}
+                            exportChat={exportChat}
+                            qrModalOpen={qrModalOpen}
+                            setQrModalOpen={setQrModalOpen}
+                            handleFileUpload={handleFileUpload}
+                            chatMode={chatMode}
+                            setChatMode={setChatMode}
+                            planMode={planMode}
+                            setPlanMode={setPlanMode}
+                            designScheme={designScheme}
+                            setDesignScheme={setDesignScheme}
+                            selectedElement={selectedElement}
+                            setSelectedElement={setSelectedElement}
+                            onWebSearchResult={onWebSearchResult}
+                          />
                         </div>
                       </div>
-                    </StickToBottom>
-                    {/* Template Gallery - Below Example Prompts */}
-                    {!chatStarted && <TemplateSection />}
-                  </>
-                )}
-              </div>
-            )}
+                    </div>
+                  </StickToBottom>
+                  {/* Template Gallery - Below Example Prompts */}
+                  {!chatStarted && <TemplateSection />}
+                </>
+              )}
+            </div>
+          )}
 
-            {/* Resize Handle - only show when workbench is visible and chat is shown */}
-            {chatStarted && showWorkbench && showChat && (
-              <ResizeHandle
-                onResize={handleResize}
-                onResizeStart={() => setIsResizing(true)}
-                onResizeEnd={() => setIsResizing(false)}
+          {/* Resize Handle - only show when workbench is visible and chat is shown */}
+          {chatStarted && showWorkbench && showChat && (
+            <ResizeHandle
+              onResize={handleResize}
+              onResizeStart={() => setIsResizing(true)}
+              onResizeEnd={() => setIsResizing(false)}
+            />
+          )}
+
+          {/* Workbench Panel */}
+          <PanelErrorBoundary panelName="Workbench">
+            <Suspense>
+              <Workbench
+                chatStarted={chatStarted}
+                isStreaming={isStreaming}
+                setSelectedElement={setSelectedElement}
+                width={showChat ? workbenchWidth : undefined}
+                fullWidth={!showChat}
               />
-            )}
-
-            {/* Workbench Panel */}
-            <PanelErrorBoundary panelName="Workbench">
-              <Suspense>
-                <Workbench
-                  chatStarted={chatStarted}
-                  isStreaming={isStreaming}
-                  setSelectedElement={setSelectedElement}
-                  width={showChat ? workbenchWidth : undefined}
-                  fullWidth={!showChat}
-                />
-              </Suspense>
-            </PanelErrorBoundary>
-          </div>
+            </Suspense>
+          </PanelErrorBoundary>
         </div>
-      );
+      </div>
+    );
 
-      return <Tooltip.Provider delayDuration={200}>{baseChat}</Tooltip.Provider>;
-    },
-  ),
+    return <Tooltip.Provider delayDuration={200}>{baseChat}</Tooltip.Provider>;
+  },
 );
 
 function ScrollToBottom() {

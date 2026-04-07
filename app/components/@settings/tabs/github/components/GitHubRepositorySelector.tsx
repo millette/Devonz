@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '~/components/ui/Button';
 import { BranchSelector } from '~/components/ui/BranchSelector';
 import { GitHubRepositoryCard } from './GitHubRepositoryCard';
 import type { GitHubRepoInfo } from '~/types/GitHub';
 import { useGitHubConnection, useGitHubStats } from '~/lib/hooks';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('GitHubRepoSelector');
@@ -164,7 +164,7 @@ export function GitHubRepositorySelector({ onClone, className }: GitHubRepositor
         <div className="i-ph:git-branch size-12 text-devonz-elements-textTertiary mx-auto mb-4" />
         <p className="text-devonz-elements-textSecondary mb-4">No repositories found</p>
         <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-          <div className={classNames('i-ph:arrows-clockwise size-4 mr-2', { 'animate-spin': isRefreshing })} />
+          <div className={cn('i-ph:arrows-clockwise size-4 mr-2', { 'animate-spin': isRefreshing })} />
           Refresh
         </Button>
       </div>
@@ -173,7 +173,7 @@ export function GitHubRepositorySelector({ onClone, className }: GitHubRepositor
 
   return (
     <motion.div
-      className={classNames('space-y-6', className)}
+      className={cn('space-y-6', className)}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -193,7 +193,7 @@ export function GitHubRepositorySelector({ onClone, className }: GitHubRepositor
           size="sm"
           className="flex items-center gap-2"
         >
-          <div className={classNames('i-ph:arrows-clockwise size-4', { 'animate-spin': isRefreshing })} />
+          <div className={cn('i-ph:arrows-clockwise size-4', { 'animate-spin': isRefreshing })} />
           Refresh
         </Button>
       </div>

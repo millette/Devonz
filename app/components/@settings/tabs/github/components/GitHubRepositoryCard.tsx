@@ -1,4 +1,3 @@
-import React from 'react';
 import type { GitHubRepoInfo } from '~/types/GitHub';
 
 interface GitHubRepositoryCardProps {

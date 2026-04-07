@@ -3,8 +3,8 @@ import React, { memo, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Switch } from '~/components/ui/Switch';
 import { useSettings } from '~/lib/hooks/useSettings';
-import { classNames } from '~/utils/classNames';
-import { toast } from 'react-toastify';
+import { cn } from '~/utils/cn';
+import { toast } from 'sonner';
 import { PromptLibrary } from '~/lib/common/prompt-library';
 import { useStore } from '@nanostores/react';
 import { stagingStore, updateSettings as updateStagingSettings } from '~/lib/stores/staging';
@@ -44,7 +44,7 @@ const FeatureCard = memo(
     <motion.div
       key={feature.id}
       layoutId={feature.id}
-      className={classNames(
+      className={cn(
         'relative group cursor-pointer',
         'bg-devonz-elements-background-depth-2',
         'hover:bg-devonz-elements-background-depth-3',
@@ -58,7 +58,7 @@ const FeatureCard = memo(
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={classNames(feature.icon, 'w-5 h-5 text-devonz-elements-textSecondary')} />
+            <div className={cn(feature.icon, 'w-5 h-5 text-devonz-elements-textSecondary')} />
             <div className="flex items-center gap-2">
               <h4 className="font-medium text-devonz-elements-textPrimary">{feature.title}</h4>
               {feature.beta && (
@@ -102,7 +102,7 @@ const FeatureSection = memo(
       transition={{ duration: 0.3 }}
     >
       <div className="flex items-center gap-3">
-        <div className={classNames(icon, 'text-xl text-devonz-elements-item-contentAccent')} />
+        <div className={cn(icon, 'text-xl text-devonz-elements-item-contentAccent')} />
         <div>
           <h3 className="text-lg font-medium text-devonz-elements-textPrimary">{title}</h3>
           <p className="text-sm text-devonz-elements-textSecondary">{description}</p>
@@ -468,7 +468,7 @@ export default function FeaturesTab() {
       {activeSection === 'prompts' && (
         <motion.div
           layout
-          className={classNames(
+          className={cn(
             'bg-devonz-elements-background-depth-2',
             'hover:bg-devonz-elements-background-depth-3',
             'transition-all duration-200',
@@ -481,7 +481,7 @@ export default function FeaturesTab() {
         >
           <div className="flex items-center gap-4">
             <div
-              className={classNames(
+              className={cn(
                 'p-2 rounded-lg text-xl',
                 'bg-devonz-elements-background-depth-3 group-hover:bg-devonz-elements-background-depth-4',
                 'transition-colors duration-200',
@@ -505,7 +505,7 @@ export default function FeaturesTab() {
                 setPromptId(e.target.value);
                 toast.success('Prompt template updated');
               }}
-              className={classNames(
+              className={cn(
                 'p-2 rounded-lg text-sm min-w-[200px]',
                 'bg-devonz-elements-background-depth-3 border border-devonz-elements-borderColor',
                 'text-devonz-elements-textPrimary',

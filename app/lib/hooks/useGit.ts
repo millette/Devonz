@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 
 import { runtime as runtimePromise } from '~/lib/runtime';
 import type { GitAuth, PromiseFsClient } from 'isomorphic-git';
 import Cookies from 'js-cookie';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { createScopedLogger } from '~/utils/logger';
 
 interface FileEntry {

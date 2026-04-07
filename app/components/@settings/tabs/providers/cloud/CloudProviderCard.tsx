@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@nanostores/react';
 import Cookies from 'js-cookie';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
 import { Switch } from '~/components/ui/Switch';
 import { getApiKeysFromCookies } from '~/components/chat/APIKeyManager';
 import { envKeyStatusStore, preferredModelsStore, updatePreferredModel } from '~/lib/stores/settings';
@@ -30,8 +30,8 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
   const [hasKey, setHasKey] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
 
-  // Subscribe to env key status store
-  const envKeyStatus = useStore(envKeyStatusStore);
+  // Subscribe to env key status store (guard against undefined store value)
+  const envKeyStatus = useStore(envKeyStatusStore) ?? {};
   const providerEnvStatus = envKeyStatus[provider.name];
   const hasEnvKey = providerEnvStatus?.hasEnvKey ?? false;
 
@@ -187,7 +187,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3 }}
-      className={classNames(
+      className={cn(
         'rounded-lg border border-devonz-elements-borderColor',
         'bg-devonz-elements-background-depth-2',
         'hover:bg-devonz-elements-background-depth-3',
@@ -199,7 +199,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
-            className={classNames(
+            className={cn(
               iconClass,
               'w-6 h-6',
               provider.settings.enabled
@@ -209,7 +209,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
           />
           <div className="flex items-center gap-2">
             <span
-              className={classNames(
+              className={cn(
                 'text-sm font-medium',
                 provider.settings.enabled
                   ? 'text-devonz-elements-item-contentAccent'
@@ -220,7 +220,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
             </span>
             {/* Key status dot */}
             <span
-              className={classNames(
+              className={cn(
                 'inline-block w-2 h-2 rounded-full flex-shrink-0',
                 hasKey ? 'bg-green-500' : hasEnvKey ? 'bg-blue-500' : 'bg-gray-500',
               )}
@@ -266,7 +266,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               placeholder={`Enter ${provider.name} API key`}
-              className={classNames(
+              className={cn(
                 'w-full px-3 py-1.5 pr-9 rounded-md text-sm',
                 'bg-devonz-elements-background-depth-1',
                 'border border-devonz-elements-borderColor',
@@ -281,7 +281,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
               className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none p-0 cursor-pointer text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary"
               title={showKey ? 'Hide key' : 'Show key'}
             >
-              <div className={classNames(showKey ? 'i-ph:eye-slash' : 'i-ph:eye', 'w-4 h-4')} />
+              <div className={cn(showKey ? 'i-ph:eye-slash' : 'i-ph:eye', 'w-4 h-4')} />
             </button>
           </div>
 
@@ -290,7 +290,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
             type="button"
             onClick={testConnection}
             disabled={testing}
-            className={classNames(
+            className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm whitespace-nowrap',
               'bg-transparent border border-devonz-elements-borderColor',
               'text-devonz-elements-textSecondary',
@@ -351,14 +351,14 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
               <button
                 type="button"
                 onClick={() => setModelsExpanded((prev) => !prev)}
-                className={classNames(
+                className={cn(
                   'flex items-center gap-1.5 text-xs bg-transparent border-none p-0 cursor-pointer',
                   'text-devonz-elements-textSecondary hover:text-devonz-elements-item-contentAccent',
                   'transition-colors duration-150',
                 )}
               >
                 <div
-                  className={classNames(
+                  className={cn(
                     'i-ph:caret-right w-3 h-3 transition-transform duration-200',
                     modelsExpanded && 'rotate-90',
                   )}
@@ -379,7 +379,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
                     className="mt-1.5 overflow-hidden"
                   >
                     <div
-                      className={classNames(
+                      className={cn(
                         'max-h-[160px] overflow-y-auto rounded-md p-2',
                         'bg-devonz-elements-background-depth-1',
                         'border border-devonz-elements-borderColor',
@@ -390,7 +390,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
                           type="button"
                           key={model.name}
                           onClick={() => savePreferredModel(model.name)}
-                          className={classNames(
+                          className={cn(
                             'w-full flex items-center gap-2 py-1.5 px-2 rounded text-left',
                             'text-xs cursor-pointer border-none',
                             'transition-colors duration-100',
@@ -400,7 +400,7 @@ export function CloudProviderCard({ provider, index, onToggle, iconClass, descri
                           )}
                         >
                           <div
-                            className={classNames(
+                            className={cn(
                               'w-3 h-3 flex-shrink-0',
                               selectedModel === model.name
                                 ? 'i-ph:check-circle-fill text-devonz-elements-item-contentAccent'

@@ -2,6 +2,9 @@ import { type ActionFunctionArgs } from 'react-router';
 import { z } from 'zod';
 import { db, schema } from '~/lib/.server/db';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('api.db.migrate');
@@ -60,7 +63,7 @@ async function migrateAction({ request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'), 400);
   }
 
   const parsed = migrationPayloadSchema.safeParse(rawBody);
@@ -68,22 +71,13 @@ async function migrateAction({ request }: ActionFunctionArgs) {
   if (!parsed.success) {
     logger.warn('Migration payload validation failed:', parsed.error.issues);
 
-    return Response.json(
-      {
-        error: 'Invalid migration payload',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      },
-      { status: 400 },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid migration payload'), 400);
   }
 
   const { chats, snapshots } = parsed.data;
 
   if (chats.length === 0) {
-    return Response.json({
+    return successResponse({
       migrated: { chats: 0, messages: 0, snapshots: 0 },
       skipped: [],
       total: 0,
@@ -188,7 +182,7 @@ async function migrateAction({ request }: ActionFunctionArgs) {
     `Migration complete: ${migratedChats} chats, ${migratedMessages} messages, ${migratedSnapshots} snapshots. ${skipped.length} skipped.`,
   );
 
-  return Response.json({
+  return successResponse({
     migrated: {
       chats: migratedChats,
       messages: migratedMessages,
@@ -206,5 +200,6 @@ async function migrateAction({ request }: ActionFunctionArgs) {
  */
 
 export const action = withSecurity(migrateAction, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['POST'],
 });

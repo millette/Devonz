@@ -1,7 +1,7 @@
 import type { MCPServer } from '~/lib/services/mcpService';
 import McpStatusBadge from '~/components/@settings/tabs/mcp/McpStatusBadge';
 import McpServerListItem from '~/components/@settings/tabs/mcp/McpServerListItem';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 type McpServerListProps = {
   serverEntries: [string, MCPServer][];
@@ -68,7 +68,7 @@ export default function McpServerList({
                 {isAvailable && onToggleAutoApprove && (
                   <button
                     onClick={() => onToggleAutoApprove(serverName)}
-                    className={classNames(
+                    className={cn(
                       'flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors',
                       isAutoApproved
                         ? 'bg-green-500/15 text-green-400 hover:bg-green-500/25'

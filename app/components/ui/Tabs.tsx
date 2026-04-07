@@ -1,52 +1,56 @@
 import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
-const Tabs = TabsPrimitive.Root;
+interface TabsListProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> {
+  ref?: React.Ref<React.ElementRef<typeof TabsPrimitive.List>>;
+}
 
-const TabsList = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.List
-    ref={ref}
-    className={classNames(
-      'inline-flex h-10 items-center justify-center rounded-md bg-devonz-elements-background-depth-1 dark:bg-devonz-elements-background-depth-3-dark p-1 text-devonz-elements-textSecondary dark:text-devonz-elements-textSecondary-dark border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor-dark',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsList.displayName = TabsPrimitive.List.displayName;
+function TabsList({ className, ref, ...props }: TabsListProps) {
+  return (
+    <TabsPrimitive.List
+      ref={ref}
+      className={cn(
+        'inline-flex h-10 items-center justify-center rounded-md bg-devonz-elements-background-depth-1 dark:bg-devonz-elements-background-depth-3-dark p-1 text-devonz-elements-textSecondary dark:text-devonz-elements-textSecondary-dark border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor-dark',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
-    ref={ref}
-    className={classNames(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-devonz-elements-background dark:ring-offset-devonz-elements-background-dark transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-devonz-elements-background-depth-0 dark:data-[state=active]:bg-devonz-elements-background-depth-2-dark data-[state=active]:text-devonz-elements-textPrimary dark:data-[state=active]:text-devonz-elements-textPrimary-dark data-[state=active]:shadow-sm',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+interface TabsTriggerProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> {
+  ref?: React.Ref<React.ElementRef<typeof TabsPrimitive.Trigger>>;
+}
 
-const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
-    ref={ref}
-    className={classNames(
-      'mt-2 ring-offset-devonz-elements-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-ring focus-visible:ring-offset-2',
-      className,
-    )}
-    {...props}
-  />
-));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+function TabsTrigger({ className, ref, ...props }: TabsTriggerProps) {
+  return (
+    <TabsPrimitive.Trigger
+      ref={ref}
+      className={cn(
+        'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-devonz-elements-background dark:ring-offset-devonz-elements-background-dark transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-devonz-elements-background-depth-0 dark:data-[state=active]:bg-devonz-elements-background-depth-2-dark data-[state=active]:text-devonz-elements-textPrimary dark:data-[state=active]:text-devonz-elements-textPrimary-dark data-[state=active]:shadow-sm',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-export { Tabs, TabsList, TabsTrigger, TabsContent };
+interface TabsContentProps extends React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content> {
+  ref?: React.Ref<React.ElementRef<typeof TabsPrimitive.Content>>;
+}
+
+function TabsContent({ className, ref, ...props }: TabsContentProps) {
+  return (
+    <TabsPrimitive.Content
+      ref={ref}
+      className={cn(
+        'mt-2 ring-offset-devonz-elements-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-devonz-elements-ring focus-visible:ring-offset-2',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { TabsList, TabsTrigger, TabsContent };

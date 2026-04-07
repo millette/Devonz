@@ -3,14 +3,14 @@ import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useMessageParser, usePromptEnhancer, useShortcuts } from '~/lib/hooks';
 import { resetVersionTracking } from '~/lib/hooks/useMessageParser';
 import { description, useChatHistory } from '~/lib/persistence';
 import { chatId } from '~/lib/persistence/useChatHistory';
 import type { ImportChatFn } from '~/lib/persistence/db';
 import { getProjectPlanMode, setProjectPlanMode } from '~/lib/persistence/projectPlanMode';
-import { bootRuntime } from '~/lib/runtime';
+import { bootRuntime, teardownCurrentRuntime } from '~/lib/runtime';
 import { chatStore, clearPendingChatMessage } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, PROMPT_COOKIE_KEY, PROVIDER_LIST } from '~/utils/constants';
@@ -235,7 +235,17 @@ export const ChatImpl = memo(
       });
 
       return () => {
+        /*
+         * Tear down the old runtime so its dev-server / WebContainer stops
+         * and the port is freed. This prevents stale previews and multiple
+         * simultaneous localhost instances when switching between chats.
+         */
         workbenchStore.resetPreviews();
+        workbenchStore.showWorkbench.set(false);
+
+        teardownCurrentRuntime().catch((error) => {
+          logger.error('Failed to teardown runtime on chat exit:', error);
+        });
       };
     }, [currentChatId]);
 
@@ -328,6 +338,7 @@ export const ChatImpl = memo(
       onFinish: (message, response) => {
         const usage = response.usage;
         setData(undefined);
+        workbenchStore.resetDataStreamProcessing();
 
         if (usage) {
           logger.debug('Token usage:', usage);
@@ -420,7 +431,7 @@ export const ChatImpl = memo(
           content: `[Model: ${modelRef.current}]\n\n[Provider: ${providerRef.current.name}]\n\n${prompt}`,
         });
       }
-    }, [searchParams]);
+    }, [searchParams.get('prompt')]);
 
     const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
     const { parsedMessages, parseMessages } = useMessageParser();
@@ -432,7 +443,7 @@ export const ChatImpl = memo(
 
     useEffect(() => {
       chatStore.setKey('started', initialMessages.length > 0);
-    }, []);
+    }, [initialMessages.length]);
 
     useEffect(() => {
       processSampledMessages({
@@ -482,6 +493,7 @@ export const ChatImpl = memo(
 
       // Clear progress annotations so "Analysing Request" doesn't persist
       setData(undefined);
+      workbenchStore.resetDataStreamProcessing();
 
       // Remove empty assistant message created by the aborted stream
       const lastMsg = messages[messages.length - 1];
@@ -566,6 +578,7 @@ export const ChatImpl = memo(
           errorType,
         });
         setData([]);
+        workbenchStore.resetDataStreamProcessing();
       },
       [provider.name, stop],
     );
@@ -845,6 +858,7 @@ export const ChatImpl = memo(
         textareaRef.current?.blur();
       } finally {
         sendingRef.current = false;
+        setFakeLoading(false);
       }
     };
 
@@ -1060,7 +1074,7 @@ export const ChatImpl = memo(
     );
 
     return (
-      <div className="relative h-full">
+      <div className="relative flex flex-col flex-1 min-h-0">
         {agentState.planPhase !== 'idle' && (
           <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-devonz-elements-background-depth-2 border border-devonz-elements-borderColor shadow-md pointer-events-none">
             <div className={`w-2 h-2 rounded-full ${AGENT_PHASE_DOT_COLORS[agentState.planPhase]}`} />

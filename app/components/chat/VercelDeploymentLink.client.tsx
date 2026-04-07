@@ -95,12 +95,16 @@ export function VercelDeploymentLink() {
           method: 'GET',
         });
 
-        const data = await fallbackResponse.json();
+        const envelope = (await fallbackResponse.json()) as {
+          success: boolean;
+          data?: { deploy?: { url?: string }; project?: { url?: string } };
+        };
+        const fallbackData = envelope.data;
 
-        if ((data as { deploy?: { url?: string } }).deploy?.url) {
-          setDeploymentUrl((data as { deploy: { url: string } }).deploy.url);
-        } else if ((data as { project?: { url?: string } }).project?.url) {
-          setDeploymentUrl((data as { project: { url: string } }).project.url);
+        if (fallbackData?.deploy?.url) {
+          setDeploymentUrl(fallbackData.deploy.url);
+        } else if (fallbackData?.project?.url) {
+          setDeploymentUrl(fallbackData.project.url);
         }
       } catch (err) {
         logger.error('Error fetching Vercel deployment:', err);

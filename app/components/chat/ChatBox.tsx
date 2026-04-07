@@ -1,11 +1,11 @@
 import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { clientLazy } from '~/utils/react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { PROVIDER_LIST } from '~/utils/constants';
 import { CombinedModelSelector } from '~/components/chat/CombinedModelSelector';
 import FilePreview from './FilePreview';
 import { IconButton } from '~/components/ui/IconButton';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { SpeechRecognitionButton } from '~/components/chat/SpeechRecognition';
 import { Dialog, DialogRoot, DialogTitle, DialogDescription } from '~/components/ui/Dialog';
 import styles from './BaseChat.module.scss';
@@ -90,7 +90,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
 
   return (
     <div
-      className={classNames('relative p-4 rounded-xl w-full max-w-chat mx-auto z-prompt', 'shadow-xl')}
+      className={cn('relative p-4 rounded-xl w-full max-w-chat mx-auto z-prompt', 'shadow-xl')}
       style={{
         background: 'var(--devonz-chat-bg)',
         borderWidth: '1px',
@@ -129,7 +129,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           />
         </Dialog>
       </DialogRoot>
-      <svg className={classNames(styles.PromptEffectContainer)} aria-hidden="true">
+      <svg className={cn(styles.PromptEffectContainer)} aria-hidden="true">
         <defs>
           <linearGradient
             id="line-gradient"
@@ -152,8 +152,8 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
             <stop offset="100%" stopColor="white" stopOpacity="0%"></stop>
           </linearGradient>
         </defs>
-        <rect className={classNames(styles.PromptEffectLine)} pathLength="100" strokeLinecap="round"></rect>
-        <rect className={classNames(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
+        <rect className={cn(styles.PromptEffectLine)} pathLength="100" strokeLinecap="round"></rect>
+        <rect className={cn(styles.PromptShine)} x="48" y="24" width="70" height="1"></rect>
       </svg>
 
       <FilePreview
@@ -175,18 +175,17 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
           <button
             className="bg-transparent text-accent-500 pointer-auto"
             onClick={() => props.setSelectedElement?.(null)}
+            aria-label="Clear element selection"
           >
             Clear
           </button>
         </div>
       )}
-      <div
-        className={classNames('relative shadow-xs border border-devonz-elements-borderColor backdrop-blur rounded-lg')}
-      >
+      <div className={cn('relative shadow-xs border border-devonz-elements-borderColor backdrop-blur rounded-lg')}>
         <textarea
           ref={props.textareaRef}
           aria-label="Chat message input"
-          className={classNames(
+          className={cn(
             'w-full pl-4 pt-4 pr-16 outline-none resize-none text-devonz-elements-textPrimary placeholder-devonz-elements-textTertiary bg-transparent text-sm',
             'transition-all duration-200',
             'hover:border-devonz-elements-focus',
@@ -312,7 +311,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
               <IconButton
                 title="Enhance prompt"
                 disabled={props.input.length === 0 || props.enhancingPrompt}
-                className={classNames('transition-all', props.enhancingPrompt ? 'opacity-100' : '')}
+                className={cn('transition-all', props.enhancingPrompt ? 'opacity-100' : '')}
                 onClick={() => {
                   props.enhancePrompt?.();
                   toast.success('Prompt enhanced!');
@@ -336,7 +335,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
               <div className="relative">
                 <IconButton
                   title="Select Model"
-                  className={classNames('transition-all flex items-center gap-1', {
+                  className={cn('transition-all flex items-center gap-1', {
                     'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent':
                       isModelSelectorOpen,
                     'bg-devonz-elements-item-backgroundDefault text-devonz-elements-item-contentDefault':
@@ -355,7 +354,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
               {/* More tools toggle */}
               <IconButton
                 title={showMoreTools ? 'Hide tools' : 'More tools'}
-                className={classNames(
+                className={cn(
                   'transition-all',
                   showMoreTools
                     ? 'bg-devonz-elements-item-backgroundAccent text-devonz-elements-item-contentAccent'
@@ -364,7 +363,7 @@ export const ChatBox: React.FC<ChatBoxProps> = (props) => {
                 onClick={() => setShowMoreTools((v) => !v)}
               >
                 <div
-                  className={classNames(
+                  className={cn(
                     'text-lg transition-transform duration-200',
                     showMoreTools ? 'i-ph:x' : 'i-devonz:expand',
                   )}

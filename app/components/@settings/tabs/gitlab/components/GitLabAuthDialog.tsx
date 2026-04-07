@@ -1,8 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { toast } from 'react-toastify';
-import { classNames } from '~/utils/classNames';
+import { toast } from 'sonner';
+import { cn } from '~/utils/cn';
 import { useGitLabConnection } from '~/lib/hooks';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -92,7 +92,7 @@ export function GitLabAuthDialog({ isOpen, onClose }: GitLabAuthDialogProps) {
                     onChange={(e) => setGitlabUrl(e.target.value)}
                     disabled={isConnecting}
                     placeholder="https://gitlab.com"
-                    className={classNames(
+                    className={cn(
                       'w-full px-3 py-2 rounded-lg text-sm',
                       'bg-devonz-elements-background-depth-2 dark:bg-devonz-elements-background-depth-3',
                       'border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor-dark',
@@ -116,7 +116,7 @@ export function GitLabAuthDialog({ isOpen, onClose }: GitLabAuthDialogProps) {
                     onChange={(e) => setToken(e.target.value)}
                     disabled={isConnecting}
                     placeholder="Enter your GitLab access token"
-                    className={classNames(
+                    className={cn(
                       'w-full px-3 py-2 rounded-lg text-sm',
                       'bg-devonz-elements-background-depth-2 dark:bg-devonz-elements-background-depth-3',
                       'border border-devonz-elements-borderColor dark:border-devonz-elements-borderColor-dark',
@@ -162,7 +162,7 @@ export function GitLabAuthDialog({ isOpen, onClose }: GitLabAuthDialogProps) {
                   <motion.button
                     type="submit"
                     disabled={isConnecting || !token.trim()}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm inline-flex items-center gap-2',
                       'bg-orange-500 text-white hover:bg-orange-600',
                       'disabled:opacity-50 disabled:cursor-not-allowed',

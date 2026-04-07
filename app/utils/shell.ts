@@ -1,4 +1,4 @@
-import type { RuntimeProvider, SpawnedProcess, Disposer } from '~/lib/runtime/runtime-provider';
+import type { RuntimeProvider, SpawnedProcess } from '~/lib/runtime/runtime-provider';
 import type { ITerminal } from '~/types/terminal';
 import { withResolvers } from './promises';
 import { atom } from 'nanostores';
@@ -119,10 +119,8 @@ export type ExecutionResult = { output: string; exitCode: number } | undefined;
 export class DevonzShell {
   #initialized: (() => void) | undefined;
   #readyPromise: Promise<void>;
-  #runtime: RuntimeProvider | undefined;
   #terminal: ITerminal | undefined;
   #process: SpawnedProcess | undefined;
-  #disposeOutput: Disposer | undefined;
 
   executionState = atom<
     { sessionId: string; active: boolean; executionPrms?: Promise<unknown>; abort?: () => void } | undefined
@@ -167,7 +165,6 @@ export class DevonzShell {
    * Spawns a real OS shell and waits for it to become interactive.
    */
   async init(runtime: RuntimeProvider, terminal: ITerminal) {
-    this.#runtime = runtime;
     this.#terminal = terminal;
 
     const { command, args } = getDefaultShell();
@@ -180,7 +177,7 @@ export class DevonzShell {
     });
 
     /* Forward output to terminal + internal handler */
-    this.#disposeOutput = this.#process.onData((data) => {
+    this.#process.onData((data) => {
       /*
        * Filter internal markers before displaying to user.
        * The raw data still goes to the internal handler for marker detection.

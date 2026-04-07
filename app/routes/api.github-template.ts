@@ -1,7 +1,9 @@
 import { type AppLoadContext, type LoaderFunctionArgs } from 'react-router';
 import JSZip from 'jszip';
-import { handleApiError } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('GitHubTemplate');
@@ -197,10 +199,10 @@ async function githubTemplateLoader({ request, context }: LoaderFunctionArgs) {
   const repo = url.searchParams.get('repo');
 
   if (!repo) {
-    return Response.json({ error: 'Repository name is required' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Repository name is required', 400));
   }
 
-  return handleApiError('GitHubTemplate', async () => {
+  try {
     const githubToken =
       context?.cloudflare?.env?.GITHUB_TOKEN || process.env.GITHUB_TOKEN || process.env.VITE_GITHUB_ACCESS_TOKEN;
 
@@ -216,11 +218,19 @@ async function githubTemplateLoader({ request, context }: LoaderFunctionArgs) {
       (file): file is { name: string; path: string; content: string } => file != null && !file.path.startsWith('.git'),
     );
 
-    return Response.json(filteredFiles);
-  });
+    return successResponse(filteredFiles);
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitHub template fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
 export const loader = withSecurity(githubTemplateLoader, {
   allowedMethods: ['GET'],
-  rateLimit: false,
+  auth: AUTH_PRESETS.authenticated,
 });

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { GitHubUserResponse } from '~/types/GitHub';
 
 interface GitHubUserProfileProps {

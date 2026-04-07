@@ -51,6 +51,8 @@ export const PortDropdown = memo(
         <button
           className="flex items-center group-focus-within:text-devonz-elements-preview-addressBar-text bg-white group-focus-within:bg-devonz-elements-preview-addressBar-background dark:bg-devonz-elements-preview-addressBar-backgroundHover rounded-full px-2 py-1 gap-1.5"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          aria-label="Select preview port"
+          aria-expanded={isDropdownOpen}
         >
           <span className="i-ph:plug text-base"></span>
           {previews.length > 0 && activePreviewIndex >= 0 && activePreviewIndex < previews.length ? (
@@ -63,9 +65,9 @@ export const PortDropdown = memo(
               Ports
             </div>
             {sortedPreviews.map((preview) => (
-              <div
+              <button
                 key={preview.port}
-                className="flex items-center px-4 py-2 cursor-pointer hover:bg-devonz-elements-item-backgroundActive"
+                className="flex items-center w-full px-4 py-2 cursor-pointer bg-transparent hover:bg-devonz-elements-item-backgroundActive"
                 onClick={() => {
                   setActivePreviewIndex(preview.index);
                   setIsDropdownOpen(false);
@@ -81,7 +83,7 @@ export const PortDropdown = memo(
                 >
                   {preview.port}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         )}

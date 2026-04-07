@@ -16,7 +16,10 @@ import * as nodePath from 'node:path';
 import fg from 'fast-glob';
 import { RuntimeManager } from '~/lib/runtime/local-runtime';
 import { withSecurity } from '~/lib/security';
-import { searchRequestSchema, parseOrError } from '~/lib/api/schemas';
+import { searchRequestSchema, validateInput } from '~/lib/api/schemas';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { WORK_DIR } from '~/utils/constants';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -159,18 +162,10 @@ async function searchFile(
  */
 
 async function searchAction({ request }: ActionFunctionArgs) {
-  let rawBody: unknown;
+  const validation = await validateInput(request, searchRequestSchema);
 
-  try {
-    rawBody = await request.json();
-  } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
-  }
-
-  const parsed = parseOrError(searchRequestSchema, rawBody, 'RuntimeSearch');
-
-  if (!parsed.success) {
-    return parsed.response;
+  if (!validation.success) {
+    return errorResponse(validation.error);
   }
 
   const {
@@ -182,7 +177,7 @@ async function searchAction({ request }: ActionFunctionArgs) {
     isRegex = false,
     isWordMatch = false,
     resultLimit = 500,
-  } = parsed.data;
+  } = validation.data;
 
   /* Cap result limit to a sensible maximum */
   const cappedLimit = Math.min(resultLimit, 5000);
@@ -193,7 +188,7 @@ async function searchAction({ request }: ActionFunctionArgs) {
     regex = buildSearchPattern(query, caseSensitive, isRegex, isWordMatch);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Invalid regex';
-    return Response.json({ error: `Invalid search pattern: ${message}` }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, `Invalid search pattern: ${message}`));
   }
 
   const manager = RuntimeManager.getInstance();
@@ -228,12 +223,11 @@ async function searchAction({ request }: ActionFunctionArgs) {
       allMatches.push(...fileMatches);
     }
 
-    return Response.json({ results: allMatches });
+    return successResponse({ results: allMatches });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Search failed';
     logger.error(`Text search failed for project "${projectId}":`, error);
 
-    return Response.json({ error: message }, { status: 500 });
+    return errorResponse(error instanceof Error ? error : 'Search failed');
   }
 }
 
@@ -243,4 +237,4 @@ async function searchAction({ request }: ActionFunctionArgs) {
  * ---------------------------------------------------------------------------
  */
 
-export const action = withSecurity(searchAction, { rateLimit: false });
+export const action = withSecurity(searchAction, { auth: AUTH_PRESETS.authenticated, rateLimit: false });

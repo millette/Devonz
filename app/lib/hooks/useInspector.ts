@@ -13,8 +13,14 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
 
-import type { BulkStyleChange, BulkTarget, ElementInfo, InspectorMode, InspectorTab } from '~/lib/inspector/types';
-import type { ThemeData } from '~/lib/inspector/types';
+import type {
+  BulkStyleChange,
+  BulkTarget,
+  ElementInfo,
+  InspectorMode,
+  InspectorTab,
+  ThemeData,
+} from '~/lib/inspector/types';
 import { RELEVANT_STYLE_PROPS } from '~/lib/inspector/types';
 
 import {

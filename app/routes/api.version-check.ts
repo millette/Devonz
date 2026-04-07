@@ -1,5 +1,7 @@
 import { type LoaderFunctionArgs } from 'react-router';
 import { withSecurity } from '~/lib/security';
+import { successResponse } from '~/lib/api/responses';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import type { ChangelogEntry, VersionCheckResponse } from '~/types/api-types';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -27,7 +29,7 @@ const GITHUB_HEADERS = {
 async function versionCheckLoader(_args: LoaderFunctionArgs) {
   // Return cached response if still fresh
   if (cache && Date.now() - cache.timestamp < CACHE_TTL_MS) {
-    return Response.json(cache.data);
+    return successResponse(cache.data);
   }
 
   const owner = 'zebbern';
@@ -132,10 +134,11 @@ async function versionCheckLoader(_args: LoaderFunctionArgs) {
   // Cache the response
   cache = { data: response, timestamp: Date.now() };
 
-  return Response.json(response);
+  return successResponse(response);
 }
 
 export const loader = withSecurity(versionCheckLoader, {
+  auth: AUTH_PRESETS.public,
   allowedMethods: ['GET'],
   rateLimit: false,
 });

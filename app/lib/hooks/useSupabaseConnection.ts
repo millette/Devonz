@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { useStore } from '@nanostores/react';
+import { csrfFetch } from '~/lib/api/csrf-client';
 import { logStore } from '~/lib/stores/logs';
 import type { SupabaseUser, SupabaseStats } from '~/types/supabase';
 import {
@@ -87,7 +88,7 @@ export function useSupabaseConnection() {
     try {
       const cleanToken = connection.token.trim();
 
-      const response = await fetch('/api/supabase', {
+      const response = await csrfFetch('/api/supabase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

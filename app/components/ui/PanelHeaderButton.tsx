@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface PanelHeaderButtonProps {
   className?: string;
@@ -13,10 +13,10 @@ export const PanelHeaderButton = memo(
   ({ className, disabledClassName, disabled = false, children, onClick }: PanelHeaderButtonProps) => {
     return (
       <button
-        className={classNames(
+        className={cn(
           'flex items-center shrink-0 gap-1.5 px-1.5 rounded-md py-0.5 text-devonz-elements-item-contentDefault bg-transparent enabled:hover:text-devonz-elements-item-contentActive enabled:hover:bg-devonz-elements-item-backgroundActive disabled:cursor-not-allowed',
           {
-            [classNames('opacity-30', disabledClassName)]: disabled,
+            [cn('opacity-30', disabledClassName)]: disabled,
           },
           className,
         )}

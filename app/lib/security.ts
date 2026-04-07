@@ -1,26 +1,18 @@
 import { timingSafeEqual } from 'node:crypto';
+import type { ZodType } from 'zod';
 import type { ActionFunctionArgs, LoaderFunctionArgs } from 'react-router';
 import { createScopedLogger } from '~/utils/logger';
+import { SecurityError, SecurityErrorType } from './api/errors';
+import { errorResponse } from './api/responses';
+import { validateInput } from './api/schemas';
+import { CsrfService } from './csrf';
+import { AUTH_CONFIG, CSP_CONNECT_SRC_ALLOWLIST, RATE_LIMITS } from './security-config';
+import type { AuthConfig } from './security-config';
 
 const logger = createScopedLogger('Security');
 
 // Rate limiting store (in-memory for serverless environments)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
-
-// Rate limit configuration
-const RATE_LIMITS = {
-  // General API endpoints
-  '/api/*': { windowMs: 15 * 60 * 1000, maxRequests: 100 }, // 100 requests per 15 minutes
-
-  // LLM API (more restrictive)
-  '/api/llmcall': { windowMs: 60 * 1000, maxRequests: 10 }, // 10 requests per minute
-
-  // GitHub API endpoints
-  '/api/github-*': { windowMs: 60 * 1000, maxRequests: 30 }, // 30 requests per minute
-
-  // Netlify API endpoints
-  '/api/netlify-*': { windowMs: 60 * 1000, maxRequests: 20 }, // 20 requests per minute
-};
 
 /**
  * Rate limiting middleware
@@ -143,41 +135,7 @@ export function buildContentSecurityPolicy(isProduction: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    [
-      "connect-src 'self'",
-
-      // Git providers
-      'https://api.github.com',
-      'https://models.github.ai',
-      'https://gitlab.com',
-
-      // Deployment platforms
-      'https://api.netlify.com',
-      'https://api.vercel.com',
-      'https://*.supabase.co',
-      'https://api.supabase.com',
-
-      // LLM providers - Major
-      'https://api.openai.com',
-      'https://api.anthropic.com',
-      'https://generativelanguage.googleapis.com',
-
-      // LLM providers - Other
-      'https://api.groq.com',
-      'https://api.mistral.ai',
-      'https://api.cohere.com',
-      'https://api.deepseek.com',
-      'https://api.perplexity.ai',
-      'https://api.x.ai',
-      'https://api.together.xyz',
-      'https://api.hyperbolic.xyz',
-      'https://api.moonshot.ai',
-      'https://openrouter.ai',
-      'https://api-inference.huggingface.co',
-
-      // WebSocket support for real-time features
-      'wss://*.supabase.co',
-    ].join(' '),
+    ["connect-src 'self'", ...CSP_CONNECT_SRC_ALLOWLIST].join(' '),
     "frame-src 'self' http://localhost:*",
     "object-src 'none'",
     "base-uri 'self'",
@@ -287,20 +245,21 @@ export function sanitizeErrorMessage(error: unknown, isDevelopment = false): str
  * @returns `true` if the token is valid or if no auth token is configured.
  */
 export function validateAuthToken(request: Request): boolean {
-  const expected = process.env.DEVONZ_AUTH_TOKEN;
+  const expected = process.env[AUTH_CONFIG.envVariable];
 
   // If no auth token is configured, bypass auth (local dev friendly)
   if (!expected) {
     return true;
   }
 
-  // Extract token from X-Auth-Token header
-  let token = request.headers.get('X-Auth-Token');
+  // Extract token from auth header
+  let token = request.headers.get(AUTH_CONFIG.tokenHeader);
 
-  // Fall back to devonz-auth cookie
+  // Fall back to auth cookie
   if (!token) {
     const cookies = request.headers.get('Cookie') ?? '';
-    const match = cookies.match(/(?:^|;\s*)devonz-auth=([^;]*)/);
+    const pattern = new RegExp(`(?:^|;\\s*)${AUTH_CONFIG.cookieName}=([^;]*)`);
+    const match = cookies.match(pattern);
     token = match?.[1] ?? null;
   }
 
@@ -323,70 +282,153 @@ export function validateAuthToken(request: Request): boolean {
   }
 }
 
+/** HTTP methods that can carry a request body and require CSRF / body validation. */
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'DELETE', 'PATCH']);
+
+/**
+ * Options for the security wrapper.
+ *
+ * Supports both legacy options (`requireAuth`, `rateLimit`, `allowedMethods`)
+ * and new declarative options (`auth`, `csrfExempt`, `validateBody`).
+ * When `auth` is provided it takes precedence over `requireAuth`.
+ */
+export interface SecurityOptions {
+  /** @deprecated Use `auth` with an AuthConfig preset instead. */
+  requireAuth?: boolean;
+
+  /** Whether rate limiting is applied. Defaults to `true`. */
+  rateLimit?: boolean;
+
+  /** Restrict to specific HTTP methods (e.g. `['GET', 'POST']`). */
+  allowedMethods?: string[];
+
+  /** Declarative auth configuration. Takes precedence over `requireAuth`. */
+  auth?: AuthConfig;
+
+  /** Skip CSRF validation for this route. Defaults to `false`. Only effective when `auth` is provided. */
+  csrfExempt?: boolean;
+
+  /** Zod schema for pre-handler body validation on mutating requests. */
+  validateBody?: ZodType<any>;
+}
+
 /**
  * Security wrapper for API routes.
- * Accepts handlers that may or may not consume the args parameter.
+ *
+ * Applies rate limiting, authentication, CSRF protection, optional body
+ * validation, and security headers. Accepts handlers that may or may not
+ * consume the route args parameter.
+ *
+ * ### Backward compatibility
+ *
+ * Legacy call-sites (`withSecurity(handler)` or
+ * `withSecurity(handler, { requireAuth: true })`) continue to work unchanged.
+ * CSRF protection only activates when the new `auth` option is used.
  */
 export function withSecurity(
   handler: (args: ActionFunctionArgs | LoaderFunctionArgs) => Promise<Response> | Response,
-  options: {
-    requireAuth?: boolean;
-    rateLimit?: boolean;
-    allowedMethods?: string[];
-  } = {},
+  options: SecurityOptions = {},
 ) {
   return async (args: ActionFunctionArgs | LoaderFunctionArgs): Promise<Response> => {
     const { request } = args;
     const url = new URL(request.url);
     const endpoint = url.pathname;
+    const method = request.method.toUpperCase();
+    const clientIP = getClientIP(request);
+    const requestContext = { method, path: endpoint, clientIP };
 
-    // Check allowed methods
-    if (options.allowedMethods && !options.allowedMethods.includes(request.method)) {
-      return new Response('Method not allowed', {
-        status: 405,
-        headers: createSecurityHeaders(),
+    const secHeaders = createSecurityHeaders();
+
+    /** Append security headers (and optional extras) to a response. */
+    const applyHeaders = (response: Response, extra?: Record<string, string>): Response => {
+      for (const [key, value] of Object.entries(secHeaders)) {
+        response.headers.set(key, value);
+      }
+
+      if (extra) {
+        for (const [key, value] of Object.entries(extra)) {
+          response.headers.set(key, value);
+        }
+      }
+
+      return response;
+    };
+
+    // --- Method check ----------------------------------------------------------
+    if (options.allowedMethods && !options.allowedMethods.includes(method)) {
+      logger.warn('Method not allowed', requestContext);
+
+      return applyHeaders(errorResponse(new SecurityError(SecurityErrorType.FORBIDDEN, 'Method not allowed'), 405));
+    }
+
+    // --- Authentication --------------------------------------------------------
+    const useNewAuth = options.auth !== undefined;
+    const authRequired = useNewAuth
+      ? options.auth!.level === 'authenticated' || options.auth!.level === 'ownerOnly'
+      : options.requireAuth === true;
+
+    if (authRequired && !validateAuthToken(request)) {
+      logger.warn('Unauthorized request', requestContext);
+
+      return applyHeaders(errorResponse(new SecurityError(SecurityErrorType.UNAUTHORIZED, 'Unauthorized')), {
+        'WWW-Authenticate': 'Bearer',
       });
     }
 
-    // Check auth token when requireAuth is enabled
-    if (options.requireAuth && !validateAuthToken(request)) {
-      logger.warn(`Unauthorized request to ${endpoint} from ${getClientIP(request)}`);
-
-      return new Response(JSON.stringify({ error: true, message: 'Unauthorized' }), {
-        status: 401,
-        headers: {
-          ...createSecurityHeaders(),
-          'Content-Type': 'application/json',
-          'WWW-Authenticate': 'Bearer',
-        },
-      });
-    }
-
-    // Apply rate limiting
+    // --- Rate limiting ---------------------------------------------------------
     if (options.rateLimit !== false) {
       const rateLimitResult = checkRateLimit(request, endpoint);
 
       if (!rateLimitResult.allowed) {
-        return new Response('Rate limit exceeded', {
-          status: 429,
-          headers: {
-            ...createSecurityHeaders(),
-            'Retry-After': Math.ceil((rateLimitResult.resetTime! - Date.now()) / 1000).toString(),
-            'X-RateLimit-Reset': rateLimitResult.resetTime!.toString(),
-          },
+        logger.warn('Rate limit exceeded', requestContext);
+
+        return applyHeaders(errorResponse(new SecurityError(SecurityErrorType.RATE_LIMITED, 'Rate limit exceeded')), {
+          'Retry-After': Math.ceil((rateLimitResult.resetTime! - Date.now()) / 1000).toString(),
+          'X-RateLimit-Reset': rateLimitResult.resetTime!.toString(),
         });
       }
     }
 
+    // --- CSRF protection (only when using the new `auth` option) ---------------
+    const csrfActive = useNewAuth && !options.csrfExempt && options.auth!.csrfRequired !== false;
+
+    if (csrfActive && MUTATING_METHODS.has(method)) {
+      const csrfResult = CsrfService.validateRequest(request);
+
+      if (!csrfResult.valid) {
+        logger.warn('CSRF validation failed', requestContext);
+
+        return applyHeaders(errorResponse(csrfResult.error));
+      }
+    }
+
+    // --- Body validation (optional) --------------------------------------------
+    if (options.validateBody && MUTATING_METHODS.has(method)) {
+      const clonedRequest = request.clone();
+      const validation = await validateInput(clonedRequest, options.validateBody);
+
+      if (!validation.success) {
+        logger.warn('Body validation failed', requestContext);
+
+        return applyHeaders(errorResponse(validation.error));
+      }
+    }
+
+    /*
+     * Reuse the existing CSRF token from the request cookie instead of
+     * generating a new one on every GET response.  Token rotation on every
+     * GET causes race conditions during rapid concurrent requests: in-flight
+     * POSTs read the old cookie value for the X-CSRF-Token header, but the
+     * browser sends the new cookie value set by a concurrent GET response,
+     * producing a mismatch.  The double-submit cookie pattern does NOT
+     * require per-request rotation — security comes from the Same-Origin
+     * Policy preventing cross-origin cookie reads.
+     */
+    const existingCsrfToken = csrfActive ? CsrfService.extractTokenFromRequest(request) : null;
+
     try {
       // Execute the handler
       const response = await handler(args);
-
-      // Add security headers to response
-      const responseHeaders = new Headers(response.headers);
-      Object.entries(createSecurityHeaders()).forEach(([key, value]) => {
-        responseHeaders.set(key, value);
-      });
 
       /*
        * For SSE / streaming responses we must NOT re-wrap the body in a new
@@ -398,45 +440,53 @@ export function withSecurity(
       const isStreaming = contentType.includes('text/event-stream') || contentType.includes('application/octet-stream');
 
       if (isStreaming) {
-        Object.entries(createSecurityHeaders()).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
+        applyHeaders(response);
+
+        // Set CSRF token cookie on streaming GET responses when CSRF is active
+        if (csrfActive && method === 'GET') {
+          CsrfService.setTokenCookie(response, existingCsrfToken ?? CsrfService.generateToken());
+        }
 
         return response;
       }
 
-      return new Response(response.body, {
+      // Build new response with security headers
+      const responseHeaders = new Headers(response.headers);
+
+      for (const [key, value] of Object.entries(secHeaders)) {
+        responseHeaders.set(key, value);
+      }
+
+      const wrappedResponse = new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
         headers: responseHeaders,
       });
+
+      // Set CSRF token cookie on GET responses when CSRF is active
+      if (csrfActive && method === 'GET') {
+        CsrfService.setTokenCookie(wrappedResponse, existingCsrfToken ?? CsrfService.generateToken());
+      }
+
+      return wrappedResponse;
     } catch (error) {
       // Silently ignore broken-pipe errors from SSE client disconnects
       const code = (error as NodeJS.ErrnoException)?.code;
 
       if (code === 'EPIPE' || code === 'ECONNRESET' || code === 'ERR_STREAM_WRITE_AFTER_END') {
-        logger.debug('Client disconnected during response (ignored):', code);
+        logger.debug('Client disconnected during response (ignored)', {
+          ...requestContext,
+          errorCode: code,
+        });
 
-        return new Response(null, { status: 499, headers: createSecurityHeaders() });
+        return applyHeaders(new Response(null, { status: 499 }));
       }
 
-      logger.error('Security-wrapped handler error:', error);
+      logger.error('Security-wrapped handler error', { ...requestContext, error });
 
-      const errorMessage = sanitizeErrorMessage(error, process.env.NODE_ENV === 'development');
+      const message = sanitizeErrorMessage(error, process.env.NODE_ENV === 'development');
 
-      return new Response(
-        JSON.stringify({
-          error: true,
-          message: errorMessage,
-        }),
-        {
-          status: 500,
-          headers: {
-            ...createSecurityHeaders(),
-            'Content-Type': 'application/json',
-          },
-        },
-      );
+      return applyHeaders(errorResponse(message, 500));
     }
   };
 }

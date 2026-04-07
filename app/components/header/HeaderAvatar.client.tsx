@@ -3,7 +3,7 @@ import { useStore } from '@nanostores/react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { motion } from 'framer-motion';
 import { profileStore } from '~/lib/stores/profile';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { TabType } from '~/components/@settings/core/types';
 
 const ControlPanel = lazy(() =>
@@ -48,7 +48,7 @@ export function HeaderAvatar() {
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className={classNames(
+            className={cn(
               'min-w-[180px] z-[9999]',
               'bg-devonz-elements-background-depth-2',
               'rounded-lg shadow-lg',
@@ -66,7 +66,7 @@ export function HeaderAvatar() {
             </div>
 
             <DropdownMenu.Item
-              className={classNames(
+              className={cn(
                 'flex items-center gap-2 px-3 py-2',
                 'text-sm text-devonz-elements-textPrimary',
                 'hover:bg-devonz-elements-item-backgroundActive',
@@ -80,7 +80,7 @@ export function HeaderAvatar() {
             </DropdownMenu.Item>
 
             <DropdownMenu.Item
-              className={classNames(
+              className={cn(
                 'flex items-center gap-2 px-3 py-2',
                 'text-sm text-devonz-elements-textPrimary',
                 'hover:bg-devonz-elements-item-backgroundActive',
@@ -96,7 +96,7 @@ export function HeaderAvatar() {
             <div className="my-1 border-t border-devonz-elements-borderColor" />
 
             <DropdownMenu.Item
-              className={classNames(
+              className={cn(
                 'flex items-center gap-2 px-3 py-2',
                 'text-sm text-devonz-elements-textPrimary',
                 'hover:bg-devonz-elements-item-backgroundActive',

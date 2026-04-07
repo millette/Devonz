@@ -16,6 +16,9 @@ import type { RuntimeFileSystem, WatchEvent } from '~/lib/runtime/runtime-provid
 import { isValidProjectId, isSafePath } from '~/lib/runtime/runtime-provider';
 import { withSecurity } from '~/lib/security';
 import { fsWriteRequestSchema, parseOrError } from '~/lib/api/schemas';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('RuntimeFS');
@@ -33,11 +36,11 @@ async function fsLoader({ request }: LoaderFunctionArgs) {
   const filePath = url.searchParams.get('path') ?? '.';
 
   if (!projectId || !isValidProjectId(projectId)) {
-    return Response.json({ error: 'Invalid or missing projectId' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid or missing projectId'));
   }
 
   if (!isSafePath(filePath)) {
-    return Response.json({ error: 'Invalid path: traversal detected' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid path: traversal detected'));
   }
 
   const manager = RuntimeManager.getInstance();
@@ -79,7 +82,7 @@ async function fsLoader({ request }: LoaderFunctionArgs) {
     case 'readdir': {
       try {
         const entries = await runtime.fs.readdir(filePath);
-        return Response.json(entries);
+        return successResponse(entries);
       } catch (error) {
         /*
          * Return an empty array (200) instead of 404 for non-existent
@@ -92,20 +95,19 @@ async function fsLoader({ request }: LoaderFunctionArgs) {
         const code = (error as NodeJS.ErrnoException)?.code;
 
         if (code === 'ENOENT' || code === 'ENOTDIR') {
-          return Response.json([]);
+          return successResponse([]);
         }
 
-        const message = error instanceof Error ? error.message : 'Readdir failed';
         logger.warn(`readdir failed: ${filePath}`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Readdir failed');
       }
     }
 
     case 'stat': {
       try {
         const stat = await runtime.fs.stat(filePath);
-        return Response.json(stat);
+        return successResponse(stat);
       } catch {
         // Return 204 instead of 404 to avoid browser console noise
         return new Response(null, { status: 204 });
@@ -114,7 +116,7 @@ async function fsLoader({ request }: LoaderFunctionArgs) {
 
     case 'exists': {
       const exists = await runtime.fs.exists(filePath);
-      return Response.json({ exists });
+      return successResponse({ exists });
     }
 
     case 'watch': {
@@ -176,7 +178,7 @@ async function fsLoader({ request }: LoaderFunctionArgs) {
     }
 
     default: {
-      return Response.json({ error: `Unknown operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown operation: ${op}`));
     }
   }
 }
@@ -193,7 +195,7 @@ async function fsAction({ request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'));
   }
 
   /*
@@ -236,12 +238,11 @@ async function fsAction({ request }: ActionFunctionArgs) {
           await runtime.fs.writeFile(filePath, content);
         }
 
-        return Response.json({ success: true });
+        return successResponse(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Write failed';
         logger.error(`writeFile failed: ${filePath}`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Write failed');
       }
     }
 
@@ -250,12 +251,11 @@ async function fsAction({ request }: ActionFunctionArgs) {
 
       try {
         await runtime.fs.mkdir(dirPath, { recursive: recursive ?? false });
-        return Response.json({ success: true });
+        return successResponse(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Mkdir failed';
         logger.error(`mkdir failed: ${dirPath}`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Mkdir failed');
       }
     }
 
@@ -267,12 +267,11 @@ async function fsAction({ request }: ActionFunctionArgs) {
           recursive: recursive ?? false,
           force: force ?? false,
         });
-        return Response.json({ success: true });
+        return successResponse(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Remove failed';
         logger.error(`rm failed: ${rmPath}`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Remove failed');
       }
     }
 
@@ -281,17 +280,16 @@ async function fsAction({ request }: ActionFunctionArgs) {
 
       try {
         await runtime.fs.rename(oldPath, newPath);
-        return Response.json({ success: true });
+        return successResponse(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Rename failed';
         logger.error(`rename failed: ${oldPath} → ${newPath}`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Rename failed');
       }
     }
 
     default: {
-      return Response.json({ error: `Unknown operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown operation: ${op}`));
     }
   }
 }
@@ -345,5 +343,5 @@ async function walkProjectDir(fs: RuntimeFileSystem, dir = '.'): Promise<WatchEv
  * ---------------------------------------------------------------------------
  */
 
-export const loader = withSecurity(fsLoader, { rateLimit: false });
-export const action = withSecurity(fsAction, { rateLimit: false });
+export const loader = withSecurity(fsLoader, { auth: AUTH_PRESETS.authenticated, rateLimit: false });
+export const action = withSecurity(fsAction, { auth: AUTH_PRESETS.authenticated, rateLimit: false });

@@ -3,6 +3,9 @@ import { eq, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '~/lib/.server/db';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('api.db.chats');
@@ -46,7 +49,7 @@ async function chatsLoader({ request }: LoaderFunctionArgs) {
   });
 
   if (!parsed.success) {
-    return Response.json({ error: 'Invalid pagination parameters', details: parsed.error.issues }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid pagination parameters'), 400);
   }
 
   const { page, limit } = parsed.data;
@@ -61,7 +64,7 @@ async function chatsLoader({ request }: LoaderFunctionArgs) {
 
   logger.debug(`Returning ${rows.length} chats (page ${page}, total ${total})`);
 
-  return Response.json({
+  return successResponse({
     chats: rows,
     pagination: {
       page,
@@ -84,7 +87,7 @@ async function chatsAction({ request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'), 400);
   }
 
   const parsed = createChatSchema.safeParse(rawBody);
@@ -92,16 +95,7 @@ async function chatsAction({ request }: ActionFunctionArgs) {
   if (!parsed.success) {
     logger.warn('Chat creation validation failed:', parsed.error.issues);
 
-    return Response.json(
-      {
-        error: 'Invalid request',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      },
-      { status: 400 },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request'), 400);
   }
 
   const { id, urlId, description, timestamp, metadata } = parsed.data;
@@ -122,7 +116,7 @@ async function chatsAction({ request }: ActionFunctionArgs) {
 
   const created = await db.select().from(schema.chats).where(eq(schema.chats.id, id)).limit(1);
 
-  return Response.json({ chat: created[0] }, { status: 201 });
+  return successResponse({ chat: created[0] }, undefined, 201);
 }
 
 /*
@@ -148,7 +142,7 @@ async function bulkDeleteChats() {
 
   logger.info('Deleted all chats (bulk delete)');
 
-  return Response.json({ deleted: true });
+  return successResponse({ deleted: true });
 }
 
 /*
@@ -158,9 +152,11 @@ async function bulkDeleteChats() {
  */
 
 export const loader = withSecurity(chatsLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
 });
 
 export const action = withSecurity(handleChatsAction, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['POST', 'DELETE'],
 });

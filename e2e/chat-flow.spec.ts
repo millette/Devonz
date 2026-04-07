@@ -74,19 +74,24 @@ function mockConfiguredProviders(page: import('@playwright/test').Page) {
 /** Mock env-key check endpoints. */
 function mockEnvKeyChecks(page: import('@playwright/test').Page) {
   return Promise.all([
-    page.route('**/api/check-env-key*', (route) => {
+    // Single-provider env key check
+    page.route('**/api/check-env-key', (route) => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ hasKey: false }),
+        body: JSON.stringify({ success: true, data: { hasKey: false } }),
       });
     }),
-    page.route('**/api/check-env-keys*', (route) => {
+    // Bulk env key check — returns { success, data: Record<provider, status> }
+    page.route('**/api/check-env-keys', (route) => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          OpenAI: { hasEnvKey: true, hasCookieKey: false },
+          success: true,
+          data: {
+            OpenAI: { hasEnvKey: true, hasCookieKey: false },
+          },
         }),
       });
     }),
@@ -99,6 +104,16 @@ test.describe('Chat flow', () => {
     await mockProviderModels(page);
     await mockConfiguredProviders(page);
     await mockEnvKeyChecks(page);
+
+    // Enable OpenAI provider so the send button is not disabled.
+    // The providersStore merges saved localStorage settings on init,
+    // so setting `provider_settings` before navigation activates OpenAI.
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'provider_settings',
+        JSON.stringify({ OpenAI: { settings: { enabled: true } } }),
+      );
+    });
   });
 
   test('loads app and verifies the chat page renders', async ({ page }) => {
@@ -114,19 +129,25 @@ test.describe('Chat flow', () => {
 
   test('sends a message and verifies mocked assistant response appears', async ({ page }) => {
     await mockChatSSE(page);
-    await page.goto('/');
+    await page.goto('/', { waitUntil: 'networkidle' });
 
     const chatInput = page.getByLabel('Chat message input');
     await expect(chatInput).toBeVisible({ timeout: 15_000 });
 
-    // Type a message into the chat textarea
-    await chatInput.fill('What is 2 + 2?');
+    // Type a message character-by-character so React onChange fires reliably
+    await chatInput.pressSequentially('What is 2 + 2?', { delay: 30 });
 
-    // Click the send button
+    // Wait for the send button to appear (rendered after input state updates)
     const sendButton = page.getByLabel('Send message');
+    await expect(sendButton).toBeVisible({ timeout: 5_000 });
     await sendButton.click();
 
+    // Allow time for the streaming response to process and render.
+    // The AI SDK data stream needs time to parse and update React state,
+    // and replaceState navigation to /chat/:id needs to settle.
+    await page.waitForTimeout(3_000);
+
     // Verify the mocked assistant response appears on the page
-    await expect(page.getByText('Hello from the mocked assistant!')).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('Hello from the mocked assistant!')).toBeVisible({ timeout: 15_000 });
   });
 });

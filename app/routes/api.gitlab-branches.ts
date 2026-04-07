@@ -1,5 +1,11 @@
-import { ApiError, externalFetch, handleApiError } from '~/lib/api/apiUtils';
+import { externalFetch } from '~/lib/api/apiUtils';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
+import { createScopedLogger } from '~/utils/logger';
+
+const logger = createScopedLogger('GitLabBranches');
 
 interface GitLabBranch {
   name: string;
@@ -18,16 +24,16 @@ interface BranchInfo {
 }
 
 async function gitlabBranchesHandler({ request }: { request: Request }) {
-  return handleApiError('GitLabBranches', async () => {
+  try {
     const body = (await request.json()) as { token?: string; gitlabUrl?: string; projectId?: string };
     const { token, gitlabUrl = 'https://gitlab.com', projectId } = body;
 
     if (!token) {
-      return Response.json({ error: 'GitLab token is required' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'GitLab token is required', 400));
     }
 
     if (!projectId) {
-      return Response.json({ error: 'Project ID is required' }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, 'Project ID is required', 400));
     }
 
     const branchesResponse = await externalFetch({
@@ -38,14 +44,14 @@ async function gitlabBranchesHandler({ request }: { request: Request }) {
 
     if (!branchesResponse.ok) {
       if (branchesResponse.status === 401) {
-        return Response.json({ error: 'Invalid GitLab token' }, { status: 401 });
+        return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid GitLab token', 401));
       }
 
       if (branchesResponse.status === 404) {
-        return Response.json({ error: 'Project not found or no access' }, { status: 404 });
+        return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Project not found or no access', 404));
       }
 
-      throw new ApiError(`GitLab API error: ${branchesResponse.status}`, branchesResponse.status);
+      throw new AppError(AppErrorType.NETWORK, `GitLab API error: ${branchesResponse.status}`, branchesResponse.status);
     }
 
     const branches: GitLabBranch[] = await branchesResponse.json();
@@ -83,12 +89,20 @@ async function gitlabBranchesHandler({ request }: { request: Request }) {
       return a.name.localeCompare(b.name);
     });
 
-    return Response.json({
+    return successResponse({
       branches: transformedBranches,
       defaultBranch: defaultBranchName,
       total: transformedBranches.length,
     });
-  });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return errorResponse(error);
+    }
+
+    logger.error('GitLab branches fetch failed', error);
+
+    return errorResponse(error instanceof Error ? error : String(error));
+  }
 }
 
-export const action = withSecurity(gitlabBranchesHandler);
+export const action = withSecurity(gitlabBranchesHandler, { auth: AUTH_PRESETS.authenticated });

@@ -524,7 +524,8 @@ export class ActionRunner {
     // Allocate a free port for the dev server to avoid EADDRINUSE conflicts
     const runtime = await this.#runtime;
     const freePort = await runtime.allocatePort();
-    const portEnvPrefix = process.platform === 'win32' ? `set PORT=${freePort}&&` : `PORT=${freePort}`;
+    const isWindows = typeof process !== 'undefined' && process.platform === 'win32';
+    const portEnvPrefix = isWindows ? `set PORT=${freePort}&&` : `PORT=${freePort}`;
     const commandWithPort = `${portEnvPrefix} ${action.content}`;
 
     logger.info(`Starting dev server on allocated port ${freePort}: ${action.content}`);

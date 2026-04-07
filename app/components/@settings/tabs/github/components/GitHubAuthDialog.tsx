@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { useGitHubConnection } from '~/lib/hooks';
 
 interface GitHubAuthDialogProps {
@@ -79,7 +79,7 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
                     value={tokenType}
                     onChange={(e) => setTokenType(e.target.value as 'classic' | 'fine-grained')}
                     disabled={isConnecting}
-                    className={classNames(
+                    className={cn(
                       'w-full px-3 py-2 rounded-lg text-sm',
                       'bg-devonz-elements-background-depth-1',
                       'border border-devonz-elements-borderColor',
@@ -107,7 +107,7 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
                     placeholder={`Enter your GitHub ${
                       tokenType === 'classic' ? 'personal access token' : 'fine-grained token'
                     }`}
-                    className={classNames(
+                    className={cn(
                       'w-full px-3 py-2 rounded-lg text-sm',
                       'bg-devonz-elements-background-depth-1',
                       'border border-devonz-elements-borderColor',
@@ -146,7 +146,7 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
                   <button
                     type="submit"
                     disabled={isConnecting || !token.trim()}
-                    className={classNames(
+                    className={cn(
                       'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
                       'bg-devonz-elements-bg-depth-3 text-devonz-elements-textPrimary',
                       'hover:bg-[#5E41D0] hover:text-white',

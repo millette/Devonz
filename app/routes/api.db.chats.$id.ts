@@ -3,6 +3,9 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '~/lib/.server/db';
 import { withSecurity } from '~/lib/security';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('api.db.chats.$id');
@@ -19,7 +22,7 @@ async function chatByIdLoader({ params }: LoaderFunctionArgs) {
   const parsed = idParamSchema.safeParse(params.id);
 
   if (!parsed.success) {
-    return Response.json({ error: 'Invalid chat ID' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid chat ID'), 400);
   }
 
   const chatId = parsed.data;
@@ -33,12 +36,12 @@ async function chatByIdLoader({ params }: LoaderFunctionArgs) {
   const chat = chatRows[0];
 
   if (!chat) {
-    return Response.json({ error: 'Chat not found' }, { status: 404 });
+    return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Chat not found'), 404);
   }
 
   logger.debug(`Returning chat ${chatId} with ${messageRows.length} messages`);
 
-  return Response.json({
+  return successResponse({
     chat: {
       ...chat,
       messages: messageRows.map((m) => ({
@@ -60,13 +63,13 @@ async function chatByIdLoader({ params }: LoaderFunctionArgs) {
 
 async function chatByIdAction({ request, params }: ActionFunctionArgs) {
   if (request.method !== 'DELETE') {
-    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    return errorResponse(new AppError(AppErrorType.FORBIDDEN, 'Method not allowed'), 405);
   }
 
   const parsed = idParamSchema.safeParse(params.id);
 
   if (!parsed.success) {
-    return Response.json({ error: 'Invalid chat ID' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid chat ID'), 400);
   }
 
   const chatId = parsed.data;
@@ -79,7 +82,7 @@ async function chatByIdAction({ request, params }: ActionFunctionArgs) {
     .limit(1);
 
   if (existing.length === 0) {
-    return Response.json({ error: 'Chat not found' }, { status: 404 });
+    return errorResponse(new AppError(AppErrorType.NOT_FOUND, 'Chat not found'), 404);
   }
 
   // Messages and snapshots cascade-delete via FK constraints
@@ -87,7 +90,7 @@ async function chatByIdAction({ request, params }: ActionFunctionArgs) {
 
   logger.info(`Deleted chat ${chatId}`);
 
-  return Response.json({ deleted: true, id: chatId });
+  return successResponse({ deleted: true, id: chatId });
 }
 
 /*
@@ -97,9 +100,11 @@ async function chatByIdAction({ request, params }: ActionFunctionArgs) {
  */
 
 export const loader = withSecurity(chatByIdLoader, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['GET'],
 });
 
 export const action = withSecurity(chatByIdAction, {
+  auth: AUTH_PRESETS.authenticated,
   allowedMethods: ['DELETE'],
 });

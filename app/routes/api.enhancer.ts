@@ -7,10 +7,15 @@ import { createScopedLogger } from '~/utils/logger';
 import { z } from 'zod';
 import { withSecurity } from '~/lib/security';
 import { providerSchema } from '~/lib/api/schemas';
+import { errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { DEFAULT_PROVIDER, PROVIDER_LIST } from '~/utils/constants';
 import { resolveModel } from '~/lib/.server/llm/resolve-model';
 
 export const action = withSecurity(enhancerAction, {
+  auth: AUTH_PRESETS.authenticated,
+  csrfExempt: true,
   allowedMethods: ['POST'],
   rateLimit: false,
 });
@@ -33,10 +38,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
   try {
     rawBody = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid JSON in request body'));
   }
 
   const parsed = enhancerRequestSchema.safeParse(rawBody);
@@ -44,19 +46,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
   if (!parsed.success) {
     logger.warn('Enhancer request validation failed:', parsed.error.issues);
 
-    return new Response(
-      JSON.stringify({
-        error: 'Invalid request',
-        details: parsed.error.issues.map((issue) => ({
-          path: issue.path.join('.'),
-          message: issue.message,
-        })),
-      }),
-      {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      },
-    );
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid request'));
   }
 
   const { message, model, provider } = parsed.data as {
@@ -124,15 +114,9 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
     logger.error(error);
 
     if (error instanceof Error && error.message?.includes('API key')) {
-      throw new Response('Invalid or missing API key', {
-        status: 401,
-        statusText: 'Unauthorized',
-      });
+      return errorResponse(new AppError(AppErrorType.UNAUTHORIZED, 'Invalid or missing API key'));
     }
 
-    throw new Response(null, {
-      status: 500,
-      statusText: 'Internal Server Error',
-    });
+    return errorResponse(error instanceof Error ? error : new AppError(AppErrorType.INTERNAL, 'Internal Server Error'));
   }
 }

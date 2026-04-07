@@ -22,9 +22,9 @@ import { FileTree } from './FileTree';
 import { DEFAULT_TERMINAL_SIZE, TerminalTabs } from './terminal/TerminalTabs';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { fileGenerationStatus } from '~/lib/stores/files';
-import { Search } from './Search'; // <-- Ensure Search is imported
-import { classNames } from '~/utils/classNames'; // <-- Import classNames if not already present
-import { LockManager } from './LockManager'; // <-- Import LockManager
+import { Search } from './Search';
+import { cn } from '~/utils/cn';
+import { LockManager } from './LockManager';
 
 interface EditorPanelProps {
   unsavedFiles?: Set<string>;
@@ -102,7 +102,8 @@ export const EditorPanel = memo(
                         <Tabs.Trigger
                           value="files"
                           title="Files"
-                          className={classNames(
+                          aria-label="Files"
+                          className={cn(
                             'h-full bg-transparent hover:bg-devonz-elements-background-depth-3 p-1.5 rounded-lg text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary data-[state=active]:text-devonz-elements-textPrimary',
                           )}
                         >
@@ -111,7 +112,8 @@ export const EditorPanel = memo(
                         <Tabs.Trigger
                           value="search"
                           title="Search"
-                          className={classNames(
+                          aria-label="Search"
+                          className={cn(
                             'h-full bg-transparent hover:bg-devonz-elements-background-depth-3 p-1.5 rounded-lg text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary data-[state=active]:text-devonz-elements-textPrimary',
                           )}
                         >
@@ -120,7 +122,8 @@ export const EditorPanel = memo(
                         <Tabs.Trigger
                           value="locks"
                           title="Locks"
-                          className={classNames(
+                          aria-label="Locks"
+                          className={cn(
                             'h-full bg-transparent hover:bg-devonz-elements-background-depth-3 p-1.5 rounded-lg text-devonz-elements-textTertiary hover:text-devonz-elements-textPrimary data-[state=active]:text-devonz-elements-textPrimary',
                           )}
                         >
@@ -192,7 +195,7 @@ export const EditorPanel = memo(
                   </div>
                 )}
               </PanelHeader>
-              <div className="h-full flex-1 overflow-hidden modern-scrollbar relative">
+              <div className="flex-1 overflow-hidden relative">
                 {isFileGenerating && (
                   <div className="absolute inset-x-0 top-0 z-10 flex items-center gap-2 px-3 py-1.5 bg-accent-500/15 text-accent-500 text-xs font-medium border-b border-accent-500/25">
                     <span className="i-svg-spinners:90-ring-with-bg shrink-0" />

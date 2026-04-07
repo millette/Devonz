@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 
 interface ResizeHandleProps {
   onResize: (deltaX: number) => void;
@@ -90,7 +90,7 @@ export const ResizeHandle = memo(
 
     return (
       <div
-        className={classNames(
+        className={cn(
           'flex-shrink-0 w-1 relative cursor-col-resize group hover:w-1 transition-all duration-150',
           {
             'opacity-50 cursor-not-allowed': disabled,
@@ -105,7 +105,7 @@ export const ResizeHandle = memo(
         tabIndex={disabled ? -1 : 0}
       >
         <div
-          className={classNames(
+          className={cn(
             'absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full transition-all duration-150',
             'bg-devonz-elements-borderColor',
             {
@@ -116,7 +116,7 @@ export const ResizeHandle = memo(
         />
         <div className="absolute inset-y-0 -left-2 -right-2" />
         <div
-          className={classNames(
+          className={cn(
             'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2',
             'flex flex-col gap-1 opacity-0 transition-opacity duration-150',
             {

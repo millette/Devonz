@@ -1,0 +1,8 @@
+Total messages: 163 (Errors: 5, Warnings: 2)
+Returning 5 messages for level "error"
+
+[ERROR] Failed to load resource: the server responded with a status of 401 () @ http://localhost:5173/api/supabase:0
+[ERROR] Failed to load resource: the server responded with a status of 403 () @ http://localhost:5173/api/runtime/fs:0
+[ERROR] Failed to load resource: the server responded with a status of 403 () @ http://localhost:5173/api/runtime/fs:0
+[ERROR] Failed to load resource: the server responded with a status of 403 () @ http://localhost:5173/api/runtime/fs:0
+[ERROR] Failed to load resource: the server responded with a status of 403 () @ http://localhost:5173/api/runtime/fs:0

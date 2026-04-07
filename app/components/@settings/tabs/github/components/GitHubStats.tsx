@@ -1,7 +1,6 @@
-import React from 'react';
 import { Button } from '~/components/ui/Button';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '~/components/ui/Collapsible';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { useGitHubStats } from '~/lib/hooks';
 import type { GitHubConnection, GitHubStats as GitHubStatsType } from '~/types/GitHub';
 import { GitHubErrorBoundary } from './GitHubErrorBoundary';
@@ -109,7 +108,7 @@ function GitHubStatsContent({
                 )}
               </Button>
               <div
-                className={classNames(
+                className={cn(
                   'i-ph:caret-down w-4 h-4 transform transition-transform duration-200 text-devonz-elements-textSecondary',
                   isExpanded ? 'rotate-180' : '',
                 )}

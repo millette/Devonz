@@ -16,7 +16,10 @@ import { RuntimeManager } from '~/lib/runtime/local-runtime';
 import { isValidProjectId, isSafePath } from '~/lib/runtime/runtime-provider';
 import { validateCommand, auditCommand, DEFAULT_EXEC_TIMEOUT_MS } from '~/lib/runtime/command-safety';
 import { withSecurity } from '~/lib/security';
-import { execRequestSchema, parseOrError } from '~/lib/api/schemas';
+import { execRequestSchema, validateInput } from '~/lib/api/schemas';
+import { successResponse, errorResponse } from '~/lib/api/responses';
+import { AppError, AppErrorType } from '~/lib/api/errors';
+import { AUTH_PRESETS } from '~/lib/security-config';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('RuntimeExec');
@@ -33,7 +36,7 @@ async function execLoader({ request }: LoaderFunctionArgs) {
   const projectId = url.searchParams.get('projectId');
 
   if (!projectId || !isValidProjectId(projectId)) {
-    return Response.json({ error: 'Invalid or missing projectId' }, { status: 400 });
+    return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid or missing projectId'));
   }
 
   switch (op) {
@@ -90,7 +93,7 @@ async function execLoader({ request }: LoaderFunctionArgs) {
     }
 
     default: {
-      return Response.json({ error: `Unknown GET operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown GET operation: ${op}`));
     }
   }
 }
@@ -102,21 +105,13 @@ async function execLoader({ request }: LoaderFunctionArgs) {
  */
 
 async function execAction({ request }: ActionFunctionArgs) {
-  let rawBody: unknown;
+  const validation = await validateInput(request, execRequestSchema);
 
-  try {
-    rawBody = await request.json();
-  } catch {
-    return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+  if (!validation.success) {
+    return errorResponse(validation.error);
   }
 
-  const parsed = parseOrError(execRequestSchema, rawBody, 'RuntimeExec');
-
-  if (!parsed.success) {
-    return parsed.response;
-  }
-
-  const body = parsed.data;
+  const body = validation.data;
   const { op, projectId } = body;
 
   const manager = RuntimeManager.getInstance();
@@ -132,16 +127,14 @@ async function execAction({ request }: ActionFunctionArgs) {
          */
         await runtime.cleanSessions();
 
-        return Response.json({
-          success: true,
+        return successResponse({
           workdir: runtime.workdir,
           projectId: runtime.projectId,
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Boot failed';
         logger.error(`Boot failed for "${projectId}":`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Boot failed');
       }
     }
 
@@ -149,7 +142,7 @@ async function execAction({ request }: ActionFunctionArgs) {
       const { command, cwd, env } = body;
 
       if (cwd && !isSafePath(cwd)) {
-        return Response.json({ error: 'Invalid cwd: traversal detected' }, { status: 400 });
+        return errorResponse(new AppError(AppErrorType.VALIDATION, 'Invalid cwd: traversal detected'));
       }
 
       const validation = validateCommand(command);
@@ -157,14 +150,7 @@ async function execAction({ request }: ActionFunctionArgs) {
       if (!validation.allowed) {
         logger.warn(`Blocked command for project "${projectId}": ${command}`);
 
-        return Response.json(
-          {
-            error: `Command blocked: ${validation.reason}`,
-            exitCode: 1,
-            output: `Command blocked: ${validation.reason}`,
-          },
-          { status: 403 },
-        );
+        return errorResponse(new AppError(AppErrorType.FORBIDDEN, `Command blocked: ${validation.reason}`));
       }
 
       auditCommand(projectId, command, 'exec');
@@ -175,24 +161,22 @@ async function execAction({ request }: ActionFunctionArgs) {
 
         const result = await runtime.exec(command, { cwd, env, timeout: timeoutMs });
 
-        return Response.json(result);
+        return successResponse(result);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Exec failed';
         logger.error(`Exec failed: ${command}`, error);
 
-        return Response.json({ error: message, exitCode: 1, output: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Exec failed');
       }
     }
 
     case 'teardown': {
       try {
         await manager.removeRuntime(projectId);
-        return Response.json({ success: true });
+        return successResponse(null);
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Teardown failed';
         logger.error(`Teardown failed for "${projectId}":`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Teardown failed');
       }
     }
 
@@ -201,17 +185,16 @@ async function execAction({ request }: ActionFunctionArgs) {
         const runtime = await manager.getRuntime(projectId);
         const port = await runtime.allocatePort();
 
-        return Response.json({ port });
+        return successResponse({ port });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Port allocation failed';
         logger.error(`Port allocation failed for "${projectId}":`, error);
 
-        return Response.json({ error: message }, { status: 500 });
+        return errorResponse(error instanceof Error ? error : 'Port allocation failed');
       }
     }
 
     default: {
-      return Response.json({ error: `Unknown operation: ${op}` }, { status: 400 });
+      return errorResponse(new AppError(AppErrorType.VALIDATION, `Unknown operation: ${op}`));
     }
   }
 }
@@ -222,5 +205,5 @@ async function execAction({ request }: ActionFunctionArgs) {
  * ---------------------------------------------------------------------------
  */
 
-export const loader = withSecurity(execLoader, { rateLimit: false });
-export const action = withSecurity(execAction, { rateLimit: false });
+export const loader = withSecurity(execLoader, { auth: AUTH_PRESETS.authenticated, rateLimit: false });
+export const action = withSecurity(execAction, { auth: AUTH_PRESETS.authenticated, rateLimit: false });

@@ -221,7 +221,8 @@ export const checkCloudProviderEnvKeys = async (forceRefresh = false) => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as Record<string, EnvKeyStatus>;
+    const envelope = (await response.json()) as { data: Record<string, EnvKeyStatus> };
+    const data = envelope.data ?? {};
     envKeyStatusStore.set(data);
 
     // Cache in sessionStorage for this browser session
@@ -270,9 +271,9 @@ const fetchConfiguredProviders = async (): Promise<ConfiguredProvider[]> => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as { providers?: ConfiguredProvider[] };
+    const envelope = (await response.json()) as { data?: { providers?: ConfiguredProvider[] } };
 
-    return data.providers || [];
+    return envelope.data?.providers || [];
   } catch (error) {
     logger.error('Error fetching configured providers:', error);
     return [];

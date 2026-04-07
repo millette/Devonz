@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react';
 import type { Message } from 'ai';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 import { ImportFolderButton } from '~/components/chat/ImportFolderButton';
 import { Button } from '~/components/ui/Button';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import type { ImportChatFn } from '~/lib/persistence/db';
 
 const GitCloneButton = lazy(() => import('./GitCloneButton'));
@@ -59,7 +59,7 @@ export function LeftActionPanel({ importChat }: LeftActionPanelProps) {
     }
   };
 
-  const buttonBaseClass = classNames(
+  const buttonBaseClass = cn(
     '!flex w-full items-center gap-2 justify-center',
     'text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary',
     'border border-devonz-elements-borderColor hover:border-devonz-elements-borderColorActive',
@@ -69,7 +69,7 @@ export function LeftActionPanel({ importChat }: LeftActionPanelProps) {
     'hover:bg-devonz-elements-bg-depth-3',
   );
 
-  const primaryButtonClass = classNames(
+  const primaryButtonClass = cn(
     '!flex w-full items-center gap-2 justify-center',
     'text-devonz-elements-textPrimary',
     'bg-gradient-to-r from-[#1e3a5f] to-[#2d4a6f]',
@@ -84,7 +84,14 @@ export function LeftActionPanel({ importChat }: LeftActionPanelProps) {
   return (
     <div className="grid grid-cols-3 gap-3 w-full max-w-xl items-stretch">
       {/* Hidden file input */}
-      <input type="file" id="chat-import-left" className="hidden" accept=".json" onChange={handleFileImport} />
+      <input
+        type="file"
+        id="chat-import-left"
+        className="hidden"
+        accept=".json"
+        onChange={handleFileImport}
+        aria-label="Import chat file"
+      />
 
       {/* Import Chat Button */}
       <div className="flex h-10">

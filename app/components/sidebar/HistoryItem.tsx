@@ -1,9 +1,9 @@
 import { useParams } from 'react-router';
-import { classNames } from '~/utils/classNames';
+import { cn } from '~/utils/cn';
 import { type ChatHistoryItem } from '~/lib/persistence';
 import WithTooltip from '~/components/ui/Tooltip';
 import { useEditChatDescription } from '~/lib/hooks';
-import { forwardRef, type ForwardedRef, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Checkbox } from '~/components/ui/Checkbox';
 import { createScopedLogger } from '~/utils/logger';
 
@@ -70,7 +70,7 @@ export function HistoryItem({
 
   return (
     <div
-      className={classNames(
+      className={cn(
         'group rounded-lg text-sm text-devonz-elements-textSecondary hover:text-devonz-elements-textPrimary hover:bg-devonz-elements-background-depth-3/50 overflow-hidden flex justify-between items-center px-3 py-2.5 transition-colors',
         { 'text-devonz-elements-textPrimary bg-accent-500/10 border-l-2 border-accent-500': isActiveChat },
         { 'cursor-pointer': selectionMode },
@@ -98,6 +98,7 @@ export function HistoryItem({
             onChange={handleChange}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
+            aria-label="Edit chat name"
           />
           <button
             type="submit"
@@ -116,9 +117,7 @@ export function HistoryItem({
             <span className="truncate pr-24">{currentDescription}</span>
           </WithTooltip>
           <div
-            className={classNames(
-              'absolute right-0 top-0 bottom-0 flex items-center bg-transparent px-2 transition-colors',
-            )}
+            className={cn('absolute right-0 top-0 bottom-0 flex items-center bg-transparent px-2 transition-colors')}
           >
             <div className="flex items-center gap-2.5 text-devonz-elements-textTertiary opacity-0 group-hover:opacity-100 transition-opacity">
               <ChatActionButton
@@ -161,32 +160,29 @@ export function HistoryItem({
   );
 }
 
-const ChatActionButton = forwardRef(
-  (
-    {
-      toolTipContent,
-      icon,
-      className,
-      onClick,
-    }: {
-      toolTipContent: string;
-      icon: string;
-      className?: string;
-      onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
-      btnTitle?: string;
-    },
-    ref: ForwardedRef<HTMLButtonElement>,
-  ) => {
-    return (
-      <WithTooltip tooltip={toolTipContent} position="bottom" sideOffset={4}>
-        <button
-          ref={ref}
-          type="button"
-          aria-label={toolTipContent}
-          className={`text-devonz-elements-textTertiary hover:text-blue-500 transition-colors ${icon} ${className ? className : ''}`}
-          onClick={onClick}
-        />
-      </WithTooltip>
-    );
-  },
-);
+function ChatActionButton({
+  toolTipContent,
+  icon,
+  className,
+  onClick,
+  ref,
+}: {
+  toolTipContent: string;
+  icon: string;
+  className?: string;
+  onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+  btnTitle?: string;
+  ref?: React.Ref<HTMLButtonElement>;
+}) {
+  return (
+    <WithTooltip tooltip={toolTipContent} position="bottom" sideOffset={4}>
+      <button
+        ref={ref}
+        type="button"
+        aria-label={toolTipContent}
+        className={`text-devonz-elements-textTertiary hover:text-blue-500 transition-colors ${icon} ${className ? className : ''}`}
+        onClick={onClick}
+      />
+    </WithTooltip>
+  );
+}
