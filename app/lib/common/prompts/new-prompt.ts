@@ -107,6 +107,17 @@ export const getFineTunedPrompt = (
   - Dropdowns and selects MUST show options and update state when selected
   - If a feature is visible in the UI, it MUST be fully functional
 
+  ENTRY POINT WIRING (CRITICAL — MOST COMMON FAILURE):
+  - The starter template may use Vanilla JS (main.js + index.html with <div id="app">). When building a React app, you MUST:
+    1. UPDATE index.html: Replace <div id="app"></div> with <div id="root"></div> AND change the script src from "/main.js" to "/src/main.tsx"
+    2. CREATE src/main.tsx: This is the React entry point that imports ReactDOM and renders the root component:
+       import { StrictMode } from 'react'; import { createRoot } from 'react-dom/client'; import App from './App'; import './index.css';
+       createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+    3. DELETE or REPLACE old template files (main.js, style.css) that conflict with the new framework
+  - If you skip ANY of these steps, the preview will show "Hello World" or a blank page instead of your app
+  - SELF-CHECK after writing all files: Does index.html reference src/main.tsx? Does src/main.tsx import and render App? Does App render the feature?
+  - This applies to ANY framework: always update the HTML entry point AND create the framework-specific mount file
+
   APP COHESION (MANDATORY):
   - All pages MUST share the same layout shell (header, sidebar, footer) via a layout component
   - State MUST be properly shared across components that need the same data (lift state up or use a store)
@@ -480,13 +491,15 @@ export const getFineTunedPrompt = (
     - Create files BEFORE shell commands that depend on them
     - Update package.json FIRST, then install dependencies
     - CRITICAL FILE ORDERING: After package.json, write files in this priority order:
-      1. Main application entry (App.tsx or equivalent) — the MOST IMPORTANT file
-      2. Page/route components (the files users actually see)
-      3. Core business logic, state management, data/seed files
-      4. Shared components and utilities
-      5. Configuration files (tsconfig, tailwind.config, postcss.config)
-      6. Shell commands (npm install)
-      7. Start command (npm run dev) — ALWAYS LAST
+      1. index.html (with correct mount point and script reference for the framework)
+      2. Entry point file (src/main.tsx for React, main.js for vanilla)
+      3. Main application component (App.tsx or equivalent) — the MOST IMPORTANT component file
+      4. Page/route components (the files users actually see)
+      5. Core business logic, state management, data/seed files
+      6. Shared components and utilities
+      7. Configuration files (tsconfig, tailwind.config, postcss.config)
+      8. Shell commands (npm install)
+      9. Start command (npm run dev) — ALWAYS LAST
       * WHY: If output is interrupted, the essential application logic exists rather than only configs
       * The main component file (App.tsx) should NEVER be the last file in the artifact
     - CRITICAL: EVERY project MUST end with <devonzAction type="start">npm run dev</devonzAction> - never tell user to run manually
@@ -495,6 +508,13 @@ export const getFineTunedPrompt = (
     - App.tsx MUST render the requested feature — NEVER leave the template default "Start prompting" text.
     - App.tsx MUST be updated in the SAME response as feature components. If using react-router-dom, define ALL routes.
     - SELF-CHECK: After writing App.tsx, mentally render it — if it shows a blank page or template default, FIX IT.
+
+  ENTRY POINT FILES (CRITICAL — #1 CAUSE OF "BLANK PAGE" BUGS):
+    - You MUST ALWAYS write index.html with the correct mount point (<div id="root"></div> for React) and script reference (/src/main.tsx for React)
+    - You MUST ALWAYS write src/main.tsx (or equivalent entry point) that imports and renders the root component
+    - File ordering: index.html FIRST, then src/main.tsx, then App.tsx, then other components
+    - SELF-CHECK: Trace the chain: index.html → script src → main.tsx → imports App → App renders feature. If ANY link is broken, the app shows a blank page.
+    - NEVER assume the template's index.html and entry point are already correct — ALWAYS include them in your artifact.
 
   TEMPLATE COMPONENT REUSE (CRITICAL):
     - If the template includes pre-built UI components (listed in the user message), you MUST import and use them.
