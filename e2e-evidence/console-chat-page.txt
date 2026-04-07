@@ -1,8 +1,0 @@
-Total messages: 40 (Errors: 3, Warnings: 2)
-Returning 3 messages for level "error"
-
-[ERROR] Failed to load resource: the server responded with a status of 401 () @ http://localhost:5173/api/supabase:0
-[ERROR] [Preview] Screenshot capture failed: InvalidStateError: Failed to execute 'drawImage' on 'CanvasRenderingContext2D': The image argument is a canvas element with a width or height of 0.
-    at onLibraryReady (http://localhost:3000/_devonz-inspector.js:2060:11) @ http://localhost:3000/_devonz-inspector.js:1784
-[ERROR] [Preview] Screenshot capture failed: InvalidStateError: Failed to execute 'drawImage' on 'CanvasRenderingContext2D': The image argument is a canvas element with a width or height of 0.
-    at onLibraryReady (http://localhost:3000/_devonz-inspector.js:2060:11) @ http://localhost:3000/_devonz-inspector.js:1784

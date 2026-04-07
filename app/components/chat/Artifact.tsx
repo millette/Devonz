@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { computed } from 'nanostores';
+import { computed, type MapStore } from 'nanostores';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   bundledLanguages,
@@ -43,19 +43,23 @@ export const Artifact = memo(({ artifactId }: ArtifactProps) => {
   const artifacts = useStore(workbenchStore.artifacts);
   const artifact = artifacts[artifactId];
 
+  const filteredActions = useMemo(() => {
+    if (!artifact) {
+      return null;
+    }
+
+    return computed(artifact.runner.actions as MapStore, (actions: Record<string, ActionState>) => {
+      return Object.values(actions).filter((action) => {
+        return action.type !== 'supabase' && !(action.type === 'shell' && action.content?.includes('supabase'));
+      });
+    });
+  }, [artifact]);
+
+  const actions = useStore(filteredActions ?? computed(workbenchStore.artifacts, () => [] as ActionState[]));
+
   if (!artifact) {
     return null;
   }
-
-  const actions = useStore(
-    computed(artifact.runner.actions, (actions) => {
-      // Filter out Supabase actions except for migrations
-      return Object.values(actions).filter((action) => {
-        // Exclude actions with type 'supabase' or actions that contain 'supabase' in their content
-        return action.type !== 'supabase' && !(action.type === 'shell' && action.content?.includes('supabase'));
-      });
-    }),
-  );
 
   const toggleActions = () => {
     userToggledActions.current = true;

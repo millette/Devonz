@@ -51,3 +51,10 @@ docs/instructions/Roadmap.md
 !plan/*.md
 !README.md
 .qodo
+
+# Test artifacts (Playwright, e2e evidence)
+e2e-evidence/
+test-results/
+playwright-report/
+e2e/
+screenshots/

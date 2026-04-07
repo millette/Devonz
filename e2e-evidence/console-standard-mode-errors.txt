@@ -1,6 +1,0 @@
-Total messages: 185 (Errors: 3, Warnings: 2)
-Returning 3 messages for level "error"
-
-[ERROR] Failed to fetch manifest patches TypeError: Failed to fetch @ http://localhost:5173/node_modules/.vite/deps/chunk-7JE6BYY5.js?v=a6c068f3:9534
-[ERROR] Failed to fetch manifest patches TypeError: Failed to fetch @ http://localhost:5173/node_modules/.vite/deps/chunk-7JE6BYY5.js?v=a6c068f3:9534
-[ERROR] Failed to load resource: the server responded with a status of 401 () @ http://localhost:5173/api/supabase:0

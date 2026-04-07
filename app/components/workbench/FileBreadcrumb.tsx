@@ -49,7 +49,7 @@ export const FileBreadcrumb = memo<FileBreadcrumbProps>(({ files, pathSegments =
 
   useEffect(() => {
     if (activeIndex === null) {
-      return;
+      return undefined;
     }
 
     const handleOutsideClick = (event: MouseEvent) => {
