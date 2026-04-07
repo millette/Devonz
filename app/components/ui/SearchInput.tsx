@@ -1,9 +1,9 @@
-import React from 'react';
+import type { InputHTMLAttributes, Ref } from 'react';
 import { cn } from '~/utils/cn';
 import { Input } from './Input';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface SearchInputProps extends InputHTMLAttributes<HTMLInputElement> {
   /** Function to call when the clear button is clicked */
   onClear?: () => void;
 
@@ -20,7 +20,7 @@ interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   loading?: boolean;
 
   /** Ref forwarded to the underlying input element */
-  ref?: React.Ref<HTMLInputElement>;
+  ref?: Ref<HTMLInputElement>;
 }
 
 /**

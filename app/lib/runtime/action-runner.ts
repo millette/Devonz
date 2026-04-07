@@ -31,6 +31,7 @@ import {
   type ChangeType,
 } from '~/lib/stores/staging';
 import { workbenchStore } from '~/lib/stores/workbench';
+import { getPreferredPackageVersion } from '~/utils/dependencyCatalog';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -1130,13 +1131,37 @@ export class ActionRunner {
       // Step 3: If missing packages found, inject into package.json and install
       if (missingPackages.size > 0) {
         const missing = [...missingPackages];
-        logger.info(`Dependency validator found ${missing.length} missing package(s): ${missing.join(', ')}`);
-
-        // Inject missing packages into package.json dependencies
-        const deps = (pkgJson.dependencies as Record<string, string>) || {};
+        const installable: Array<{ name: string; version: string }> = [];
+        const unverified: string[] = [];
 
         for (const pkg of missing) {
-          deps[pkg] = 'latest';
+          const preferredVersion = getPreferredPackageVersion(pkg);
+
+          if (preferredVersion) {
+            installable.push({ name: pkg, version: preferredVersion });
+          } else {
+            unverified.push(pkg);
+          }
+        }
+
+        logger.info(
+          `Dependency validator found ${missing.length} missing package(s): ${missing.join(', ')}. Auto-installing ${installable.length} vetted package(s).`,
+        );
+
+        if (unverified.length > 0) {
+          logger.warn(
+            `Skipped auto-install for ${unverified.length} unverified package(s): ${unverified.join(', ')}. Leaving the import error visible so Devonz can correct the package name instead of installing a hallucinated dependency.`,
+          );
+        }
+
+        if (installable.length === 0) {
+          return;
+        }
+
+        const deps = (pkgJson.dependencies as Record<string, string>) || {};
+
+        for (const { name, version } of installable) {
+          deps[name] = version;
         }
 
         pkgJson.dependencies = deps;

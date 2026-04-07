@@ -1,4 +1,4 @@
-import React from 'react';
+import type { FC } from 'react';
 
 interface FilePreviewProps {
   files: File[];
@@ -6,7 +6,7 @@ interface FilePreviewProps {
   onRemove: (index: number) => void;
 }
 
-const FilePreview: React.FC<FilePreviewProps> = ({ files, imageDataList, onRemove }) => {
+const FilePreview: FC<FilePreviewProps> = ({ files, imageDataList, onRemove }) => {
   if (!files || files.length === 0) {
     return null;
   }

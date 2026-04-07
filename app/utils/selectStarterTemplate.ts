@@ -7,162 +7,17 @@ import { INLINE_TEMPLATES } from './inline-templates';
 import { loadShowcaseTemplates } from './showcase-templates';
 import { createScopedLogger } from '~/utils/logger';
 import { csrfFetch } from '~/lib/api/csrf-client';
+import {
+  ANGULAR_COMBINED_PACKAGES,
+  COMMON_EXTRA_PACKAGES,
+  SHADCN_PEER_DEPS,
+  SOLIDJS_COMBINED_PACKAGES,
+  SVELTE_COMBINED_PACKAGES,
+  UNIVERSAL_EXTRA_PACKAGES,
+  VUE_COMBINED_PACKAGES,
+} from './dependencyCatalog';
 
 const logger = createScopedLogger('StarterTemplate');
-
-/**
- * Known shadcn/ui peer dependencies that MUST be in package.json
- * when using shadcn/ui components. Maps package name to version.
- * These are the Radix UI primitives, icons, and utilities that shadcn/ui imports.
- */
-const SHADCN_PEER_DEPS: Record<string, string> = {
-  '@radix-ui/react-icons': '^1.3.2',
-  '@radix-ui/react-slot': '^1.1.0',
-  '@radix-ui/react-label': '^2.1.0',
-  '@radix-ui/react-dialog': '^1.1.2',
-  '@radix-ui/react-select': '^2.1.2',
-  '@radix-ui/react-tabs': '^1.1.1',
-  '@radix-ui/react-separator': '^1.1.0',
-  '@radix-ui/react-scroll-area': '^1.2.0',
-  '@radix-ui/react-avatar': '^1.1.1',
-  '@radix-ui/react-checkbox': '^1.1.2',
-  '@radix-ui/react-switch': '^1.1.1',
-  '@radix-ui/react-toggle': '^1.1.0',
-  '@radix-ui/react-toggle-group': '^1.1.0',
-  '@radix-ui/react-tooltip': '^1.1.3',
-  '@radix-ui/react-popover': '^1.1.2',
-  '@radix-ui/react-dropdown-menu': '^2.1.2',
-  '@radix-ui/react-context-menu': '^2.2.2',
-  '@radix-ui/react-accordion': '^1.2.1',
-  '@radix-ui/react-alert-dialog': '^1.1.2',
-  '@radix-ui/react-aspect-ratio': '^1.1.0',
-  '@radix-ui/react-collapsible': '^1.1.1',
-  '@radix-ui/react-hover-card': '^1.1.2',
-  '@radix-ui/react-menubar': '^1.1.2',
-  '@radix-ui/react-navigation-menu': '^1.2.1',
-  '@radix-ui/react-progress': '^1.1.0',
-  '@radix-ui/react-radio-group': '^1.2.1',
-  '@radix-ui/react-slider': '^1.2.1',
-  '@radix-ui/react-toast': '^1.2.2',
-  'class-variance-authority': '^0.7.0',
-  clsx: '^2.1.1',
-  'tailwind-merge': '^2.5.4',
-  'lucide-react': '^0.460.0',
-  cmdk: '^1.0.0',
-  vaul: '^1.1.0',
-  sonner: '^1.7.0',
-  'input-otp': '^1.4.1',
-  'react-day-picker': '^9.4.4',
-  'embla-carousel-react': '^8.5.1',
-  'react-resizable-panels': '^2.1.7',
-  recharts: '^2.15.0',
-  'tailwindcss-animate': '^1.0.7',
-};
-
-/**
- * Universal packages that LLMs frequently import across any framework.
- * Pre-installed to avoid auto-fix loops caused by missing dependencies.
- */
-const UNIVERSAL_EXTRA_PACKAGES: Record<string, string> = {
-  'date-fns': '^4.1.0',
-  axios: '^1.7.9',
-  zod: '^3.24.1',
-  nanoid: '^5.1.5',
-  clsx: '^2.1.1',
-  'tailwind-merge': '^2.5.4',
-};
-
-/**
- * React-specific packages that LLMs frequently import in React projects.
- * Only injected into React-family templates (React, Next, Remix, Shadcn).
- */
-const REACT_EXTRA_PACKAGES: Record<string, string> = {
-  'framer-motion': '^11.15.0',
-  'lucide-react': '^0.460.0',
-  'react-router-dom': '^7.1.1',
-  zustand: '^5.0.3',
-  immer: '^10.1.1',
-  '@tanstack/react-query': '^5.62.16',
-  'react-hook-form': '^7.54.2',
-  '@hookform/resolvers': '^3.9.1',
-  sonner: '^1.7.0',
-  'class-variance-authority': '^0.7.0',
-  recharts: '^2.15.0',
-};
-
-/**
- * Combined common packages for React-family templates.
- */
-const COMMON_EXTRA_PACKAGES: Record<string, string> = {
-  ...UNIVERSAL_EXTRA_PACKAGES,
-  ...REACT_EXTRA_PACKAGES,
-};
-
-/**
- * Vue-specific packages that LLMs frequently import in Vue projects.
- * Only injected into Vue-family templates.
- */
-const VUE_EXTRA_PACKAGES: Record<string, string> = {
-  pinia: '^3.0.1',
-  '@vueuse/core': '^12.5.0',
-  'vue-router': '^4.5.0',
-  'lucide-vue-next': '^0.460.0',
-};
-
-/**
- * Combined packages for Vue-family templates (universal + Vue-specific).
- */
-const VUE_COMBINED_PACKAGES: Record<string, string> = {
-  ...UNIVERSAL_EXTRA_PACKAGES,
-  ...VUE_EXTRA_PACKAGES,
-};
-
-/**
- * Svelte-specific packages commonly used by LLMs in SvelteKit projects.
- */
-const SVELTE_EXTRA_PACKAGES: Record<string, string> = {
-  'svelte-sonner': '^0.3.28',
-  'bits-ui': '^1.0.0-next.72',
-};
-
-/**
- * Combined packages for Svelte-family templates.
- */
-const SVELTE_COMBINED_PACKAGES: Record<string, string> = {
-  ...UNIVERSAL_EXTRA_PACKAGES,
-  ...SVELTE_EXTRA_PACKAGES,
-};
-
-/**
- * SolidJS-specific packages commonly used by LLMs.
- * Only injected into SolidJS templates.
- */
-const SOLIDJS_EXTRA_PACKAGES: Record<string, string> = {
-  '@solidjs/router': '^0.15.3',
-};
-
-/**
- * Combined packages for SolidJS templates.
- */
-const SOLIDJS_COMBINED_PACKAGES: Record<string, string> = {
-  ...UNIVERSAL_EXTRA_PACKAGES,
-  ...SOLIDJS_EXTRA_PACKAGES,
-};
-
-/**
- * Angular-specific packages commonly used by LLMs.
- */
-const ANGULAR_EXTRA_PACKAGES: Record<string, string> = {
-  '@angular/cdk': '^19.0.0',
-};
-
-/**
- * Combined packages for Angular templates.
- */
-const ANGULAR_COMBINED_PACKAGES: Record<string, string> = {
-  ...UNIVERSAL_EXTRA_PACKAGES,
-  ...ANGULAR_EXTRA_PACKAGES,
-};
 
 /**
  * Maps shadcn/ui component filenames to their primary exports.
@@ -912,6 +767,7 @@ You may import/read/reference them. If changes are needed, create new files inst
 - ${depCount} pre-configured dependencies exist. NEVER rewrite package.json from scratch.
 - Only ADD new dependencies — keep ALL existing ones.
 - If you import a new npm package in code, add it to package.json dependencies FIRST.
+- If you need a package that is NOT already listed below, verify the exact npm package name is real/current before adding it, and NEVER use \`"latest"\` in package.json.
 ${resolvedName.toLowerCase().includes('shadcn') ? `- Shadcn/ui template: All Radix UI peer deps are pre-installed. Do NOT re-add them to package.json.\n` : ''}${isTailwindV3 ? `- Tailwind CSS v3 syntax: \`@tailwind base; @tailwind components; @tailwind utilities;\` — NOT \`@import "tailwindcss";\`.\n` : ''}${isReact18 ? `- React 18 project: Use forwardRef, manual useMemo/useCallback. Do NOT use React 19 APIs (useActionState, use(), ref-as-prop).\n` : ''}${isReact19 ? `- React 19 project: Use ref as prop (no forwardRef), useActionState, use() hook. React Compiler handles memoization.\n` : ''}`;
     } catch {
       // Failed to parse package.json, skip dep preservation instructions

@@ -1,4 +1,4 @@
-import React from 'react';
+import { useState, type FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '~/components/ui/Button';
 import { cn } from '~/utils/cn';
@@ -21,10 +21,10 @@ interface GitHubConnectionProps {
 export function GitHubConnection({ connectionTest, onTestConnection }: GitHubConnectionProps) {
   const { isConnected, isLoading, isConnecting, connect, disconnect, error } = useGitHubConnection();
 
-  const [token, setToken] = React.useState('');
-  const [tokenType, setTokenType] = React.useState<'classic' | 'fine-grained'>('classic');
+  const [token, setToken] = useState('');
+  const [tokenType, setTokenType] = useState<'classic' | 'fine-grained'>('classic');
 
-  const handleConnect = async (e: React.FormEvent) => {
+  const handleConnect = async (e: FormEvent) => {
     e.preventDefault();
     logger.debug('handleConnect called with token:', token ? 'token provided' : 'no token', 'tokenType:', tokenType);
 

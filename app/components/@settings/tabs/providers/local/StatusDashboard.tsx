@@ -1,4 +1,4 @@
-import React from 'react';
+import { createElement } from 'react';
 import { Button } from '~/components/ui/Button';
 import { Card, CardContent } from '~/components/ui/Card';
 import { useLocalModelHealth } from '~/lib/hooks/useLocalModelHealth';
@@ -47,7 +47,7 @@ function StatusDashboard({ onBack }: { onBack: () => void }) {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-devonz-elements-background-depth-3 flex items-center justify-center">
                       {PROVIDER_ICONS[status.provider as keyof typeof PROVIDER_ICONS] ? (
-                        React.createElement(PROVIDER_ICONS[status.provider as keyof typeof PROVIDER_ICONS], {
+                        createElement(PROVIDER_ICONS[status.provider as keyof typeof PROVIDER_ICONS], {
                           className: 'w-5 h-5 text-devonz-elements-textPrimary',
                         })
                       ) : (

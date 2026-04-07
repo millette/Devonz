@@ -134,6 +134,9 @@ export const getFineTunedPrompt = (
     - NEVER use "npm install <package>" shell commands to add new dependencies
     - Instead, ALWAYS update package.json via a devonzAction type="file" to add packages to "dependencies" or "devDependencies"
     - Then run a single "npm install" shell action to install everything at once
+    - NEVER write \`"latest"\` in package.json — use the version already present in the template, a vetted compatible semver range, or skip the package if you're unsure
+    - NEVER invent package names or use outdated/renamed packages; if a package name is uncertain, prefer an existing dependency or a built-in browser/React/Tailwind solution
+    - When fixing a missing-package error, first verify whether the import should be changed before adding a new dependency
     - Why: Shell-only npm install does NOT persist dependencies in package.json, causing cascading failures when the dev server restarts
     - Correct workflow for adding new packages:
       1. Write updated package.json with new packages added to dependencies/devDependencies
@@ -144,7 +147,7 @@ export const getFineTunedPrompt = (
 </system_constraints>
 
 <technology_preferences>
-  - Use Vite for web servers (Vite 6 for stability, latest version with native Rolldown support for bleeding-edge)
+  - Use Vite for web servers, but keep the version already present in package.json/template unless the user explicitly asks for an upgrade
   - NEVER hardcode port 5173 — it is reserved by the Devonz host runtime. If you need to set a port, use 3000
   - Do NOT set custom ports in vite.config or next.config unless the user explicitly requests a specific port
   - ALWAYS choose Node.js scripts over shell scripts

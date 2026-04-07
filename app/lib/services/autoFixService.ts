@@ -21,6 +21,7 @@ import {
 } from '~/lib/stores/autofix';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { getRecoverySuggestion } from '~/utils/errors/errorConfig';
+import { buildMissingPackageFixInstructions } from '~/utils/dependencyCatalog';
 
 const logger = createScopedLogger('AutoFixService');
 
@@ -83,17 +84,7 @@ function classifyError(error: AutoFixError): ClassifiedError {
         category: 'import-resolution',
         missingPackage: packageName,
         sourceFile,
-        fixInstructions: [
-          `**Root Cause**: The npm package \`${packageName}\` is imported in \`${sourceFile}\` but is NOT installed.`,
-          '',
-          '**Required Fix** (do ALL three steps):',
-          `1. Add \`"${packageName}": "latest"\` to the \`"dependencies"\` object in \`package.json\` (use a file action, NOT npm install <pkg>)`,
-          '2. Run `npm install --legacy-peer-deps` as a shell action',
-          '3. Run `npm run dev` as a start action to restart the dev server',
-          '',
-          '**CRITICAL**: Do NOT modify the import statement in the source file — the import is correct, the package just needs to be installed.',
-          '**CRITICAL**: Do NOT rewrite package.json from scratch — only ADD the missing package to the existing dependencies.',
-        ].join('\n'),
+        fixInstructions: buildMissingPackageFixInstructions(packageName, sourceFile),
       };
     }
 
@@ -155,14 +146,7 @@ function classifyError(error: AutoFixError): ClassifiedError {
       return {
         category: 'import-resolution',
         missingPackage: packageName,
-        fixInstructions: [
-          `**Root Cause**: Module \`${packageName}\` is not installed.`,
-          '',
-          '**Required Fix**:',
-          `1. Add \`"${packageName}": "latest"\` to package.json dependencies`,
-          '2. Run `npm install --legacy-peer-deps`',
-          '3. Restart the dev server with `npm run dev`',
-        ].join('\n'),
+        fixInstructions: buildMissingPackageFixInstructions(packageName),
       };
     }
   }
