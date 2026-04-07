@@ -42,10 +42,15 @@ function resolveEncryptionKey(): Buffer {
   }
 
   if (key.length !== 32) {
-    throw new Error(
-      `DEVONZ_ENCRYPTION_KEY must be exactly 32 bytes (256 bits). ` +
-        `Received ${key.length} bytes. Provide a 64-character hex string, a 44-character base64 string, or a 32-byte raw value.`,
+    const generated = randomBytes(32);
+
+    logger.warn(
+      `DEVONZ_ENCRYPTION_KEY is invalid (expected 32 bytes, got ${key.length}). ` +
+        `Falling back to auto-generated key. Encrypted values will NOT persist across restarts. ` +
+        `Provide a 64-character hex string, a 44-character base64 string, or a 32-byte raw value.`,
     );
+
+    return generated;
   }
 
   return key;

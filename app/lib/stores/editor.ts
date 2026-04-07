@@ -29,11 +29,18 @@ export class EditorStore {
     if (import.meta.hot) {
       import.meta.hot.data.documents = this.documents;
       import.meta.hot.data.selectedFile = this.selectedFile;
+
+      // Clean up previous subscription from prior HMR instance
+      import.meta.hot.data.unsubFiles?.();
     }
 
-    filesStore.files.subscribe((files) => {
+    const unsubFiles = filesStore.files.subscribe((files) => {
       this.setDocuments(files);
     });
+
+    if (import.meta.hot) {
+      import.meta.hot.data.unsubFiles = unsubFiles;
+    }
   }
 
   setDocuments(files: FileMap) {

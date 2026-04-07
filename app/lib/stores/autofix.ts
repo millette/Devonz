@@ -11,7 +11,7 @@
  * - Error fingerprint tracking: detects recurring errors across fix attempts
  */
 
-import { atom, map } from 'nanostores';
+import { map, computed } from 'nanostores';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('AutoFixStore');
@@ -182,18 +182,10 @@ export const autoFixStore = map<AutoFixState>(initialState);
 /**
  * Derived atoms for easy access
  */
-export const isAutoFixEnabled = atom(initialState.settings.isEnabled);
-export const isAutoFixing = atom(false);
-export const autoFixRetryCount = atom(0);
-export const isAutoFixPausedByLoop = atom(false);
-
-// Sync derived atoms with main store
-autoFixStore.subscribe((state) => {
-  isAutoFixEnabled.set(state.settings.isEnabled);
-  isAutoFixing.set(state.isFixing);
-  autoFixRetryCount.set(state.currentRetries);
-  isAutoFixPausedByLoop.set(state.pausedByLoop);
-});
+export const isAutoFixEnabled = computed(autoFixStore, (state) => state.settings.isEnabled);
+export const isAutoFixing = computed(autoFixStore, (state) => state.isFixing);
+export const autoFixRetryCount = computed(autoFixStore, (state) => state.currentRetries);
+export const isAutoFixPausedByLoop = computed(autoFixStore, (state) => state.pausedByLoop);
 
 /**
  * Update auto-fix settings
