@@ -157,6 +157,40 @@ export const ChatImpl = memo(
       const savedProvider = Cookies.get('selectedProvider');
       return (PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER) as ProviderInfo;
     });
+
+    /*
+     * Validate restored provider/model against active (enabled) providers.
+     * Stale cookies can reference a disabled/unconfigured provider (e.g. AmazonBedrock),
+     * causing auth errors when the send flow embeds [Provider: ...] in the message.
+     */
+    useEffect(() => {
+      if (activeProviders.length === 0) {
+        return;
+      }
+
+      const fallbackProvider = (activeProviders.find((p) => p.name === DEFAULT_PROVIDER.name) ||
+        activeProviders[0]) as ProviderInfo;
+      const resolvedProvider = activeProviders.find((p) => p.name === provider.name) || fallbackProvider;
+
+      if (resolvedProvider.name !== provider.name) {
+        logger.warn(`Selected provider "${provider.name}" is not enabled — falling back to "${resolvedProvider.name}"`);
+        setProvider(resolvedProvider);
+        Cookies.set('selectedProvider', resolvedProvider.name, { expires: 30 });
+      }
+
+      const providerModels = resolvedProvider.staticModels.map((entry) => entry.name);
+      const fallbackModel = providerModels[0] || DEFAULT_MODEL;
+      const resolvedModel = providerModels.includes(model) ? model : fallbackModel;
+
+      if (resolvedModel !== model) {
+        logger.warn(
+          `Selected model "${model}" is not available for "${resolvedProvider.name}" — falling back to "${resolvedModel}"`,
+        );
+        setModel(resolvedModel);
+        Cookies.set('selectedModel', resolvedModel, { expires: 30 });
+      }
+    }, [activeProviders, model, provider.name]);
+
     const { showChat, pendingMessage } = useStore(chatStore);
     const [animationScope, animate] = useAnimate();
     const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
@@ -709,6 +743,12 @@ export const ChatImpl = memo(
         return;
       }
 
+      // Guard: ensure selected provider is active/enabled before sending
+      if (!activeProviders.some((p) => p.name === provider.name)) {
+        toast.error(`Provider "${provider.name}" is not enabled. Please select an active provider from settings.`);
+        return;
+      }
+
       sendingRef.current = true;
 
       try {
@@ -972,6 +1012,14 @@ export const ChatImpl = memo(
     const handleProviderChange = (newProvider: ProviderInfo) => {
       setProvider(newProvider);
       Cookies.set('selectedProvider', newProvider.name, { expires: 30 });
+
+      const availableModels = newProvider.staticModels.map((entry) => entry.name);
+      const nextModel = availableModels.includes(model) ? model : availableModels[0] || DEFAULT_MODEL;
+
+      if (nextModel !== model) {
+        setModel(nextModel);
+        Cookies.set('selectedModel', nextModel, { expires: 30 });
+      }
     };
 
     const handleStreamingChange = useCallback((streaming: boolean) => {
