@@ -1,6 +1,6 @@
 # Devonz Documentation
 
-> AI-powered browser-based coding assistant built with Remix, React, and a local Node.js runtime.
+> AI-powered local vibe coding platform for full-stack development — built with React Router v7 (Remix), React 19, and WebContainer API.
 
 ---
 
@@ -23,14 +23,19 @@
 
 ## What's New
 
-- **Extended Thinking** — AI reasoning visualization for Anthropic Claude and Google Gemini
-- **MCP Schema Sanitization** — Automatic schema compatibility for Google Gemini (strips unsupported constructs)
+- **Error Classifier** — Categorizes errors into 6 types (network, auth, validation, build, runtime, unknown) with 4 severity levels (fatal, error, warning, info); warning/info → toast, fatal/error → ChatAlert dialog where users click "Ask Devonz" to request a fix
+- **Framer Motion Chat Animations** — User messages slide in from the right, assistant messages from the left
+- **Chat Naming via Artifact Titles** — Chat names derived from artifact titles instead of raw user messages
+- **Streaming Code Leak Prevention** — Prevents raw code from leaking into chat during LLM streaming
+- **Single WebContainer Enforcement** — Guarantees only one WebContainer instance runs at a time
+- **Port Escalation Prevention** — Stops runaway port allocation in the dev preview
+- **Improved System Prompts** — Chain-of-thought reasoning, entry point file requirements, CSS variable guidance
+- **Default Template: Vite + Shadcn** — Astro only for explicit requests; Vite Shadcn is the default scaffold
 - **MCP Auto-Approve** — Per-server auto-approve toggle for trusted MCP servers
 - **Formatted Tool Results** — MCP tool results render as formatted markdown instead of raw JSON
 - **Unified Mode Selector** — Single Build/Plan/Discuss dropdown replaces separate toggles
 - **Auto-Collapse Plan** — Plan panel auto-collapses when all tasks reach 100%
 - **Security Hardening** — `withSecurity()` on all 42 API routes with input validation, rate limiting options, URL allowlisting
-- **810 tests** — Across 36 test files for comprehensive coverage
 - **Z.ai Provider** — Integration with 10 static GLM models optimized for coding tasks
 
 ---
@@ -39,15 +44,15 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Remix v2.16 + React 18 |
+| Framework | React Router v7 (Remix) + React 19 |
 | Build | Vite 5.4 |
-| Language | TypeScript (strict) |
+| Language | TypeScript 5 (strict) |
 | Styling | UnoCSS + SCSS + Radix UI |
 | State | Nanostores |
 | AI/LLM | Vercel AI SDK (22 providers) |
 | Editor | CodeMirror 6 |
 | Terminal | xterm.js 5.5 |
-| Runtime | LocalRuntime (host Node.js) |
+| Runtime | WebContainer API |
 | Testing | Vitest + Testing Library |
 | Package Manager | pnpm 9.14 |
 

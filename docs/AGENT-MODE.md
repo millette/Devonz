@@ -252,6 +252,19 @@ interface AgentExecutionState {
 
 When agent mode is active, the standard system prompt is **replaced** with a single unified prompt — `AGENT_MODE_FULL_SYSTEM_PROMPT` — exported from `app/lib/agent/prompts.ts`. This replaces the previous multi-prompt system (the legacy `AGENT_SYSTEM_PROMPT`, `AGENT_SYSTEM_PROMPT_COMPACT`, `AGENT_ERROR_CONTEXT_PROMPT`, `AGENT_ITERATION_WARNING_PROMPT`, and helper functions like `getAgentSystemPrompt()` / `enhanceSystemPromptWithAgentMode()` have all been removed).
 
+### Prompt Optimizations
+
+The system prompt has been significantly trimmed and improved:
+
+- **~30% reduction** — trimmed from ~797 lines to ~559 lines
+- **~88% token budget reduction** — simple apps now cost ~16K tokens (down from ~135K)
+- **Chain-of-thought reasoning** added to guide the LLM through multi-step decisions
+- **Entry point file requirements** — `main.tsx` and `index.html` must be created for web apps
+- **CSS variable guidance** — shadcn/ui classes require CSS variables to be defined; the prompt now includes instructions for this
+- **Response brevity guidelines** — keep responses concise and action-oriented
+
+### Prompt Contents
+
 The prompt covers:
 
 1. Instructs the LLM to use `devonz_*` tools instead of artifact XML tags
@@ -261,8 +274,10 @@ The prompt covers:
 5. **Mobile-first design mandate** — all UI must be responsive and mobile-first
 6. **Design system / semantic tokens** — enforces consistent use of design tokens
 7. **Technology preferences** — React 19, Tailwind v4, shadcn/ui
-8. **Response brevity guidelines** — keep responses concise and action-oriented
-9. **Self-validation checklist** — the agent validates its own output before finishing
+8. **Chain-of-thought reasoning** — guides the LLM through multi-step planning before tool calls
+9. **Entry point requirements** — ensures `main.tsx`, `index.html` are created for web projects
+10. **CSS variable guidance** — explicit instructions for shadcn/ui CSS variable dependencies
+11. **Self-validation checklist** — the agent validates its own output before finishing
 
 See `app/lib/agent/prompts.ts` for the complete prompt.
 
@@ -285,13 +300,27 @@ The `agentChatIntegration.ts` module bridges agent mode with the standard chat A
 
 ---
 
+## Agent Mode Runtime Behavior
+
+- **Preview refresh debouncing** — Agent file writes trigger `schedulePreviewRefresh` in `action-runner.ts` to debounce preview reloads, preventing excessive iframe refreshes during rapid multi-file edits.
+- **"Agent Executing" badge** — The badge properly resets on stream end, even if the stream terminates unexpectedly.
+- **Runtime teardown** — Agent mode properly tears down the LocalRuntime on exit to free resources.
+
+---
+
 ## Error Handling
 
-The agent has built-in error recovery:
+Auto-fix has been **completely removed** from Devonz. There is no automatic error correction or auto-triggering of fixes.
+
+Error handling in agent mode follows this pipeline:
 
 1. **Tool execution errors** are captured and returned to the LLM as error results
 2. **Build errors** can be detected via `devonz_get_errors` tool
-3. **Iteration warnings** prompt the user when approaching the limit
-4. **Session errors** set status to `error` with an error message
+3. **Error classifier** (`app/lib/errors/error-classifier.ts`) categorizes errors into 6 categories × 4 severity levels
+4. **Minor errors** (warning/info severity) → Sonner toast notification (lightweight, auto-dismiss)
+5. **Serious errors** (error/fatal severity) → `ChatAlert` dialog with an **"Ask Devonz"** button
+6. **User-initiated fixes only** — The user must manually click "Ask Devonz" in the ChatAlert dialog to request the LLM to fix an error. There is no auto-triggering.
+7. **Iteration warnings** prompt the user when approaching the iteration limit
+8. **Session errors** set status to `error` with an error message
 
-The LLM is prompted to check for errors after making changes and self-correct when possible.
+The LLM is prompted to check for errors after making changes and self-correct when possible, but this self-correction happens within the agent's own tool-call loop — not via any external auto-fix mechanism.

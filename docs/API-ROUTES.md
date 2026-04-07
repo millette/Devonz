@@ -11,7 +11,7 @@ Devonz uses Remix file-based routing. All API endpoints are in `app/routes/api.*
 - `action()` — Handles POST/PUT/DELETE requests
 - `loader()` — Handles GET requests
 
-All route handlers are wrapped with `withSecurity()` from `app/lib/security.ts`. This middleware enforces CORS origin validation, SameSite=Strict cookie policy, and input sanitization.
+All route handlers are wrapped with `withSecurity()` from `app/lib/security.ts` (except `/api/sentry-tunnel`, which is CSRF-exempt for Sentry SDK compatibility). This middleware enforces CORS origin validation, SameSite=Strict cookie policy, and input sanitization.
 
 ---
 
@@ -74,6 +74,18 @@ Validated with Zod. Returns a data stream with:
 | `/api/mcp-update-config` | POST | Update MCP server configuration |
 
 > **Schema Sanitization**: `mcpService.ts` performs automatic schema sanitization before registering MCP tools. It strips `anyOf`, `oneOf`, `allOf`, and `additionalProperties` constructs from tool input schemas to ensure compatibility with Google Gemini and other providers that don't support complex JSON Schema features.
+
+---
+
+## Database / Persistence (Drizzle ORM)
+
+Server-side chat persistence backed by Drizzle ORM. These routes complement the client-side IndexedDB layer, enabling cross-device access and backup.
+
+| Endpoint | Method | Purpose |
+| -------- | ------ | ------- |
+| `/api/db/chats` | GET/POST | List chats (paginated) or create a new chat |
+| `/api/db/chats/:id` | GET/PUT/DELETE | Get, update, or delete a single chat (including messages and snapshot) |
+| `/api/db/migrate` | POST | Migrate chats from IndexedDB export format into the server-side database (batch processing) |
 
 ---
 
@@ -141,7 +153,22 @@ Validated with Zod. Returns a data stream with:
 | `/api/system/git-info` | GET | Git installation and version info |
 | `/api/bug-report` | POST | Submit bug reports |
 | `/api/version-check` | GET | Compares local commit hash against latest GitHub commit to detect available updates |
+| `/api/update` | POST | One-click update: stash, pull latest from main, install dependencies (blocked in Docker — use `docker compose pull` instead) |
 | `/api/web-search` | POST | Fetch web content with SSRF protection for AI web search |
+| `/api/encrypt` | POST | Encrypt a value using server-side encryption (for secure storage of API keys) |
+| `/api/sentry-tunnel` | POST | Proxy for Sentry event envelopes — bypasses ad-blockers that block direct `sentry.io` requests. **Not wrapped with `withSecurity()`** (Sentry SDK requests lack CSRF tokens). Validates target host against an allowlist. |
+| `/api/deploy` | POST | SSE-streamed deployment to Vercel with progress events (alternative to `/api/vercel-deploy`) |
+
+---
+
+## External API (v1)
+
+Headless / programmatic access for external integrations. Requires API key authentication via `requireApiAuth()`.
+
+| Endpoint | Method | Purpose |
+| -------- | ------ | ------- |
+| `/api/v1/chat` | POST | External chat endpoint — accepts messages, streams LLM responses via SSE |
+| `/api/v1/status` | GET | API health and version check (returns `{ status, version }`) |
 
 ---
 
@@ -221,3 +248,29 @@ export const action = withSecurity(myAction, {
   rateLimit: false,
 });
 ```
+
+### Client-Side Error Classification
+
+Errors from the runtime (terminal output, preview iframe) are **not** handled by the API routes themselves. Instead, they flow through a client-side error classification layer before reaching the UI:
+
+```text
+Terminal output / Preview iframe
+       │
+       ▼
+terminalErrorDetector.ts   or   previewErrorHandler.ts
+  (detects error patterns)       (detects uncaught exceptions / unhandled rejections)
+       │
+       ▼
+classifyError(message)  →  { category, severity, recoverable, suggestion }
+  Categories: network | auth | validation | build | runtime | unknown
+  Severities: fatal | error | warning | info
+       │
+       ▼
+shouldShowFullAlert(classified)?
+  ├── true  (fatal / error)  →  ChatAlert dialog (workbenchStore.actionAlert)
+  │                              User manually clicks "Ask Devonz" to send to LLM
+  └── false (warning / info) →  Sonner toast notification (showErrorToast)
+                                 Auto-dismissed, no LLM involvement
+```
+
+> **No auto-fix auto-triggering.** Errors are never automatically sent to the LLM. The old auto-fix system that auto-triggered LLM calls on detected errors has been completely removed. Users must explicitly click "Ask Devonz" in the ChatAlert dialog to request a fix.

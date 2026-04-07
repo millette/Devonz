@@ -19,6 +19,20 @@
 
 ---
 
+## Code Quality Standards
+
+These quality rules apply to all contributed code:
+
+- **No TODOs in production code** — if it needs more work, do the work before merging
+- **No placeholder implementations or stubs** — every function must be fully implemented
+- **Error handling is mandatory** — use the error classifier (`~/lib/errors/error-classifier.ts`) to classify and route errors to ChatAlert (fatal) or toast (non-fatal). Do not silently swallow errors
+- **No auto-fix** — errors are never silently patched. All errors go through ChatAlert (for fatal/build errors the user should address) or toast notifications (for recoverable warnings). See [ARCHITECTURE.md](ARCHITECTURE.md) for the error flow
+- **Subscribe/listener cleanup required** — unsubscribe from store listeners on component unmount; use `import.meta.hot?.dispose()` for HMR cleanup of subscriptions and side-effects
+- **Use accent color tokens from UnoCSS theme** — never hardcode hex color values (e.g., `#7B61FF`). Use the theme tokens defined in `uno.config.ts` instead
+- **Use `cn()` for conditional class merging** — import from `~/utils/cn` (wraps `clsx` + `tailwind-merge`). Do not manually concatenate class strings
+
+---
+
 ## Code Style
 
 ### ESLint
@@ -112,14 +126,35 @@ logger.error('Something failed', error);
 
 ### Setup
 
-Tests use **Vitest** with `@testing-library/react` and `@testing-library/jest-dom`.
+Unit and component tests use **Vitest** with `@testing-library/react` and `@testing-library/jest-dom`. End-to-end tests use **Playwright** (config in `playwright.config.ts`, tests in `e2e/`).
 
 ```bash
-# Run all tests once
+# Run all unit tests once
 pnpm test
 
 # Watch mode
 pnpm test:watch
+
+# Run e2e tests (Playwright)
+pnpm exec playwright test
+```
+
+### Build Verification
+
+The production build command runs TypeScript type-checking before building:
+
+```bash
+pnpm run build   # runs: tsc --noEmit && react-router build
+```
+
+Always run `pnpm run build` before opening a PR to catch type errors early.
+
+### lint-staged Note
+
+`lint-staged` (via Husky pre-commit hook) may hang on some systems. If your commit hangs, use the `--no-verify` flag:
+
+```bash
+git commit -m "feat: my change" --no-verify
 ```
 
 ### Writing Tests
@@ -199,6 +234,14 @@ Credentials come from cookies — never from request bodies or query params:
 ```typescript
 const cookieHeader = request.headers.get('Cookie') || '';
 ```
+
+---
+
+## Architecture Notes
+
+- **State management** — the project uses **nanostores** (`atom()`, `map()`, `computed()`) for all shared state. Do NOT introduce Redux, Zustand, Jotai, or other state libraries. See [STATE-MANAGEMENT.md](STATE-MANAGEMENT.md)
+- **Error classifier** — `app/lib/errors/error-classifier.ts` classifies errors by category (`network`, `auth`, `validation`, `build`, `runtime`, `unknown`) and severity (`fatal`, `error`, `warning`, `info`). Use it to decide routing: fatal/build errors → ChatAlert dialog; recoverable errors → toast notification via `error-toast.ts`
+- **No auto-fix pattern** — Devonz does NOT automatically patch or retry on error. All errors are surfaced to the user through ChatAlert or toast. Never add silent error recovery that hides failures from the user
 
 ---
 

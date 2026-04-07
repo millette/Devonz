@@ -21,9 +21,9 @@ The primary user interaction surface. Handles message display, input, file uploa
 | `Chat.client.tsx` | Top-level chat controller (client-only, wraps AI SDK `useChat`) |
 | `BaseChat.tsx` | Layout and props interface for the chat UI |
 | `ChatBox.tsx` | Message input area with toolbar and mode selector |
-| `Messages.client.tsx` | Message list renderer |
+| `Messages.client.tsx` | Message list renderer — uses Framer Motion entrance animations (see below) |
 | `UserMessage.tsx` | User message bubble |
-| `AssistantMessage.tsx` | AI response bubble |
+| `AssistantMessage.tsx` | AI response bubble — uses `stripRawArtifactTags()` to prevent streaming code from leaking into chat text; styled with accent color tokens instead of hardcoded colors |
 | `Artifact.tsx` | Code artifact display with actions |
 | `CodeBlock.tsx` | Syntax-highlighted code blocks |
 | `Markdown.tsx` | Markdown renderer (react-markdown + rehype) |
@@ -54,6 +54,26 @@ The primary user interaction surface. Handles message display, input, file uploa
 | `WebSearch.client.tsx` | Web search integration in chat |
 | `SupabaseConnection.tsx` | Supabase connection status in chat |
 | `chatExportAndImport/` | Chat export/import functionality |
+
+#### Framer Motion Chat Animations
+
+`Messages.client.tsx` uses `motion.div` from `framer-motion` to animate new messages as they appear:
+
+| Message Type | Animation | Duration | Easing |
+| ------------ | --------- | -------- | ------ |
+| User messages | Slide in from the right (`x: 20 → 0`) | 250ms | ease-out |
+| Assistant messages | Slide in from the left (`x: -20 → 0`) | 200ms | ease-out |
+
+Only **new** messages receive entrance animations — messages already present when the component mounts do not re-animate. This prevents distracting motion when scrolling through history or loading a previous chat.
+
+#### Error Handling Components
+
+| Component / Module | Purpose |
+| ------------------ | ------- |
+| `ChatAlert.tsx` | Full dialog shown for **fatal/error** severity issues — includes an "Ask Devonz" button so the user can request a fix |
+| Sonner toast notifications | Lightweight, auto-dismissing toasts for **warning/info** severity issues |
+| `app/lib/errors/error-classifier.ts` | Classifies errors into 6 categories × 4 severity levels to determine which UI treatment to use |
+| `app/lib/errors/error-toast.ts` | Utility that routes classified errors to the appropriate toast notification |
 
 ### `workbench/` — Code Editor & Preview
 
@@ -115,10 +135,9 @@ Modular settings UI organized by concern.
 
 | Component | Purpose |
 | --------- | ------- |
-| `Header.tsx` | Main header bar |
+| `Header.tsx` | Main header bar — shows "Devonz" branding text when the sidebar is collapsed; mode selector displays "Standard" or "Agent" (never just "Mode") |
 | `HeaderActionButtons.client.tsx` | Action buttons (deploy, git, etc.) |
 | `HeaderAvatar.client.tsx` | User avatar/account |
-| `AutoFixStatus.client.tsx` | Auto-fix indicator |
 
 ### `sidebar/` — Chat History Sidebar
 

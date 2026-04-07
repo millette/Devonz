@@ -1,6 +1,6 @@
 {
   "name": "devonz",
-  "description": "An AI Agent",
+  "description": "AI-powered local vibe coding platform for full-stack development",
   "private": true,
   "license": "MIT",
   "sideEffects": false,

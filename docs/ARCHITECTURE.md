@@ -76,20 +76,52 @@ Business logic separated from UI:
 | `agentToolsService.ts` | Agent tool definitions and execution |
 | `agentChatIntegration.ts` | Bridges agent mode with chat API |
 | `mcpService.ts` | MCP (Model Context Protocol) client management — includes schema sanitization for Gemini compatibility (strips `anyOf`, `oneOf`, `allOf`, `additionalProperties`), auto-approve per-server toggle, and formatted markdown rendering of tool results |
-| `autoFixService.ts` | Auto-fix error detection and correction |
+| `autoFixService.ts` | Error formatting and fix-attempt tracking — used when the user manually clicks "Ask Devonz" in a ChatAlert dialog (no auto-triggering) |
 | `githubApiService.ts` | GitHub API operations |
 | `gitlabApiService.ts` | GitLab API operations |
 | `importExportService.ts` | Chat import/export functionality |
 | `repositoryPushService.ts` | Push project files to remote Git repositories (GitHub/GitLab) |
 | `localModelHealthMonitor.ts` | Monitors local model (Ollama/LMStudio) availability |
 
-### 4. LLM Layer (`app/lib/modules/llm/`)
+### 4. Error Classification Layer (`app/lib/errors/`)
+
+Centralized error classification that replaces the old auto-fix auto-triggering system. All runtime errors now flow through this layer before reaching the UI.
+
+| File | Purpose |
+| ---- | ------- |
+| `error-classifier.ts` | Classifies errors into 6 categories (`network`, `auth`, `validation`, `build`, `runtime`, `unknown`) and 4 severity levels (`fatal`, `error`, `warning`, `info`). Exports `classifyError()` and `shouldShowFullAlert()`. |
+| `error-toast.ts` | Thin wrapper around Sonner `toast` for displaying classified errors as lightweight toast notifications. |
+
+**Routing logic:**
+
+```text
+Error detected (terminal or preview)
+       │
+       ▼
+classifyError(message) → ClassifiedError { category, severity, recoverable, suggestion }
+       │
+       ▼
+shouldShowFullAlert(classified)?
+       ├── true  (severity = fatal | error)  → ChatAlert dialog
+       │         User clicks "Ask Devonz" to send error to LLM
+       └── false (severity = warning | info) → Sonner toast notification
+                 Auto-dismissed, no LLM involvement
+```
+
+**Consumers:**
+
+- `terminalErrorDetector.ts` — detects errors in terminal output, classifies via this layer, routes to ChatAlert or toast
+- `previewErrorHandler.ts` — detects errors in preview iframe, classifies via this layer, routes to ChatAlert or toast
+
+> **No auto-fix auto-triggering.** The old system that automatically sent errors to the LLM has been completely removed. All error handling now requires explicit user action — clicking "Ask Devonz" in the ChatAlert dialog for serious errors, or simply reading the toast for minor ones.
+
+### 5. LLM Layer (`app/lib/modules/llm/`)
 
 Provider-based architecture for multi-LLM support. See [LLM Providers](LLM-PROVIDERS.md).
 
 **Key pattern**: `LLMManager` singleton auto-discovers and registers all providers from `providers/` directory. Each provider extends `BaseProvider`.
 
-### 5. Runtime Layer (`app/lib/runtime/`)
+### 6. Runtime Layer (`app/lib/runtime/`)
 
 Handles LLM response parsing and action execution:
 
@@ -106,7 +138,7 @@ Handles LLM response parsing and action execution:
 | `git-manager.ts` | Git repository lifecycle management |
 | `command-safety.ts` | Command validation and safety checks for shell execution |
 
-### 6. Persistence Layer (`app/lib/persistence/`)
+### 7. Persistence Layer (`app/lib/persistence/`)
 
 | File | Purpose |
 | ---- | ------- |
@@ -121,11 +153,11 @@ Handles LLM response parsing and action execution:
 | `types.ts` | Shared persistence type definitions |
 | `ChatDescription.client.tsx` | Chat description editing component |
 
-### 7. Server Layer (`app/routes/api.*`)
+### 8. Server Layer (`app/routes/api.*`)
 
-42 Remix API routes. See [API Routes](API-ROUTES.md).
+51 Remix API routes. See [API Routes](API-ROUTES.md).
 
-**Key pattern**: Routes use Remix conventions — `action()` for POST/PUT/DELETE, `loader()` for GET. Server-only code lives in `app/lib/.server/`. All 42 route handlers are wrapped with `withSecurity()` from `app/lib/security.ts`, which enforces CORS origin validation, SameSite cookie attributes, request sanitization, and a URL allowlist on the git proxy.
+**Key pattern**: Routes use Remix conventions — `action()` for POST/PUT/DELETE, `loader()` for GET. Server-only code lives in `app/lib/.server/`. All route handlers are wrapped with `withSecurity()` from `app/lib/security.ts` (except `/api/sentry-tunnel`, which is CSRF-exempt for Sentry SDK compatibility), enforcing CORS origin validation, SameSite cookie attributes, request sanitization, and a URL allowlist on the git proxy.
 
 ---
 
@@ -209,7 +241,16 @@ User enables Agent Mode + sends task
 
 1. **LocalRuntime for execution**: Code runs on the host machine via `LocalRuntime` (server-side). `RuntimeClient` (browser-side) communicates with it through `/api/runtime/*` Remix routes. `bootRuntime(projectId)` initializes a project runtime with files stored at `~/.devonz/projects/{projectId}/`. Supports native binaries, real Git, and full shell access (Git Bash preferred on Windows). Port detection uses ANSI-stripped regex matching, firing events via SSE to `PreviewsStore` for iframe preview at `http://localhost:PORT`. COEP/COOP headers have been removed (they were WebContainer-only); CSP `frame-src` allows localhost.
 
-2. **Nanostores over Redux/Context**: Lightweight atomic stores avoid the boilerplate of Redux while supporting cross-component reactivity without prop drilling.
+   **Runtime lifecycle guarantees:**
+   - **Single instance enforcement** — `RuntimeManager` is a server-side singleton that maps project IDs to `LocalRuntime` instances. Concurrent `bootRuntime()` calls for the same project coalesce into a single promise. On chat exit, `teardown()` destroys the runtime and releases all resources.
+   - **Port escalation prevention** — `teardown()` kills all shell sessions, awaits process exit with a **5 s timeout**, force-kills orphaned port holders via `killPortHolder()`, then polls with `waitForPortFree()` (250 ms interval, 3 s timeout) to confirm ports are released before a new runtime boots.
+   - **Preview refresh debouncing** — `PreviewsStore` debounces iframe refreshes (300 ms delay) to avoid rapid reloads during agent mode file writes.
+
+2. **Nanostores as the only state management**: Nanostores is the **sole** state management library — there is no Redux, Zustand, or React Context for global state. Lightweight atomic stores avoid boilerplate while supporting cross-component reactivity without prop drilling.
+
+   **Leak prevention patterns:**
+   - **Computed atoms over manual subscribes** — Derived state uses `computed()` (e.g., `isAutoFixEnabled`, `isInReviewCycle`, `budgetSeverity`) instead of manual `subscribe()` + `set()` chains, eliminating a class of subscription leak bugs.
+   - **HMR guards** — Class-based stores (e.g., `EditorStore`) persist atoms across hot module replacement via `import.meta.hot.data`, preventing store re-creation and state loss during development.
 
 3. **Remix for routing + SSR**: Server-side rendering for SEO/initial load, with client-only components for interactive features (editor, terminal, preview).
 
@@ -221,7 +262,7 @@ User enables Agent Mode + sends task
 
 7. **CSS custom properties for theming**: All theme colors flow through `--devonz-elements-*` variables, enabling runtime theme switching without rebuilds.
 
-8. **Security by default** — Every API route (all 42 handlers) is wrapped with `withSecurity()` from `app/lib/security.ts`, enforcing CORS origin validation, SameSite cookie attributes, request sanitization, and a URL allowlist on the git proxy.
+8. **Security by default** — Every API route is wrapped with `withSecurity()` from `app/lib/security.ts` (except `/api/sentry-tunnel`, which is CSRF-exempt for Sentry SDK requests), enforcing CORS origin validation, SameSite cookie attributes, request sanitization, and a URL allowlist on the git proxy.
 
 9. **Docker-first deployment** — Multi-stage Dockerfile + docker-compose.yml with GHCR CI/CD and optional Watchtower auto-update enables one-command self-hosting.
 

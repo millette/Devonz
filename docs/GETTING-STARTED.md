@@ -37,7 +37,7 @@ Create a `.env.local` file in the project root (gitignored). The app loads env f
 
 ### LLM Provider Keys
 
-Set the API key for whichever provider(s) you want to use:
+All provider keys are **optional** — set only the ones for providers you want to use. You can also add keys at runtime through the UI settings panel.
 
 ```env
 # OpenAI
@@ -130,6 +130,16 @@ OPENAI_LIKE_API_MODELS=model-name-1,model-name-2
 # Set via UI settings panel
 ```
 
+### Encryption Key (Optional)
+
+```env
+# Encryption key for API key cookie encryption (AES-256-GCM).
+# If omitted or invalid, the app auto-generates a random key at startup.
+# For persistent encryption across restarts, generate a 32-byte hex key:
+#   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+DEVONZ_ENCRYPTION_KEY=
+```
+
 > **Note**: API keys can also be set through the UI settings panel at runtime. They are stored in browser cookies, not on the server.
 
 > See `.env.example` for the full list of 55+ documented environment variables. Copy it as a starting point: `cp .env.example .env.local`
@@ -215,6 +225,11 @@ docker compose --profile auto-update up -d
 ```
 
 The `RUNNING_IN_DOCKER=true` environment variable is set automatically in the Docker Compose configuration, which adjusts Ollama and LMStudio base URLs to use `host.docker.internal`.
+
+### Docker Notes
+
+- **`fast-glob`** is a production dependency (not devDependency), so it is available in the Docker production image. If you see `Cannot find module 'fast-glob'` after building, ensure you are on the latest code — this was fixed by moving it from `devDependencies` to `dependencies`.
+- **`DEVONZ_ENCRYPTION_KEY`** gracefully falls back to an auto-generated random key if the variable is missing or invalid. You do not need to set it for Docker to work, but for persistent cookie encryption across container restarts, set a stable 32-byte hex key in your `.env.local` or Docker Compose environment.
 
 ---
 
