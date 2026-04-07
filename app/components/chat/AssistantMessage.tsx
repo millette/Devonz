@@ -67,20 +67,29 @@ interface AssistantMessageProps {
   addToolResult: ({ toolCallId, result }: { toolCallId: string; result: unknown }) => void;
 }
 
-const ARTIFACT_TAG_RE = /<\/?devonzArtifact[^>]*>/g;
-const ACTION_TAG_RE = /<\/?devonzAction[^>]*>/g;
-const ACTION_BLOCK_RE = /<devonzAction[^>]*>[\s\S]*?<\/devonzAction>/g;
+const COMPLETE_ARTIFACT_BLOCK_RE = /<devonzArtifact[^>]*>[\s\S]*?<\/devonzArtifact>/g;
+const UNCLOSED_ARTIFACT_RE = /<devonzArtifact[^>]*>[\s\S]*$/;
+const LEFTOVER_TAG_RE = /<\/?devonz(?:Artifact|Action)[^>]*>/g;
 
 /**
- * Strip raw artifact/action markup that may leak through the parser
- * during streaming when tags arrive split across chunks.
+ * Strip raw artifact/action markup that leaks through the parser during
+ * streaming.  Complete blocks are removed first, then everything after an
+ * unclosed `<devonzArtifact` tag (whose closing tag hasn't arrived yet) is
+ * chopped — this prevents code content from appearing in the chat bubble
+ * while the AI is still generating.
  */
 function stripRawArtifactTags(text: string): string {
   if (!text.includes('devonzA')) {
     return text;
   }
 
-  return text.replace(ACTION_BLOCK_RE, '').replace(ARTIFACT_TAG_RE, '').replace(ACTION_TAG_RE, '');
+  let result = text
+    .replace(COMPLETE_ARTIFACT_BLOCK_RE, '')
+    .replace(UNCLOSED_ARTIFACT_RE, '');
+
+  result = result.replace(LEFTOVER_TAG_RE, '');
+
+  return result;
 }
 
 function openArtifactInWorkbench(filePath: string) {

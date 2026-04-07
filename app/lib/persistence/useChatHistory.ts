@@ -469,8 +469,25 @@ export function useChatHistory() {
 
         takeSnapshot(messages[messages.length - 1].id, workbenchStore.files.get(), resolvedUrlId, chatSummary);
 
-        if (!description.get() && firstArtifact?.title) {
-          description.set(firstArtifact?.title);
+        if (!description.get()) {
+          if (firstArtifact?.title) {
+            description.set(firstArtifact.title);
+          } else {
+            const firstUserMsg = messages.find((m) => m.role === 'user');
+
+            if (firstUserMsg) {
+              const text =
+                typeof firstUserMsg.content === 'string'
+                  ? firstUserMsg.content
+                  : (firstUserMsg.parts?.find((p: Record<string, unknown>) => p.type === 'text') as { text?: string })
+                      ?.text ?? '';
+
+              if (text) {
+                const truncated = text.slice(0, 60).trim();
+                description.set(truncated.length < text.length ? `${truncated}…` : truncated);
+              }
+            }
+          }
         }
 
         const finalChatId = chatId.get();
