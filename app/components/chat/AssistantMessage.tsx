@@ -67,6 +67,22 @@ interface AssistantMessageProps {
   addToolResult: ({ toolCallId, result }: { toolCallId: string; result: unknown }) => void;
 }
 
+const ARTIFACT_TAG_RE = /<\/?devonzArtifact[^>]*>/g;
+const ACTION_TAG_RE = /<\/?devonzAction[^>]*>/g;
+const ACTION_BLOCK_RE = /<devonzAction[^>]*>[\s\S]*?<\/devonzAction>/g;
+
+/**
+ * Strip raw artifact/action markup that may leak through the parser
+ * during streaming when tags arrive split across chunks.
+ */
+function stripRawArtifactTags(text: string): string {
+  if (!text.includes('devonzA')) {
+    return text;
+  }
+
+  return text.replace(ACTION_BLOCK_RE, '').replace(ARTIFACT_TAG_RE, '').replace(ACTION_TAG_RE, '');
+}
+
 function openArtifactInWorkbench(filePath: string) {
   filePath = normalizedFilePath(filePath);
 
@@ -228,7 +244,7 @@ export const AssistantMessage = memo(
             provider={provider}
             html
           >
-            {content}
+            {stripRawArtifactTags(content)}
           </Markdown>
         </div>
 
