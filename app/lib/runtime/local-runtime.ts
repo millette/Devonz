@@ -124,6 +124,38 @@ function killPortHolder(port: number): void {
 }
 
 /**
+ * Wait until a TCP port is free, retrying `killPortHolder` if it remains
+ * occupied.  Returns `true` once the port is free, `false` on timeout.
+ */
+async function waitForPortFree(port: number, timeoutMs = 3_000): Promise<boolean> {
+  const start = Date.now();
+  const POLL_INTERVAL_MS = 250;
+
+  while (Date.now() - start < timeoutMs) {
+    const isFree = await new Promise<boolean>((resolve) => {
+      const server = net.createServer();
+      server.once('error', () => resolve(false));
+      server.once('listening', () => {
+        server.close(() => resolve(true));
+      });
+      server.listen(port, '127.0.0.1');
+    });
+
+    if (isFree) {
+      return true;
+    }
+
+    // Port still occupied — kill the holder again and wait before retrying
+    killPortHolder(port);
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+  }
+
+  logger.warn(`Port ${port} still occupied after ${timeoutMs}ms — new server may pick a different port`);
+
+  return false;
+}
+
+/**
  * Find a free TCP port in the given range.
  * Skips the host app's own port to avoid preview conflicts.
  */
@@ -516,22 +548,64 @@ export class LocalRuntime implements RuntimeProvider {
   async teardown(): Promise<void> {
     logger.info(`Tearing down runtime for project "${this.#projectId}"`);
 
-    // Kill all running sessions
+    const EXIT_TIMEOUT_MS = 5_000;
+    const exitPromises: Array<Promise<void>> = [];
+    const portsToFree = new Set(this.#detectedPorts);
+
+    // Kill all sessions and wait for processes to fully exit so ports are released
     for (const [id, session] of this.#sessions) {
-      killProcessTree(session.process);
+      const proc = session.process;
+
+      const exitPromise = new Promise<void>((resolve) => {
+        if (proc.exitCode !== null) {
+          resolve();
+
+          return;
+        }
+
+        let done = false;
+
+        const finish = () => {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            resolve();
+          }
+        };
+
+        proc.once('close', finish);
+
+        const timer = setTimeout(() => {
+          logger.warn(`Session ${id} did not exit within ${EXIT_TIMEOUT_MS}ms during teardown — proceeding`);
+          finish();
+        }, EXIT_TIMEOUT_MS);
+      });
+
+      exitPromises.push(exitPromise);
+      killProcessTree(proc);
       logger.debug(`Killed session ${id}`);
     }
+
+    // Wait for all processes to fully exit so ports are released
+    await Promise.all(exitPromises);
 
     this.#sessions.clear();
     this.#portListeners = [];
 
     // Force-kill any orphaned processes still holding detected ports
-    // (killProcessTree alone doesn't catch detached child processes on Windows)
-    for (const port of this.#detectedPorts) {
+    for (const port of portsToFree) {
       killPortHolder(port);
     }
 
+    // Verify ports are actually free — retry killing if still occupied
+    for (const port of portsToFree) {
+      await waitForPortFree(port);
+    }
+
     this.#detectedPorts.clear();
+
+    // Remove stale lock files that dev servers may leave behind
+    await this.#cleanLockFiles();
   }
 
   /*

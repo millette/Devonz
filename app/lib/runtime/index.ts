@@ -59,6 +59,13 @@ let runtimePromise: Promise<RuntimeProvider> | null =
 let bootResolver: ((runtime: RuntimeProvider) => void) | null = null;
 
 /**
+ * Guard promise that prevents `bootRuntime()` from racing with an
+ * in-progress `teardownCurrentRuntime()`.  When non-null, a teardown
+ * is still running and callers must await it before proceeding.
+ */
+let teardownInProgress: Promise<void> | null = null;
+
+/**
  * The runtime promise — resolves to a {@link RuntimeProvider} once booted.
  *
  * ```ts
@@ -106,6 +113,13 @@ if (!import.meta.env.SSR) {
  * @param projectId - Unique identifier for the project (chat ID or similar)
  */
 export async function bootRuntime(projectId: string): Promise<RuntimeProvider> {
+  // Wait for any in-progress teardown to complete before booting so the old
+  // runtime's ports are fully released and don't cause port escalation.
+  if (teardownInProgress) {
+    logger.debug('Waiting for in-progress teardown before booting...');
+    await teardownInProgress;
+  }
+
   // If already booted for this project, return existing instance
   if (runtimeInstance && runtimeContext.projectId === projectId && runtimeContext.loaded) {
     logger.debug(`Runtime already booted for project "${projectId}"`);
@@ -172,26 +186,41 @@ export function getRuntimeInstance(): RuntimeClient | null {
  * no new project is booted immediately after.
  */
 export async function teardownCurrentRuntime(): Promise<void> {
+  // If teardown is already in progress, return the existing promise to
+  // deduplicate concurrent calls (cleanup useEffect + bootRuntime race).
+  if (teardownInProgress) {
+    return teardownInProgress;
+  }
+
   if (!runtimeInstance) {
     return;
   }
 
+  const instance = runtimeInstance;
   const projectId = runtimeContext.projectId;
 
   logger.info(`Tearing down runtime for project "${projectId}"`);
 
+  teardownInProgress = (async () => {
+    try {
+      await instance.teardown();
+    } catch (error) {
+      logger.error(`Runtime teardown failed for "${projectId}":`, error);
+    }
+
+    runtimeInstance = null;
+    runtimeContext.loaded = false;
+    runtimeContext.projectId = null;
+
+    if (import.meta.hot) {
+      import.meta.hot.data.runtimeInstance = null;
+    }
+  })();
+
   try {
-    await runtimeInstance.teardown();
-  } catch (error) {
-    logger.error(`Runtime teardown failed for "${projectId}":`, error);
-  }
-
-  runtimeInstance = null;
-  runtimeContext.loaded = false;
-  runtimeContext.projectId = null;
-
-  if (import.meta.hot) {
-    import.meta.hot.data.runtimeInstance = null;
+    await teardownInProgress;
+  } finally {
+    teardownInProgress = null;
   }
 }
 
