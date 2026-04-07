@@ -135,6 +135,11 @@ export const getFineTunedPrompt = (
     - Instead, ALWAYS update package.json via a devonzAction type="file" to add packages to "dependencies" or "devDependencies"
     - Then run a single "npm install" shell action to install everything at once
     - NEVER write \`"latest"\` in package.json — use the version already present in the template, a vetted compatible semver range, or skip the package if you're unsure
+    - NEVER pin to a version that does not exist yet. Common pitfalls:
+      * zustand — v4 topped out at 4.5.5; for v4 use \`"^4.5.0"\`, or use \`"^5.0.0"\` for the current major
+      * react-router-dom — v6 topped out at 6.28.x; for v7+ the package moved to \`"react-router"\`
+      * framer-motion — renamed to \`"motion"\` from v12; for v11 use \`"^11.0.0"\`, for v12+ use \`"motion"\`
+      * When unsure of the latest version, use a known stable range or omit the version constraint (e.g. \`"zustand": "*"\`)
     - NEVER invent package names or use outdated/renamed packages; if a package name is uncertain, prefer an existing dependency or a built-in browser/React/Tailwind solution
     - When fixing a missing-package error, first verify whether the import should be changed before adding a new dependency
     - Why: Shell-only npm install does NOT persist dependencies in package.json, causing cascading failures when the dev server restarts
