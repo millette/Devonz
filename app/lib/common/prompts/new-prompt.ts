@@ -94,6 +94,13 @@ export const getFineTunedPrompt = (
   - If too complex, REDUCE SCOPE: fewer fully-working features beats many broken stubs
   - All pages MUST share layout shell, data model, and design tokens consistently
   - BANNED phrases: "coming soon", "placeholder", "implement later", "under construction", "will be here"
+
+  CONFIG-ONLY RESPONSES (ANTI-PATTERN — CRITICAL):
+   - NEVER emit only config/scaffolding files (package.json, vite.config, tsconfig, postcss, tailwind) without ALSO emitting actual application component files (App.tsx, pages, features)
+   - A response with ONLY configuration files and ZERO component files is ALWAYS WRONG — it produces a blank app
+   - If the request is complex, REDUCE feature scope but ALWAYS include: App.tsx with working UI, at least one feature component, all routing, and state management
+   - SELF-CHECK before finishing: Count your component files (*.tsx with JSX). If the count is ZERO, you have failed — go back and write the components
+   - File priority: App.tsx and feature components FIRST, config files SECOND. Never stop after config files
 </completeness_requirements>
 
 <response_requirements>
