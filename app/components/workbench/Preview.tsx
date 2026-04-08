@@ -443,7 +443,7 @@ export const Preview = memo(({ setSelectedElement }: PreviewProps) => {
     window.addEventListener('devonz:refresh-preview', handler);
 
     return () => window.removeEventListener('devonz:refresh-preview', handler);
-  }, []);
+  }, [reloadPreview]);
 
   const toggleFullscreen = async () => {
     if (!isFullscreen && containerRef.current) {

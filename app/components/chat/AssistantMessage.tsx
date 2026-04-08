@@ -71,21 +71,30 @@ const COMPLETE_ARTIFACT_BLOCK_RE = /<devonzArtifact[^>]*>[\s\S]*?<\/devonzArtifa
 const UNCLOSED_ARTIFACT_RE = /<devonzArtifact[^>]*>[\s\S]*$/;
 const LEFTOVER_TAG_RE = /<\/?devonz(?:Artifact|Action)[^>]*>/g;
 
+/** Matches complete or partial `</assistant>` / `<assistant>` XML tags that LLMs sometimes emit */
+const ASSISTANT_TAG_RE = /<\/?assist(?:ant)?>|<\/assis(?:t(?:a(?:n(?:t)?)?)?)?\s*$/g;
+
 /**
  * Strip raw artifact/action markup that leaks through the parser during
  * streaming.  Complete blocks are removed first, then everything after an
  * unclosed `<devonzArtifact` tag (whose closing tag hasn't arrived yet) is
  * chopped — this prevents code content from appearing in the chat bubble
  * while the AI is still generating.
+ *
+ * Also strips stray `</assistant>` or partial fragments like `</assis`
+ * that some models emit at the end of their response.
  */
 function stripRawArtifactTags(text: string): string {
-  if (!text.includes('devonzA')) {
-    return text;
+  let result = text;
+
+  if (result.includes('devonzA')) {
+    result = result.replace(COMPLETE_ARTIFACT_BLOCK_RE, '').replace(UNCLOSED_ARTIFACT_RE, '');
+    result = result.replace(LEFTOVER_TAG_RE, '');
   }
 
-  let result = text.replace(COMPLETE_ARTIFACT_BLOCK_RE, '').replace(UNCLOSED_ARTIFACT_RE, '');
-
-  result = result.replace(LEFTOVER_TAG_RE, '');
+  if (result.includes('assis') || result.includes('Assis')) {
+    result = result.replace(ASSISTANT_TAG_RE, '');
+  }
 
   return result;
 }

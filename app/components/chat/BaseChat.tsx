@@ -326,7 +326,15 @@ export const BaseChat = React.memo(
         };
 
         setRecognition(recognition);
+
+        return () => {
+          recognition.abort();
+          recognition.onresult = null;
+          recognition.onerror = null;
+        };
       }
+
+      return undefined;
     }, []);
 
     useEffect(() => {
